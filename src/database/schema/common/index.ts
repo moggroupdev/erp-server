@@ -1,4 +1,5 @@
-import { timestamp, customType, pgEnum } from 'drizzle-orm/pg-core';
+import { timestamp, customType, pgEnum, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const numericPrecision = { precision: 15, scale: 3 };
 
@@ -7,6 +8,11 @@ export const numeric = customType<{ data: number; driverData: string }>({
   fromDriver: (value: string) => parseFloat(value),
   toDriver: (value: number) => value.toString(),
 });
+
+export const nonNegativeQuantityCheck = (name: string, column: AnyPgColumn) => check(name, sql`${column} >= 0`);
+
+export const nonNegativeNullableQuantityCheck = (name: string, column: AnyPgColumn) =>
+  check(name, sql`${column} IS NULL OR ${column} >= 0`);
 
 export const deletedAt = timestamp('deleted_at', { withTimezone: true });
 export const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
@@ -121,5 +127,9 @@ export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shippin
 - قسم سمكرة بارد
 - قسم سمكرة ساخن
 - قسم سمكرة ساخن
+
+=====
+
+
 
 */

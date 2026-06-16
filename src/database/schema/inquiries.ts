@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, inquiryStatusEnum } from './common';
+import { createdAt, inquiryStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { customers } from './customers';
 import { products } from './products';
@@ -19,16 +19,22 @@ export const inquiries = pgTable('inquiries', {
   createdAt,
 });
 
-export const inquiryItems = pgTable('inquiry_items', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  inquiryId: uuid('inquiry_id')
-    .notNull()
-    .references(() => inquiries.id),
-  productCode: text('product_code').references(() => products.code),
-  title: text('title').notNull(),
-  quantity: integer('quantity').notNull().default(1),
-  notes: text('notes'),
-});
+export const inquiryItems = pgTable(
+  'inquiry_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    inquiryId: uuid('inquiry_id')
+      .notNull()
+      .references(() => inquiries.id),
+    productCode: text('product_code')
+      .notNull()
+      .references(() => products.code),
+    title: text('title').notNull(),
+    quantity: integer('quantity').notNull().default(1),
+    notes: text('notes'),
+  },
+  (table) => [nonNegativeQuantityCheck('inquiry_items_quantity_non_negative', table.quantity)],
+);
 
 export const inquiriesRelations = relations(inquiries, ({ one, many }) => ({
   customer: one(customers, {

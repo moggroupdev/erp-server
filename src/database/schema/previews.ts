@@ -11,7 +11,9 @@ export const previews = pgTable('previews', {
     .references(() => inquiries.id),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   visitedAt: timestamp('visited_at', { withTimezone: true }),
-  previewedBy: uuid('previewed_by').references(() => users.id),
+  assignedTo: uuid('assigned_to')
+    .notNull()
+    .references(() => users.id),
   notes: text('notes'),
   status: previewStatusEnum('status').notNull().default('scheduled'),
   createdBy: uuid('created_by')
@@ -37,10 +39,10 @@ export const previewsRelations = relations(previews, ({ one, many }) => ({
     fields: [previews.inquiryId],
     references: [inquiries.id],
   }),
-  previewedBy: one(users, {
-    fields: [previews.previewedBy],
+  assignedTo: one(users, {
+    fields: [previews.assignedTo],
     references: [users.id],
-    relationName: 'previewedBy',
+    relationName: 'assignedTo',
   }),
   createdBy: one(users, {
     fields: [previews.createdBy],

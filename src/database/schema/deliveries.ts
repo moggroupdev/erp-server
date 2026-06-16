@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, deliveryStatusEnum } from './common';
+import { createdAt, deliveryStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { orders, orderItems } from './orders';
 import { customerAddresses } from './customers';
@@ -23,17 +23,21 @@ export const deliveries = pgTable('deliveries', {
   createdAt,
 });
 
-export const deliveryItems = pgTable('delivery_items', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  deliveryId: uuid('delivery_id')
-    .notNull()
-    .references(() => deliveries.id),
-  orderItemId: uuid('order_item_id')
-    .notNull()
-    .references(() => orderItems.id),
-  quantity: integer('quantity').notNull(),
-  notes: text('notes'),
-});
+export const deliveryItems = pgTable(
+  'delivery_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    deliveryId: uuid('delivery_id')
+      .notNull()
+      .references(() => deliveries.id),
+    orderItemId: uuid('order_item_id')
+      .notNull()
+      .references(() => orderItems.id),
+    quantity: integer('quantity').notNull(),
+    notes: text('notes'),
+  },
+  (table) => [nonNegativeQuantityCheck('delivery_items_quantity_non_negative', table.quantity)],
+);
 
 export const deliveriesRelations = relations(deliveries, ({ one, many }) => ({
   order: one(orders, {
