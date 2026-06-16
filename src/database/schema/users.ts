@@ -1,6 +1,6 @@
-import { pgTable, uuid, text, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt } from './common';
+import { createdAt, deletedAt } from './common';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -10,13 +10,18 @@ export const users = pgTable('users', {
   email: text('email').unique(),
   isEmailVerified: boolean('is_email_verified').notNull().default(false),
   password: text('password'), // Store hashed password
-  createdBy: uuid('created_by').references(() => users.id),
+  createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
   createdAt,
+  deletedAt,
 });
 
-export const usersRelations = relations(users, ({ one }) => ({
-  createdBy: one(users, {
+export const usersRelations = relations(users, ({ one, many }) => ({
+  creator: one(users, {
     fields: [users.createdBy],
     references: [users.id],
+    relationName: 'userCreatedBy',
+  }),
+  createdUsers: many(users, {
+    relationName: 'userCreatedBy',
   }),
 }));
