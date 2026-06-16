@@ -50,16 +50,21 @@ export const productCategoryEnum = pgEnum('product_category', [
   'hinged_door', // باب مفصلي: باب يفتح في اتجاه واحد
   'swing_door', // باب مروحي: باب يفتح في الاتجاهين
   'overhead_light', // فانوس علوي: وحدة إضاءة مثبتة بالأعلى
+
+  // For imported products
+  'digital_scale', // ميزان رقمي
+  'blender', // خلاط
+  'microwave', // ميكرويف
 ]);
 
 export const materialUnitEnum = pgEnum('material_unit', [
+  'count',
   'kg',
   'gram',
   'meter',
   'cm',
   'liter',
   'sheet',
-  'piece',
   'roll',
   'box',
 ]);
@@ -78,58 +83,22 @@ export const previewStatusEnum = pgEnum('preview_status', ['scheduled', 'done', 
 
 export const offerStatusEnum = pgEnum('offer_status', ['draft', 'sent', 'accepted', 'rejected', 'cancelled']);
 
-export const orderStatusEnum = pgEnum('order_status', [
-  'pending',
-  'in_production',
-  'production_done',
-  'shipping',
-  'delivered',
-  'cancelled',
-]);
+export const orderStatusEnum = pgEnum('order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 
-export const itemProductionStatusEnum = pgEnum('item_production_status', [
-  'pending', // في انتظار بدء الإنتاج
-  'material_check', // مراجعة وتأكيد توافر الخامات
-  'cutting', // مرحلة قص وتقطيع الخامات
-  'punching', // مرحلة التخريم أو الثقب
-  'bending', // مرحلة الثني والتشكيل
-  'hot_sheet_metal', // سمكرة ساخن: تشكيل وتجميع الأجزاء المعرضة للحرارة
-  'cold_sheet_metal', // سمكرة بارد: تشكيل وتجميع الأجزاء غير الحرارية
-  'neutral_sheet_metal', // سمكرة متعادل: أعمال السمكرة العامة والمحايدة
-  'injection', // حقن: تركيب أو معالجة أجزاء الحقن
-  'electrical_installation', // كهرباء: تركيب واختبار المكونات الكهربائية
-  'gas_installation', // غاز: تركيب واختبار دوائر ومكونات الغاز
-  'blacksmithing', // حدادة: أعمال اللحام والتجميع المعدني
-  'finishing', // تشطيب: تنظيف وتجهيز المنتج النهائي
-  'quality_check', // فحص الجودة والتأكد من مطابقة المواصفات
-  'completed', // اكتمل الإنتاج وأصبح المنتج جاهزاً
-  'cancelled', // تم الإلغاء
-]);
-
-export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', [
-  'pending',
-  'partial_received',
-  'fully_received',
-  'cancelled',
-]);
+export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shipping', 'delivered', 'cancelled']);
 
-/*
-
-أقسام الانتاج
-
-- قسم التبريد
-- قسم الكهرباء
-- قسم الغاز
-- قسم الحقن
-- قسم سمكرة متعادل
-- قسم سمكرة بارد
-- قسم سمكرة ساخن
-- قسم سمكرة ساخن
-
-=====
-
-
-
-*/
+export const productionDepartmentEnum = pgEnum('production_department', [
+  'cutting', // قسم المقص
+  'bending', // قسم الثني
+  'refrigeration', // قسم التبريد
+  'electricity', // قسم الكهرباء
+  'gas', // قسم الغاز
+  'injection', // قسم الحقن
+  'neutral_sheet_metal', // قسم سمكرة متعادل
+  'cold_sheet_metal', // قسم سمكرة بارد
+  'hot_sheet_metal', // قسم سمكرة ساخن
+  'blacksmithing', // قسم الحدادة
+  'maintenance', // قسم الصيانة
+]);

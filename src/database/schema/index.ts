@@ -12,6 +12,7 @@ export * from './inquiries';
 export * from './previews';
 export * from './offers';
 export * from './orders';
+export * from './production-plans';
 export * from './boms';
 export * from './purchasing';
 export * from './deliveries';
@@ -22,15 +23,15 @@ All Tables
 
 ## table                         - primaryKey  - deleting    - createdAt - createdBy
 
-001. users                        - uuid        - deletedAt   - YES       - YES (nullable)
+001. users                        - uuid        - SOFT        - YES       - YES (nullable)
 002. governorates                 - uuid        - NO          - NO        - NO
 003. cities                       - uuid        - NO          - NO        - NO
-004. customers                    - uuid        - deletedAt   - YES       - YES (NOT NULL)
+004. customers                    - uuid        - SOFT        - YES       - YES (NOT NULL)
 005. customer_addresses           - uuid        - NO          - NO        - NO
-006. vendors                      - uuid        - deletedAt   - YES       - YES (NOT NULL)
+006. vendors                      - uuid        - SOFT        - YES       - YES (NOT NULL)
 007. vendor_addresses             - uuid        - NO          - NO        - NO
-008. products                     - code        - deletedAt   - YES       - YES (NOT NULL)
-009. materials                    - code        - deletedAt   - YES       - YES (NOT NULL)
+008. products                     - text        - SOFT        - YES       - YES (NOT NULL)
+009. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
 010. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
 011. inquiry_items                - uuid        - NO          - NO        - NO
 012. previews                     - uuid        - NO          - YES       - YES (NOT NULL)
@@ -44,5 +45,8 @@ All Tables
 020. purchase_order_items         - uuid        - NO          - NO        - NO
 021. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
 022. delivery_items               - uuid        - NO          - NO        - NO
+023. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+024. production_plan_items        - uuid        - NO          - NO        - NO
+025. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 
 */

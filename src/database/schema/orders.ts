@@ -1,11 +1,12 @@
 import { pgTable, uuid, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, itemProductionStatusEnum, numeric, orderStatusEnum, nonNegativeQuantityCheck } from './common';
+import { createdAt, numeric, orderStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { customers, customerAddresses } from './customers';
 import { inquiries } from './inquiries';
 import { products } from './products';
 import { offers, offerItems } from './offers';
+import { productionPlanItems } from './production-plans';
 
 export const orders = pgTable('orders', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -42,10 +43,9 @@ export const orderItems = pgTable(
     title: text('title').notNull(),
     dimensions: text('dimensions'),
     standard: boolean('standard').notNull().default(false),
-    quantity: integer('quantity').notNull().default(1),
     unitPrice: numeric('unit_price').notNull(),
+    quantity: integer('quantity').notNull().default(1),
     quantityProduced: integer('quantity_produced').notNull().default(0),
-    productionStatus: itemProductionStatusEnum('production_status').notNull().default('pending'),
     notes: text('notes'),
   },
   (table) => [
@@ -78,7 +78,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   items: many(orderItems),
 }));
 
-export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
   order: one(orders, {
     fields: [orderItems.orderId],
     references: [orders.id],
@@ -91,4 +91,5 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     fields: [orderItems.productCode],
     references: [products.code],
   }),
+  planItems: many(productionPlanItems),
 }));
