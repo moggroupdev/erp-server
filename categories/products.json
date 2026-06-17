@@ -1,0 +1,447 @@
+[
+  {
+    "code": "01",
+    "name": {
+      "ar": "البوتاجازات",
+      "en": "Cooking Ranges"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "البوتاجازات",
+          "en": "Cooking Ranges"
+        }
+      }
+    ]
+  },
+  {
+    "code": "02",
+    "name": {
+      "ar": "بوتجازات كهرباء",
+      "en": "Electric Cooking Ranges"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "بوتجازات كهرباء",
+          "en": "Electric Cooking Ranges"
+        }
+      }
+    ]
+  },
+  {
+    "code": "03",
+    "name": {
+      "ar": "القلايات",
+      "en": "Fryers"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "قلايات غاز",
+          "en": "Gas Fryers"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "قلايات كهرباء",
+          "en": "Electric Fryers"
+        }
+      }
+    ]
+  },
+  {
+    "code": "04",
+    "name": {
+      "ar": "غلايات مياه / باستا كوكر",
+      "en": "Water Boilers & Pasta Cookers"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "غلايات مياه / باستا كوكر",
+          "en": "Water Boilers & Pasta Cookers"
+        }
+      }
+    ]
+  },
+  {
+    "code": "05",
+    "name": {
+      "ar": "سلمندر",
+      "en": "Salamander Grills"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "سلمندر",
+          "en": "Salamander Grills"
+        }
+      }
+    ]
+  },
+  {
+    "code": "06",
+    "name": {
+      "ar": "بان ماري",
+      "en": "Bain Marie"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "بان ماري",
+          "en": "Bain Marie"
+        }
+      }
+    ]
+  },
+  {
+    "code": "07",
+    "name": {
+      "ar": "الحلل",
+      "en": "Cooking Pans & Kettles"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "مقلاة مائلة",
+          "en": "Tilting Pan"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "حلة غلي",
+          "en": "Boiling Pan"
+        }
+      }
+    ]
+  },
+  {
+    "code": "08",
+    "name": {
+      "ar": "شوايات لحوم وأسماك",
+      "en": "Meat & Fish Grills"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "شوايات غاز",
+          "en": "Gas Grills"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "شوايات كهرباء",
+          "en": "Electric Grills"
+        }
+      }
+    ]
+  },
+  {
+    "code": "09",
+    "name": {
+      "ar": "الأفران",
+      "en": "Ovens"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "أفران غاز",
+          "en": "Gas Ovens"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "أفران كهرباء",
+          "en": "Electric Ovens"
+        }
+      },
+      {
+        "code": "03",
+        "name": {
+          "ar": "أفران بيتزا غاز",
+          "en": "Gas Pizza Ovens"
+        }
+      },
+      {
+        "code": "04",
+        "name": {
+          "ar": "أفران بيتزا كهرباء",
+          "en": "Electric Pizza Ovens"
+        }
+      }
+    ]
+  },
+  {
+    "code": "10",
+    "name": {
+      "ar": "الثلاجات",
+      "en": "Refrigerators"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "ثلاجات رأسية",
+          "en": "Upright Refrigerators"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "ثلاجات أفقية",
+          "en": "Horizontal Refrigerators"
+        }
+      },
+      {
+        "code": "03",
+        "name": {
+          "ar": "ثلاجات سلاطات",
+          "en": "Salad Preparation Refrigerators"
+        }
+      }
+    ]
+  },
+  {
+    "code": "11",
+    "name": {
+      "ar": "مبردات المياه",
+      "en": "Water Coolers"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "مبردات مياه",
+          "en": "Water Coolers"
+        }
+      }
+    ]
+  },
+  {
+    "code": "12",
+    "name": {
+      "ar": "تروليات الطعام",
+      "en": "Food Trolleys"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "تروللي حفظ طعام ساخن",
+          "en": "Heated Food Holding Trolley"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "تروللي نقل طعام متعادل",
+          "en": "Neutral Food Transport Trolley"
+        }
+      }
+    ]
+  },
+  {
+    "code": "13",
+    "name": {
+      "ar": "تروليات الفضيات",
+      "en": "Cutlery Trolleys"
+    },
+    "subcategories": [
+      {
+        "code": "02",
+        "name": {
+          "ar": "تروللي نقع فضيات",
+          "en": "Cutlery Soaking Trolley"
+        }
+      }
+    ]
+  },
+  {
+    "code": "14",
+    "name": {
+      "ar": "موائد الخدمة",
+      "en": "Service Tables"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "موائد خدمة",
+          "en": "Service Tables"
+        }
+      }
+    ]
+  },
+  {
+    "code": "15",
+    "name": {
+      "ar": "التروليات",
+      "en": "Utility Trolleys"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "تروليات",
+          "en": "Utility Trolleys"
+        }
+      }
+    ]
+  },
+  {
+    "code": "16",
+    "name": {
+      "ar": "وحدات الأرفف",
+      "en": "Shelving Units"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "وحدات أرفف",
+          "en": "Shelving Units"
+        }
+      }
+    ]
+  },
+  {
+    "code": "17",
+    "name": {
+      "ar": "الأرفف الحائطية",
+      "en": "Wall Shelves"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "أرفف حائطية",
+          "en": "Wall Shelves"
+        }
+      }
+    ]
+  },
+  {
+    "code": "18",
+    "name": {
+      "ar": "الأحواض",
+      "en": "Sinks"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "أحواض",
+          "en": "Sinks"
+        }
+      }
+    ]
+  },
+  {
+    "code": "19",
+    "name": {
+      "ar": "الدواليب",
+      "en": "Cabinets"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "دواليب حائطية",
+          "en": "Wall Cabinets"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "دواليب سفلية",
+          "en": "Base Cabinets"
+        }
+      }
+    ]
+  },
+  {
+    "code": "20",
+    "name": {
+      "ar": "الأهواد",
+      "en": "Exhaust Hoods"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "أهواد حائطية وجزيرة",
+          "en": "Wall & Island Hoods"
+        }
+      }
+    ]
+  },
+  {
+    "code": "21",
+    "name": {
+      "ar": "جريلات الصرف",
+      "en": "Drainage Gratings"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "جريلات صرف أرضية",
+          "en": "Floor Drain Gratings"
+        }
+      }
+    ]
+  },
+  {
+    "code": "22",
+    "name": {
+      "ar": "الأبواب",
+      "en": "Doors"
+    },
+    "subcategories": [
+      {
+        "code": "01",
+        "name": {
+          "ar": "أبواب مفصلية",
+          "en": "Hinged Doors"
+        }
+      },
+      {
+        "code": "02",
+        "name": {
+          "ar": "أبواب مروحية",
+          "en": "Swing Doors"
+        }
+      }
+    ]
+  },
+  {
+    "code": "23",
+    "name": {
+      "ar": "الفوانيس العلوية",
+      "en": "Canopy Lights"
+    },
+    "subcategories": [
+      {
+        "code": "02",
+        "name": {
+          "ar": "فوانيس علوية",
+          "en": "Overhead Lights"
+        }
+      }
+    ]
+  }
+]
