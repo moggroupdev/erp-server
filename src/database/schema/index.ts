@@ -31,22 +31,23 @@ All Tables
 006. vendors                      - uuid        - SOFT        - YES       - YES (NOT NULL)
 007. vendor_addresses             - uuid        - NO          - NO        - NO
 008. products                     - text        - SOFT        - YES       - YES (NOT NULL)
-009. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
-010. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
-011. inquiry_items                - uuid        - NO          - NO        - NO
-012. previews                     - uuid        - NO          - YES       - YES (NOT NULL)
-013. preview_items                - uuid        - NO          - NO        - NO
-014. offers                       - uuid        - NO          - YES       - YES (NOT NULL)
-015. offer_items                  - uuid        - NO          - NO        - NO
-016. orders                       - uuid        - NO          - YES       - YES (NOT NULL)
-017. order_items                  - uuid        - NO          - NO        - NO
-018. boms                         - uuid        - NO          - YES       - YES (NOT NULL)
-019. purchase_orders              - uuid        - NO          - YES       - YES (NOT NULL)
-020. purchase_order_items         - uuid        - NO          - NO        - NO
-021. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
-022. delivery_items               - uuid        - NO          - NO        - NO
-023. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
-024. production_plan_items        - uuid        - NO          - NO        - NO
-025. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+009. product_standard_dimensions  - uuid        - NO          - NO        - NO
+010. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
+011. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
+012. inquiry_items                - uuid        - NO          - NO        - NO
+013. previews                     - uuid        - NO          - YES       - YES (NOT NULL)
+014. preview_items                - uuid        - NO          - NO        - NO
+015. offers                       - uuid        - NO          - YES       - YES (NOT NULL)
+016. offer_items                  - uuid        - NO          - NO        - NO
+017. orders                       - uuid        - NO          - YES       - YES (NOT NULL)
+018. order_items                  - uuid        - NO          - NO        - NO
+019. boms                         - uuid        - NO          - YES       - YES (NOT NULL)
+020. purchase_orders              - uuid        - NO          - YES       - YES (NOT NULL)
+021. purchase_order_items         - uuid        - NO          - NO        - NO
+022. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
+023. delivery_items               - uuid        - NO          - NO        - NO
+024. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+025. production_plan_items        - uuid        - NO          - NO        - NO
+026. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 
 */

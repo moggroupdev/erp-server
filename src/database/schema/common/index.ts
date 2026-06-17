@@ -69,6 +69,8 @@ export const materialUnitEnum = pgEnum('material_unit', [
   'box',
 ]);
 
+export const dimensionUnitEnum = pgEnum('dimension_unit', ['m', 'cm', 'mm']);
+
 export const inquiryStatusEnum = pgEnum('inquiry_status', [
   'pending',
   'preview_scheduled',
