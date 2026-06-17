@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
+    "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\""
   },
