@@ -16,6 +16,7 @@ export * from './orders';
 export * from './production-plans';
 export * from './boms';
 export * from './purchasing';
+export * from './vendor-quotation-emails';
 export * from './deliveries';
 
 /*
@@ -32,11 +33,11 @@ All Tables
 006. vendors                      - uuid        - SOFT        - YES       - YES (NOT NULL)
 007. vendor_addresses             - uuid        - NO          - NO        - NO
 008. product_category_mains       - uuid        - NO          - NO        - NO
-009. product_category_subs         - uuid        - NO          - NO        - NO
+009. product_category_subs        - uuid        - NO          - NO        - NO
 010. products                     - text        - SOFT        - YES       - YES (NOT NULL)
 011. product_standard_dimensions  - uuid        - NO          - NO        - NO
 012. material_category_mains      - uuid        - NO          - NO        - NO
-013. material_category_subs        - uuid        - NO          - NO        - NO
+013. material_category_subs       - uuid        - NO          - NO        - NO
 014. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
 015. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
 016. inquiry_items                - uuid        - NO          - NO        - NO
@@ -53,10 +54,12 @@ All Tables
 027. purchase_order_items         - uuid        - NO          - NO        - NO
 028. purchase_receipts            - uuid        - NO          - YES       - YES (NOT NULL)
 029. purchase_receipt_items       - uuid        - NO          - NO        - NO
-030. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
-031. delivery_items               - uuid        - NO          - NO        - NO
-032. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
-033. production_plan_items        - uuid        - NO          - NO        - NO
-034. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+030. vendor_quotation_emails      - uuid        - NO          - YES       - YES (NOT NULL)
+031. vendor_quotation_email_items - uuid        - NO          - NO        - NO
+032. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
+033. delivery_items               - uuid        - NO          - NO        - NO
+034. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+035. production_plan_items        - uuid        - NO          - NO        - NO
+036. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 
 */

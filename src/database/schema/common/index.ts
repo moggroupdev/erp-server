@@ -53,6 +53,8 @@ export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', ['pending
 
 export const purchaseReceiptStatusEnum = pgEnum('purchase_receipt_status', ['pending', 'shipping', 'received', 'cancelled']);
 
+export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', ['draft', 'sent', 'failed']);
+
 export const productionStageEnum = pgEnum('production_stage', [
   'cutting', // قسم المقص
   'bending', // قسم الثني
