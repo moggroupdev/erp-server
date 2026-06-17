@@ -47,9 +47,11 @@ export const offerStatusEnum = pgEnum('offer_status', ['draft', 'sent', 'accepte
 
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 
+export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shipping', 'delivered', 'cancelled']);
+
 export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
 
-export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shipping', 'delivered', 'cancelled']);
+export const purchaseReceiptStatusEnum = pgEnum('purchase_receipt_status', ['pending', 'shipping', 'received', 'cancelled']);
 
 export const productionStageEnum = pgEnum('production_stage', [
   'cutting', // قسم المقص

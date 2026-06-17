@@ -51,10 +51,12 @@ All Tables
 025. boms                         - uuid        - NO          - YES       - YES (NOT NULL)
 026. purchase_orders              - uuid        - NO          - YES       - YES (NOT NULL)
 027. purchase_order_items         - uuid        - NO          - NO        - NO
-028. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
-029. delivery_items               - uuid        - NO          - NO        - NO
-030. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
-031. production_plan_items        - uuid        - NO          - NO        - NO
-032. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+028. purchase_receipts            - uuid        - NO          - YES       - YES (NOT NULL)
+029. purchase_receipt_items       - uuid        - NO          - NO        - NO
+030. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
+031. delivery_items               - uuid        - NO          - NO        - NO
+032. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+033. production_plan_items        - uuid        - NO          - NO        - NO
+034. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 
 */
