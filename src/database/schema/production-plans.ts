@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer, unique, check } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, productionDepartmentEnum, nonNegativeQuantityCheck } from './common';
+import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { orderItems } from './orders';
 
@@ -30,18 +30,29 @@ export const productionPlanItems = pgTable(
     orderItemId: uuid('order_item_id')
       .notNull()
       .references(() => orderItems.id),
-    department: productionDepartmentEnum('department').notNull(),
+    stage: productionStageEnum('stage').notNull(),
+    startDate: timestamp('start_date', { withTimezone: true }),
+    estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     quantityPlanned: integer('quantity_planned').notNull().default(1),
     quantityCompleted: integer('quantity_completed').notNull().default(0),
     notes: text('notes'),
   },
   (table) => [
-    unique('production_plan_items_plan_order_department_unique').on(table.planId, table.orderItemId, table.department),
+    unique('production_plan_items_plan_order_stage_unique').on(table.planId, table.orderItemId, table.stage),
     nonNegativeQuantityCheck('production_plan_items_quantity_planned_non_negative', table.quantityPlanned),
     nonNegativeQuantityCheck('production_plan_items_quantity_completed_non_negative', table.quantityCompleted),
     check(
       'production_plan_items_quantity_completed_lte_planned',
       sql`${table.quantityCompleted} <= ${table.quantityPlanned}`,
+    ),
+    check(
+      'production_plan_items_estimated_end_date_gte_start_date',
+      sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,
+    ),
+    check(
+      'production_plan_items_completed_at_gte_start_date',
+      sql`${table.completedAt} IS NULL OR ${table.startDate} IS NULL OR ${table.completedAt} >= ${table.startDate}`,
     ),
   ],
 );

@@ -51,7 +51,7 @@ export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', ['pending
 
 export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shipping', 'delivered', 'cancelled']);
 
-export const productionDepartmentEnum = pgEnum('production_department', [
+export const productionStageEnum = pgEnum('production_stage', [
   'cutting', // قسم المقص
   'bending', // قسم الثني
   'refrigeration', // قسم التبريد
