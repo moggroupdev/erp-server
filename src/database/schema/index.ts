@@ -6,6 +6,7 @@ export * from './cities';
 
 export * from './customers';
 export * from './vendors';
+export * from './categories';
 export * from './products';
 export * from './materials';
 export * from './inquiries';
@@ -30,24 +31,28 @@ All Tables
 005. customer_addresses           - uuid        - NO          - NO        - NO
 006. vendors                      - uuid        - SOFT        - YES       - YES (NOT NULL)
 007. vendor_addresses             - uuid        - NO          - NO        - NO
-008. products                     - text        - SOFT        - YES       - YES (NOT NULL)
-009. product_standard_dimensions  - uuid        - NO          - NO        - NO
-010. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
-011. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
-012. inquiry_items                - uuid        - NO          - NO        - NO
-013. previews                     - uuid        - NO          - YES       - YES (NOT NULL)
-014. preview_items                - uuid        - NO          - NO        - NO
-015. offers                       - uuid        - NO          - YES       - YES (NOT NULL)
-016. offer_items                  - uuid        - NO          - NO        - NO
-017. orders                       - uuid        - NO          - YES       - YES (NOT NULL)
-018. order_items                  - uuid        - NO          - NO        - NO
-019. boms                         - uuid        - NO          - YES       - YES (NOT NULL)
-020. purchase_orders              - uuid        - NO          - YES       - YES (NOT NULL)
-021. purchase_order_items         - uuid        - NO          - NO        - NO
-022. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
-023. delivery_items               - uuid        - NO          - NO        - NO
-024. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
-025. production_plan_items        - uuid        - NO          - NO        - NO
-026. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+008. product_category_mains       - uuid        - NO          - NO        - NO
+009. product_category_subs         - uuid        - NO          - NO        - NO
+010. products                     - text        - SOFT        - YES       - YES (NOT NULL)
+011. product_standard_dimensions  - uuid        - NO          - NO        - NO
+012. material_category_mains      - uuid        - NO          - NO        - NO
+013. material_category_subs        - uuid        - NO          - NO        - NO
+014. materials                    - text        - SOFT        - YES       - YES (NOT NULL)
+015. inquiries                    - uuid        - NO          - YES       - YES (NOT NULL)
+016. inquiry_items                - uuid        - NO          - NO        - NO
+017. previews                     - uuid        - NO          - YES       - YES (NOT NULL)
+018. preview_items                - uuid        - NO          - NO        - NO
+019. offers                       - uuid        - NO          - YES       - YES (NOT NULL)
+020. offer_items                  - uuid        - NO          - NO        - NO
+021. orders                       - uuid        - NO          - YES       - YES (NOT NULL)
+022. order_items                  - uuid        - NO          - NO        - NO
+023. boms                         - uuid        - NO          - YES       - YES (NOT NULL)
+024. purchase_orders              - uuid        - NO          - YES       - YES (NOT NULL)
+025. purchase_order_items         - uuid        - NO          - NO        - NO
+026. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
+027. delivery_items               - uuid        - NO          - NO        - NO
+028. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+029. production_plan_items        - uuid        - NO          - NO        - NO
+030. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 
 */

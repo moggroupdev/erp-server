@@ -17,46 +17,6 @@ export const nonNegativeNullableQuantityCheck = (name: string, column: AnyPgColu
 export const deletedAt = timestamp('deleted_at', { withTimezone: true });
 export const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
-export const productCategoryEnum = pgEnum('product_category', [
-  'gas_stove', // بوتاجاز غاز: للطهي باستخدام الغاز
-  'electric_stove', // بوتاجاز كهرباء: للطهي باستخدام الكهرباء
-  'gas_fryer', // قلاية غاز: لقلي الأطعمة باستخدام الغاز
-  'electric_fryer', // قلاية كهرباء: لقلي الأطعمة باستخدام الكهرباء
-  'pasta_cooker', // باستا كوكر: جهاز مخصص لسلق المكرونة
-  'water_boiler', // غلاية مياه: لتسخين أو غلي المياه
-  'salamander', // سلمندر: جهاز تحمير وتسخين علوي
-  'bain_marie', // بان ماري: لحفظ الطعام ساخناً بحمام مائي
-  'tilting_pan', // حلة تلتينج بان: حلة كبيرة قابلة للإمالة
-  'boiling_pan', // حلة بويلينج بان: حلة صناعية للغلي والطهي
-  'gas_grill', // شواية غاز: للشواء باستخدام الغاز
-  'electric_grill', // شواية كهرباء: للشواء باستخدام الكهرباء
-  'gas_oven', // فرن غاز: للخبز والطهي بالغاز
-  'electric_oven', // فرن كهرباء: للخبز والطهي بالكهرباء
-  'gas_pizza_oven', // فرن بيتزا غاز: مخصص لخبز البيتزا بالغاز
-  'electric_pizza_oven', // فرن بيتزا كهرباء: مخصص لخبز البيتزا بالكهرباء
-  'upright_refrigerator', // ثلاجة رأسية: ثلاجة عمودية للتبريد
-  'chest_refrigerator', // ثلاجة أفقية: ثلاجة أو فريزر صندوقي
-  'salad_refrigerator', // ثلاجة سلطات: لحفظ وتجهيز مكونات السلطات
-  'water_cooler', // مبرد مياه: لتبريد مياه الشرب
-  'trolley', // ترولي: عربة لنقل المعدات أو الطعام
-  'table', // مائدة: طاولة عمل للمطابخ الصناعية
-  'shelving_unit', // وحدة أرفف: للتخزين والتنظيم
-  'wall_shelf', // رف حائطي: رف مثبت على الحائط
-  'sink', // حوض: لغسيل الأدوات والمعدات
-  'wall_cabinet', // دولاب حائطي: خزانة معلقة على الحائط
-  'base_cabinet', // دولاب سفلي: خزانة أرضية للتخزين
-  'hood', // هود: شفاط لسحب الأبخرة والروائح
-  'floor_drain_channel', // جريلة صرف أرضية: لتصريف المياه من الأرضية
-  'hinged_door', // باب مفصلي: باب يفتح في اتجاه واحد
-  'swing_door', // باب مروحي: باب يفتح في الاتجاهين
-  'overhead_light', // فانوس علوي: وحدة إضاءة مثبتة بالأعلى
-
-  // For imported products
-  'digital_scale', // ميزان رقمي
-  'blender', // خلاط
-  'microwave', // ميكرويف
-]);
-
 export const materialUnitEnum = pgEnum('material_unit', [
   'count',
   'kg',

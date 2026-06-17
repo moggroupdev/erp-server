@@ -1,13 +1,16 @@
 import { pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, deletedAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric, productCategoryEnum } from './common';
+import { createdAt, deletedAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric } from './common';
+import { productCategorySubs } from './categories';
 import { users } from './users';
 
 export const products = pgTable('products', {
   code: text('code').primaryKey(),
   title: text('title').notNull(),
   description: text('description'),
-  category: productCategoryEnum('category').notNull(),
+  subCategoryId: uuid('sub_category_id')
+    .notNull()
+    .references(() => productCategorySubs.id),
   deletedAt,
   createdAt,
   createdBy: uuid('created_by')
@@ -39,6 +42,10 @@ export const productsRelations = relations(products, ({ one }) => ({
   createdBy: one(users, {
     fields: [products.createdBy],
     references: [users.id],
+  }),
+  subCategory: one(productCategorySubs, {
+    fields: [products.subCategoryId],
+    references: [productCategorySubs.id],
   }),
   standardDimensions: one(productStandardDimensions, {
     fields: [products.code],

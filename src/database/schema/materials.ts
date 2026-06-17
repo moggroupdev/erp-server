@@ -8,6 +8,7 @@ import {
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
 } from './common';
+import { materialCategorySubs } from './categories';
 import { users } from './users';
 
 export const materials = pgTable(
@@ -16,6 +17,9 @@ export const materials = pgTable(
     code: text('code').primaryKey(),
     title: text('title').notNull(),
     description: text('description'),
+    subCategoryId: uuid('sub_category_id')
+      .notNull()
+      .references(() => materialCategorySubs.id),
     unit: materialUnitEnum('unit').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     quantity: numeric('quantity').notNull().default(0),
@@ -36,5 +40,9 @@ export const materialsRelations = relations(materials, ({ one }) => ({
   createdBy: one(users, {
     fields: [materials.createdBy],
     references: [users.id],
+  }),
+  subCategory: one(materialCategorySubs, {
+    fields: [materials.subCategoryId],
+    references: [materialCategorySubs.id],
   }),
 }));
