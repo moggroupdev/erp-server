@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, numeric, orderStatusEnum, nonNegativeQuantityCheck } from './common';
+import { createdAt, dimensionUnitEnum, numeric, orderStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { customers, customerAddresses } from './customers';
 import { inquiries } from './inquiries';
@@ -41,7 +41,6 @@ export const orderItems = pgTable(
     offerItemId: uuid('offer_item_id').references(() => offerItems.id),
     productCode: text('product_code').references(() => products.code),
     title: text('title').notNull(),
-    dimensions: text('dimensions'),
     standard: boolean('standard').notNull().default(false),
     unitPrice: numeric('unit_price').notNull(),
     quantity: integer('quantity').notNull().default(1),
@@ -51,6 +50,26 @@ export const orderItems = pgTable(
   (table) => [
     nonNegativeQuantityCheck('order_items_quantity_non_negative', table.quantity),
     nonNegativeQuantityCheck('order_items_quantity_produced_non_negative', table.quantityProduced),
+  ],
+);
+
+export const orderItemDimensions = pgTable(
+  'order_item_dimensions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    orderItemId: uuid('order_item_id')
+      .notNull()
+      .unique()
+      .references(() => orderItems.id),
+    length: numeric('length').notNull(),
+    width: numeric('width').notNull(),
+    height: numeric('height').notNull(),
+    unit: dimensionUnitEnum('unit').notNull(),
+  },
+  (table) => [
+    nonNegativeQuantityCheck('order_item_dimensions_length_non_negative', table.length),
+    nonNegativeQuantityCheck('order_item_dimensions_width_non_negative', table.width),
+    nonNegativeQuantityCheck('order_item_dimensions_height_non_negative', table.height),
   ],
 );
 
@@ -91,5 +110,16 @@ export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
     fields: [orderItems.productCode],
     references: [products.code],
   }),
+  dimensions: one(orderItemDimensions, {
+    fields: [orderItems.id],
+    references: [orderItemDimensions.orderItemId],
+  }),
   planItems: many(productionPlanItems),
+}));
+
+export const orderItemDimensionsRelations = relations(orderItemDimensions, ({ one }) => ({
+  orderItem: one(orderItems, {
+    fields: [orderItemDimensions.orderItemId],
+    references: [orderItems.id],
+  }),
 }));

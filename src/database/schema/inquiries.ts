@@ -29,7 +29,7 @@ export const inquiryItems = pgTable(
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
-    title: text('title').notNull(),
+    title: text('title'),
     quantity: integer('quantity').notNull().default(1),
     notes: text('notes'),
   },
