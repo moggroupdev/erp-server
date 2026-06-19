@@ -55,6 +55,8 @@ export const purchaseReceiptStatusEnum = pgEnum('purchase_receipt_status', ['pen
 
 export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', ['draft', 'sent', 'failed']);
 
+export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', ['receipt', 'issue']);
+
 export const productionStageEnum = pgEnum('production_stage', [
   'cutting', // قسم المقص
   'bending', // قسم الثني

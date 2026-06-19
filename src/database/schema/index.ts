@@ -18,6 +18,7 @@ export * from './boms';
 export * from './purchasing';
 export * from './vendor-quotation-emails';
 export * from './deliveries';
+export * from './inventory-transactions';
 
 /*
 
@@ -61,5 +62,7 @@ All Tables
 034. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
 035. production_plan_items        - uuid        - NO          - NO        - NO
 036. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+037. inventory_transactions       - uuid        - NO          - YES       - YES (NOT NULL)
+038. inventory_transaction_items  - uuid        - NO          - NO        - NO
 
 */
