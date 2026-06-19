@@ -17,6 +17,17 @@ export const nonNegativeNullableQuantityCheck = (name: string, column: AnyPgColu
 export const deletedAt = timestamp('deleted_at', { withTimezone: true });
 export const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 
+export const permissionEnum = pgEnum('permission', [
+  'add_user',
+  'list_users',
+  'update_user',
+  'delete_user',
+  'add_role',
+  'list_roles',
+  'update_role',
+  'delete_role',
+]); // Extended later
+
 export const materialUnitEnum = pgEnum('material_unit', [
   'count',
   'kg',

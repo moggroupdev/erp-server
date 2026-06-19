@@ -64,5 +64,7 @@ All Tables
 036. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
 037. inventory_transactions       - uuid        - NO          - YES       - YES (NOT NULL)
 038. inventory_transaction_items  - uuid        - NO          - NO        - NO
+039. roles                        - uuid        - NO          - YES       - YES (NOT NULL)
+040. role_permissions             - composite   - NO          - NO        - NO
 
 */
