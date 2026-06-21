@@ -9,9 +9,9 @@ import * as path from 'path';
 dotenv.config();
 
 type CategoryJson = {
-  code: string;
-  name: { ar: string; en: string };
-  subcategories: { code: string; name: { ar: string; en: string } }[];
+  legacy_code: string;
+  title: string;
+  subcategories: { legacy_code: string; title: string }[];
 };
 
 async function seedCategoryTree(
@@ -30,15 +30,13 @@ async function seedCategoryTree(
     const [insertedMain] = await db
       .insert(mainsTable)
       .values({
-        code: main.code,
-        nameEn: main.name.en,
-        nameAr: main.name.ar,
+        legacyCode: main.legacy_code,
+        title: main.title,
       })
       .onConflictDoUpdate({
-        target: mainsTable.code,
+        target: mainsTable.legacyCode,
         set: {
-          nameEn: sql`excluded.name_en`,
-          nameAr: sql`excluded.name_ar`,
+          title: sql`excluded.title`,
         },
       })
       .returning({ id: mainsTable.id });
@@ -51,16 +49,14 @@ async function seedCategoryTree(
       await db
         .insert(subsTable)
         .values({
-          code: sub.code,
-          nameEn: sub.name.en,
-          nameAr: sub.name.ar,
+          legacyCode: sub.legacy_code,
+          title: sub.title,
           mainCategoryId: mainId,
         })
         .onConflictDoUpdate({
-          target: [subsTable.mainCategoryId, subsTable.code],
+          target: [subsTable.mainCategoryId, subsTable.legacyCode],
           set: {
-            nameEn: sql`excluded.name_en`,
-            nameAr: sql`excluded.name_ar`,
+            title: sql`excluded.title`,
           },
         });
 

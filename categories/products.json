@@ -1,446 +1,275 @@
 [
   {
-    "code": "01",
-    "name": {
-      "ar": "البوتاجازات",
-      "en": "Cooking Ranges"
-    },
+    "legacy_code": "01",
+    "title": "البوتاجازات",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "البوتاجازات",
-          "en": "Cooking Ranges"
-        }
+        "legacy_code": "01",
+        "title": "البوتاجازات"
       }
     ]
   },
   {
-    "code": "02",
-    "name": {
-      "ar": "بوتجازات كهرباء",
-      "en": "Electric Cooking Ranges"
-    },
+    "legacy_code": "02",
+    "title": "بوتجازات كهرباء",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "بوتجازات كهرباء",
-          "en": "Electric Cooking Ranges"
-        }
+        "legacy_code": "01",
+        "title": "بوتجازات كهرباء"
       }
     ]
   },
   {
-    "code": "03",
-    "name": {
-      "ar": "القلايات",
-      "en": "Fryers"
-    },
+    "legacy_code": "03",
+    "title": "القلايات",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "قلايات غاز",
-          "en": "Gas Fryers"
-        }
+        "legacy_code": "01",
+        "title": "قلايات غاز"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "قلايات كهرباء",
-          "en": "Electric Fryers"
-        }
+        "legacy_code": "02",
+        "title": "قلايات كهرباء"
       }
     ]
   },
   {
-    "code": "04",
-    "name": {
-      "ar": "غلايات مياه / باستا كوكر",
-      "en": "Water Boilers & Pasta Cookers"
-    },
+    "legacy_code": "04",
+    "title": "غلايات مياه / باستا كوكر",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "غلايات مياه / باستا كوكر",
-          "en": "Water Boilers & Pasta Cookers"
-        }
+        "legacy_code": "01",
+        "title": "غلايات مياه / باستا كوكر"
       }
     ]
   },
   {
-    "code": "05",
-    "name": {
-      "ar": "سلمندر",
-      "en": "Salamander Grills"
-    },
+    "legacy_code": "05",
+    "title": "سلمندر",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "سلمندر",
-          "en": "Salamander Grills"
-        }
+        "legacy_code": "01",
+        "title": "سلمندر"
       }
     ]
   },
   {
-    "code": "06",
-    "name": {
-      "ar": "بان ماري",
-      "en": "Bain Marie"
-    },
+    "legacy_code": "06",
+    "title": "بان ماري",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "بان ماري",
-          "en": "Bain Marie"
-        }
+        "legacy_code": "01",
+        "title": "بان ماري"
       }
     ]
   },
   {
-    "code": "07",
-    "name": {
-      "ar": "الحلل",
-      "en": "Cooking Pans & Kettles"
-    },
+    "legacy_code": "07",
+    "title": "الحلل",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "مقلاة مائلة",
-          "en": "Tilting Pan"
-        }
+        "legacy_code": "01",
+        "title": "مقلاة مائلة"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "حلة غلي",
-          "en": "Boiling Pan"
-        }
+        "legacy_code": "02",
+        "title": "حلة غلي"
       }
     ]
   },
   {
-    "code": "08",
-    "name": {
-      "ar": "شوايات لحوم وأسماك",
-      "en": "Meat & Fish Grills"
-    },
+    "legacy_code": "08",
+    "title": "شوايات لحوم وأسماك",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "شوايات غاز",
-          "en": "Gas Grills"
-        }
+        "legacy_code": "01",
+        "title": "شوايات غاز"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "شوايات كهرباء",
-          "en": "Electric Grills"
-        }
+        "legacy_code": "02",
+        "title": "شوايات كهرباء"
       }
     ]
   },
   {
-    "code": "09",
-    "name": {
-      "ar": "الأفران",
-      "en": "Ovens"
-    },
+    "legacy_code": "09",
+    "title": "الأفران",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "أفران غاز",
-          "en": "Gas Ovens"
-        }
+        "legacy_code": "01",
+        "title": "أفران غاز"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "أفران كهرباء",
-          "en": "Electric Ovens"
-        }
+        "legacy_code": "02",
+        "title": "أفران كهرباء"
       },
       {
-        "code": "03",
-        "name": {
-          "ar": "أفران بيتزا غاز",
-          "en": "Gas Pizza Ovens"
-        }
+        "legacy_code": "03",
+        "title": "أفران بيتزا غاز"
       },
       {
-        "code": "04",
-        "name": {
-          "ar": "أفران بيتزا كهرباء",
-          "en": "Electric Pizza Ovens"
-        }
+        "legacy_code": "04",
+        "title": "أفران بيتزا كهرباء"
       }
     ]
   },
   {
-    "code": "10",
-    "name": {
-      "ar": "الثلاجات",
-      "en": "Refrigerators"
-    },
+    "legacy_code": "10",
+    "title": "الثلاجات",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "ثلاجات رأسية",
-          "en": "Upright Refrigerators"
-        }
+        "legacy_code": "01",
+        "title": "ثلاجات رأسية"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "ثلاجات أفقية",
-          "en": "Horizontal Refrigerators"
-        }
+        "legacy_code": "02",
+        "title": "ثلاجات أفقية"
       },
       {
-        "code": "03",
-        "name": {
-          "ar": "ثلاجات سلاطات",
-          "en": "Salad Preparation Refrigerators"
-        }
+        "legacy_code": "03",
+        "title": "ثلاجات سلاطات"
       }
     ]
   },
   {
-    "code": "11",
-    "name": {
-      "ar": "مبردات المياه",
-      "en": "Water Coolers"
-    },
+    "legacy_code": "11",
+    "title": "مبردات المياه",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "مبردات مياه",
-          "en": "Water Coolers"
-        }
+        "legacy_code": "01",
+        "title": "مبردات مياه"
       }
     ]
   },
   {
-    "code": "12",
-    "name": {
-      "ar": "تروليات الطعام",
-      "en": "Food Trolleys"
-    },
+    "legacy_code": "12",
+    "title": "تروليات الطعام",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "تروللي حفظ طعام ساخن",
-          "en": "Heated Food Holding Trolley"
-        }
+        "legacy_code": "01",
+        "title": "تروللي حفظ طعام ساخن"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "تروللي نقل طعام متعادل",
-          "en": "Neutral Food Transport Trolley"
-        }
+        "legacy_code": "02",
+        "title": "تروللي نقل طعام متعادل"
       }
     ]
   },
   {
-    "code": "13",
-    "name": {
-      "ar": "تروليات الفضيات",
-      "en": "Cutlery Trolleys"
-    },
+    "legacy_code": "13",
+    "title": "تروليات الفضيات",
     "subcategories": [
       {
-        "code": "02",
-        "name": {
-          "ar": "تروللي نقع فضيات",
-          "en": "Cutlery Soaking Trolley"
-        }
+        "legacy_code": "02",
+        "title": "تروللي نقع فضيات"
       }
     ]
   },
   {
-    "code": "14",
-    "name": {
-      "ar": "موائد الخدمة",
-      "en": "Service Tables"
-    },
+    "legacy_code": "14",
+    "title": "موائد الخدمة",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "موائد خدمة",
-          "en": "Service Tables"
-        }
+        "legacy_code": "01",
+        "title": "موائد خدمة"
       }
     ]
   },
   {
-    "code": "15",
-    "name": {
-      "ar": "التروليات",
-      "en": "Utility Trolleys"
-    },
+    "legacy_code": "15",
+    "title": "التروليات",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "تروليات",
-          "en": "Utility Trolleys"
-        }
+        "legacy_code": "01",
+        "title": "تروليات"
       }
     ]
   },
   {
-    "code": "16",
-    "name": {
-      "ar": "وحدات الأرفف",
-      "en": "Shelving Units"
-    },
+    "legacy_code": "16",
+    "title": "وحدات الأرفف",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "وحدات أرفف",
-          "en": "Shelving Units"
-        }
+        "legacy_code": "01",
+        "title": "وحدات أرفف"
       }
     ]
   },
   {
-    "code": "17",
-    "name": {
-      "ar": "الأرفف الحائطية",
-      "en": "Wall Shelves"
-    },
+    "legacy_code": "17",
+    "title": "الأرفف الحائطية",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "أرفف حائطية",
-          "en": "Wall Shelves"
-        }
+        "legacy_code": "01",
+        "title": "أرفف حائطية"
       }
     ]
   },
   {
-    "code": "18",
-    "name": {
-      "ar": "الأحواض",
-      "en": "Sinks"
-    },
+    "legacy_code": "18",
+    "title": "الأحواض",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "أحواض",
-          "en": "Sinks"
-        }
+        "legacy_code": "01",
+        "title": "أحواض"
       }
     ]
   },
   {
-    "code": "19",
-    "name": {
-      "ar": "الدواليب",
-      "en": "Cabinets"
-    },
+    "legacy_code": "19",
+    "title": "الدواليب",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "دواليب حائطية",
-          "en": "Wall Cabinets"
-        }
+        "legacy_code": "01",
+        "title": "دواليب حائطية"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "دواليب سفلية",
-          "en": "Base Cabinets"
-        }
+        "legacy_code": "02",
+        "title": "دواليب سفلية"
       }
     ]
   },
   {
-    "code": "20",
-    "name": {
-      "ar": "الأهواد",
-      "en": "Exhaust Hoods"
-    },
+    "legacy_code": "20",
+    "title": "الأهواد",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "أهواد حائطية وجزيرة",
-          "en": "Wall & Island Hoods"
-        }
+        "legacy_code": "01",
+        "title": "أهواد حائطية وجزيرة"
       }
     ]
   },
   {
-    "code": "21",
-    "name": {
-      "ar": "جريلات الصرف",
-      "en": "Drainage Gratings"
-    },
+    "legacy_code": "21",
+    "title": "جريلات الصرف",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "جريلات صرف أرضية",
-          "en": "Floor Drain Gratings"
-        }
+        "legacy_code": "01",
+        "title": "جريلات صرف أرضية"
       }
     ]
   },
   {
-    "code": "22",
-    "name": {
-      "ar": "الأبواب",
-      "en": "Doors"
-    },
+    "legacy_code": "22",
+    "title": "الأبواب",
     "subcategories": [
       {
-        "code": "01",
-        "name": {
-          "ar": "أبواب مفصلية",
-          "en": "Hinged Doors"
-        }
+        "legacy_code": "01",
+        "title": "أبواب مفصلية"
       },
       {
-        "code": "02",
-        "name": {
-          "ar": "أبواب مروحية",
-          "en": "Swing Doors"
-        }
+        "legacy_code": "02",
+        "title": "أبواب مروحية"
       }
     ]
   },
   {
-    "code": "23",
-    "name": {
-      "ar": "الفوانيس العلوية",
-      "en": "Canopy Lights"
-    },
+    "legacy_code": "23",
+    "title": "الفوانيس العلوية",
     "subcategories": [
       {
-        "code": "02",
-        "name": {
-          "ar": "فوانيس علوية",
-          "en": "Overhead Lights"
-        }
+        "legacy_code": "02",
+        "title": "فوانيس علوية"
       }
     ]
   }

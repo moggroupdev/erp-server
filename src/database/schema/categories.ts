@@ -3,18 +3,16 @@ import { relations } from 'drizzle-orm';
 
 export const materialCategoryMains = pgTable('material_category_mains', {
   id: uuid('id').defaultRandom().primaryKey(),
-  code: text('code').notNull().unique(),
-  nameEn: text('name_en').notNull(),
-  nameAr: text('name_ar').notNull(),
+  legacyCode: text('legacy_code').notNull().unique(),
+  title: text('title').notNull(),
 });
 
 export const materialCategorySubs = pgTable(
   'material_category_subs',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').notNull(),
-    nameEn: text('name_en').notNull(),
-    nameAr: text('name_ar').notNull(),
+    legacyCode: text('legacy_code').notNull(),
+    title: text('title').notNull(),
     mainCategoryId: uuid('main_category_id').notNull(),
   },
   (table) => [
@@ -23,25 +21,23 @@ export const materialCategorySubs = pgTable(
       columns: [table.mainCategoryId],
       foreignColumns: [materialCategoryMains.id],
     }),
-    unique('material_category_subs_main_code_unique').on(table.mainCategoryId, table.code),
+    unique('material_category_subs_main_legacy_code_unique').on(table.mainCategoryId, table.legacyCode),
     index('material_category_subs_main_category_id_idx').on(table.mainCategoryId),
   ],
 );
 
 export const productCategoryMains = pgTable('product_category_mains', {
   id: uuid('id').defaultRandom().primaryKey(),
-  code: text('code').notNull().unique(),
-  nameEn: text('name_en').notNull(),
-  nameAr: text('name_ar').notNull(),
+  legacyCode: text('legacy_code').notNull().unique(),
+  title: text('title').notNull(),
 });
 
 export const productCategorySubs = pgTable(
   'product_category_subs',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').notNull(),
-    nameEn: text('name_en').notNull(),
-    nameAr: text('name_ar').notNull(),
+    legacyCode: text('legacy_code').notNull(),
+    title: text('title').notNull(),
     mainCategoryId: uuid('main_category_id').notNull(),
   },
   (table) => [
@@ -50,7 +46,7 @@ export const productCategorySubs = pgTable(
       columns: [table.mainCategoryId],
       foreignColumns: [productCategoryMains.id],
     }),
-    unique('product_category_subs_main_code_unique').on(table.mainCategoryId, table.code),
+    unique('product_category_subs_main_legacy_code_unique').on(table.mainCategoryId, table.legacyCode),
     index('product_category_subs_main_category_id_idx').on(table.mainCategoryId),
   ],
 );

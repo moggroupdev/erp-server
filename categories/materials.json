@@ -1,174 +1,446 @@
 [
   {
-    "code": "01",
-    "name": { "ar": "التبريد", "en": "Refrigeration" },
+    "legacy_code": "01",
+    "title": "التبريد",
     "subcategories": [
-      { "code": "01", "name": { "ar": "وحدات تبريد", "en": "Refrigeration Units" } },
-      { "code": "02", "name": { "ar": "كباسات", "en": "Compressors" } },
-      { "code": "03", "name": { "ar": "كويلات", "en": "Coils" } },
-      { "code": "04", "name": { "ar": "مكثفات", "en": "Condensers" } },
-      { "code": "05", "name": { "ar": "مراوح", "en": "Fans" } },
-      { "code": "06", "name": { "ar": "مستلزمات التبريد", "en": "Refrigeration Components" } },
-      { "code": "07", "name": { "ar": "إكسسوارات التبريد", "en": "Refrigeration Accessories" } }
+      {
+        "legacy_code": "01",
+        "title": "وحدات تبريد"
+      },
+      {
+        "legacy_code": "02",
+        "title": "كباسات"
+      },
+      {
+        "legacy_code": "03",
+        "title": "كويلات"
+      },
+      {
+        "legacy_code": "04",
+        "title": "مكثفات"
+      },
+      {
+        "legacy_code": "05",
+        "title": "مراوح"
+      },
+      {
+        "legacy_code": "06",
+        "title": "مستلزمات التبريد"
+      },
+      {
+        "legacy_code": "07",
+        "title": "إكسسوارات التبريد"
+      }
     ]
   },
   {
-    "code": "02",
-    "name": { "ar": "الكهرباء", "en": "Electrical" },
+    "legacy_code": "02",
+    "title": "الكهرباء",
     "subcategories": [
-      { "code": "01", "name": { "ar": "بلاطات تسخين", "en": "Heating Plates" } },
-      { "code": "02", "name": { "ar": "هيترات", "en": "Heating Elements" } },
-      { "code": "03", "name": { "ar": "ترموستات وسيفتي", "en": "Thermostats & Safety Devices" } },
-      { "code": "04", "name": { "ar": "كونتاكتورات", "en": "Contactors" } },
-      { "code": "05", "name": { "ar": "إضاءة وسبوتات", "en": "Lighting & Spotlights" } },
-      { "code": "06", "name": { "ar": "جلاندات", "en": "Cable Glands" } },
-      { "code": "07", "name": { "ar": "أسلاك وكابلات", "en": "Wires & Cables" } },
-      { "code": "08", "name": { "ar": "سيلكتور سويتش", "en": "Selector Switches" } },
-      { "code": "09", "name": { "ar": "مكرونة حرارية", "en": "Heat Shrink Tubing" } }
+      {
+        "legacy_code": "01",
+        "title": "بلاطات تسخين"
+      },
+      {
+        "legacy_code": "02",
+        "title": "هيترات"
+      },
+      {
+        "legacy_code": "03",
+        "title": "ترموستات وسيفتي"
+      },
+      {
+        "legacy_code": "04",
+        "title": "كونتاكتورات"
+      },
+      {
+        "legacy_code": "05",
+        "title": "إضاءة وسبوتات"
+      },
+      {
+        "legacy_code": "06",
+        "title": "جلاندات"
+      },
+      {
+        "legacy_code": "07",
+        "title": "أسلاك وكابلات"
+      },
+      {
+        "legacy_code": "08",
+        "title": "سيلكتور سويتش"
+      },
+      {
+        "legacy_code": "09",
+        "title": "مكرونة حرارية"
+      }
     ]
   },
   {
-    "code": "03",
-    "name": { "ar": "الغاز", "en": "Gas Systems" },
+    "legacy_code": "03",
+    "title": "الغاز",
     "subcategories": [
-      { "code": "01", "name": { "ar": "كنترول ومحابس غاز", "en": "Gas Controls & Valves" } },
-      { "code": "02", "name": { "ar": "أكر ومقابض", "en": "Knobs & Handles" } },
-      { "code": "03", "name": { "ar": "منظمات ومحابس", "en": "Regulators & Valves" } },
-      { "code": "04", "name": { "ar": "كوش وشعلات", "en": "Burners & Burner Heads" } },
-      { "code": "06", "name": { "ar": "بلاطات أفران وشاورما", "en": "Oven & Shawarma Burners" } },
-      { "code": "07", "name": { "ar": "بايلوت وحساسات", "en": "Pilots & Sensors" } },
-      { "code": "08", "name": { "ar": "زورات شعلة", "en": "Burner Nozzles" } }
+      {
+        "legacy_code": "01",
+        "title": "كنترول ومحابس غاز"
+      },
+      {
+        "legacy_code": "02",
+        "title": "أكر ومقابض"
+      },
+      {
+        "legacy_code": "03",
+        "title": "منظمات ومحابس"
+      },
+      {
+        "legacy_code": "04",
+        "title": "كوش وشعلات"
+      },
+      {
+        "legacy_code": "06",
+        "title": "بلاطات أفران وشاورما"
+      },
+      {
+        "legacy_code": "07",
+        "title": "بايلوت وحساسات"
+      },
+      {
+        "legacy_code": "08",
+        "title": "زورات شعلة"
+      }
     ]
   },
   {
-    "code": "04",
-    "name": { "ar": "السباكة", "en": "Plumbing" },
+    "legacy_code": "04",
+    "title": "السباكة",
     "subcategories": [
-      { "code": "01", "name": { "ar": "محابس", "en": "Valves" } },
-      { "code": "02", "name": { "ar": "بوز حنفية", "en": "Faucet Spouts" } },
-      { "code": "03", "name": { "ar": "مواسير", "en": "Pipes & Tubes" } },
-      { "code": "04", "name": { "ar": "وصلات مرنة", "en": "Flexible Connectors" } },
-      { "code": "05", "name": { "ar": "أكواع", "en": "Elbows" } },
-      { "code": "06", "name": { "ar": "جلب", "en": "Bushings" } },
-      { "code": "07", "name": { "ar": "وصلات T", "en": "T-Fittings" } },
-      { "code": "08", "name": { "ar": "خراطيم وصرف", "en": "Hoses & Drainage" } },
-      { "code": "09", "name": { "ar": "متفرقات سباكة", "en": "Miscellaneous Plumbing" } }
+      {
+        "legacy_code": "01",
+        "title": "محابس"
+      },
+      {
+        "legacy_code": "02",
+        "title": "بوز حنفية"
+      },
+      {
+        "legacy_code": "03",
+        "title": "مواسير"
+      },
+      {
+        "legacy_code": "04",
+        "title": "وصلات مرنة"
+      },
+      {
+        "legacy_code": "05",
+        "title": "أكواع"
+      },
+      {
+        "legacy_code": "06",
+        "title": "جلب"
+      },
+      {
+        "legacy_code": "07",
+        "title": "وصلات T"
+      },
+      {
+        "legacy_code": "08",
+        "title": "خراطيم وصرف"
+      },
+      {
+        "legacy_code": "09",
+        "title": "متفرقات سباكة"
+      }
     ]
   },
   {
-    "code": "05",
-    "name": { "ar": "الجوانات", "en": "Gaskets & Seals" },
+    "legacy_code": "05",
+    "title": "الجوانات",
     "subcategories": [
-      { "code": "01", "name": { "ar": "جوانات", "en": "Gaskets" } },
-      { "code": "02", "name": { "ar": "مواد عزل", "en": "Insulation Materials" } }
+      {
+        "legacy_code": "01",
+        "title": "جوانات"
+      },
+      {
+        "legacy_code": "02",
+        "title": "مواد عزل"
+      }
     ]
   },
   {
-    "code": "06",
-    "name": { "ar": "العجل ورولمان البلي", "en": "Wheels & Bearings" },
+    "legacy_code": "06",
+    "title": "العجل ورولمان البلي",
     "subcategories": [
-      { "code": "01", "name": { "ar": "عجلات", "en": "Caster Wheels" } },
-      { "code": "02", "name": { "ar": "مصدات كاوتش", "en": "Rubber Bumpers" } },
-      { "code": "03", "name": { "ar": "رولمان بلي", "en": "Bearings" } }
+      {
+        "legacy_code": "01",
+        "title": "عجلات"
+      },
+      {
+        "legacy_code": "02",
+        "title": "مصدات كاوتش"
+      },
+      {
+        "legacy_code": "03",
+        "title": "رولمان بلي"
+      }
     ]
   },
   {
-    "code": "07",
-    "name": { "ar": "الدهانات", "en": "Paints & Coatings" },
+    "legacy_code": "07",
+    "title": "الدهانات",
     "subcategories": [
-      { "code": "01", "name": { "ar": "دهانات", "en": "Paints" } },
-      { "code": "02", "name": { "ar": "زيوت", "en": "Oils" } }
+      {
+        "legacy_code": "01",
+        "title": "دهانات"
+      },
+      {
+        "legacy_code": "02",
+        "title": "زيوت"
+      }
     ]
   },
   {
-    "code": "08",
-    "name": { "ar": "الأرتيلون والرخام", "en": "Artelon & Marble" },
+    "legacy_code": "08",
+    "title": "الأرتيلون والرخام",
     "subcategories": [
-      { "code": "01", "name": { "ar": "أرتيلون", "en": "Artelon Sheets" } },
-      { "code": "02", "name": { "ar": "رخام", "en": "Marble" } }
+      {
+        "legacy_code": "01",
+        "title": "أرتيلون"
+      },
+      {
+        "legacy_code": "02",
+        "title": "رخام"
+      }
     ]
   },
   {
-    "code": "09",
-    "name": { "ar": "التثبيت", "en": "Fasteners & Fixings" },
+    "legacy_code": "09",
+    "title": "التثبيت",
     "subcategories": [
-      { "code": "01", "name": { "ar": "مسامير مجلفنة", "en": "Galvanized Screws & Bolts" } },
-      { "code": "02", "name": { "ar": "مسامير ستانلس", "en": "Stainless Steel Screws & Bolts" } },
-      { "code": "03", "name": { "ar": "برشام وأكمون", "en": "Rivets & Anchors" } },
-      { "code": "04", "name": { "ar": "لحام", "en": "Welding Supplies" } },
-      { "code": "05", "name": { "ar": "صواميل مجلفنة", "en": "Galvanized Nuts" } },
-      { "code": "06", "name": { "ar": "صواميل ستانلس", "en": "Stainless Steel Nuts" } },
-      { "code": "07", "name": { "ar": "ورد", "en": "Washers" } },
-      { "code": "08", "name": { "ar": "فيشر", "en": "Wall Plugs & Anchors" } },
-      { "code": "09", "name": { "ar": "رجلاش وكعوب", "en": "Adjustable Feet & Caps" } }
+      {
+        "legacy_code": "01",
+        "title": "مسامير مجلفنة"
+      },
+      {
+        "legacy_code": "02",
+        "title": "مسامير ستانلس"
+      },
+      {
+        "legacy_code": "03",
+        "title": "برشام وأكمون"
+      },
+      {
+        "legacy_code": "04",
+        "title": "لحام"
+      },
+      {
+        "legacy_code": "05",
+        "title": "صواميل مجلفنة"
+      },
+      {
+        "legacy_code": "06",
+        "title": "صواميل ستانلس"
+      },
+      {
+        "legacy_code": "07",
+        "title": "ورد"
+      },
+      {
+        "legacy_code": "08",
+        "title": "فيشر"
+      },
+      {
+        "legacy_code": "09",
+        "title": "رجلاش وكعوب"
+      }
     ]
   },
   {
-    "code": "10",
-    "name": { "ar": "الإكسسوارات", "en": "Accessories" },
+    "legacy_code": "10",
+    "title": "الإكسسوارات",
     "subcategories": [
-      { "code": "01", "name": { "ar": "شعارات وعلامات", "en": "Logos & Nameplates" } },
-      { "code": "02", "name": { "ar": "أكر", "en": "Handles" } },
-      { "code": "03", "name": { "ar": "مقابض", "en": "Knobs" } },
-      { "code": "04", "name": { "ar": "لوكات", "en": "Locks" } },
-      { "code": "05", "name": { "ar": "مفصلات", "en": "Hinges" } },
-      { "code": "06", "name": { "ar": "قطاعات بلاستيك", "en": "Plastic Profiles" } },
-      { "code": "07", "name": { "ar": "كالونات", "en": "Door Latches" } },
-      { "code": "08", "name": { "ar": "تروس", "en": "Gears" } },
-      { "code": "09", "name": { "ar": "ترباس وهوكات", "en": "Bolts & Hooks" } },
-      { "code": "10", "name": { "ar": "سوست", "en": "Springs" } },
-      { "code": "11", "name": { "ar": "ماكينات أبواب", "en": "Door Closers" } },
-      { "code": "12", "name": { "ar": "أشرطة لاصقة", "en": "Adhesive Tapes" } },
-      { "code": "13", "name": { "ar": "سيفتي", "en": "Safety Accessories" } },
-      { "code": "14", "name": { "ar": "سحابات", "en": "Drawer Slides" } },
-      { "code": "15", "name": { "ar": "جريلات تهوية", "en": "Ventilation Grilles" } },
-      { "code": "16", "name": { "ar": "مطبقيات", "en": "Tray Racks" } },
-      { "code": "17", "name": { "ar": "أدوات مكتبية", "en": "Office Supplies" } },
-      { "code": "18", "name": { "ar": "متفرقات", "en": "Miscellaneous" } }
+      {
+        "legacy_code": "01",
+        "title": "شعارات وعلامات"
+      },
+      {
+        "legacy_code": "02",
+        "title": "أكر"
+      },
+      {
+        "legacy_code": "03",
+        "title": "مقابض"
+      },
+      {
+        "legacy_code": "04",
+        "title": "لوكات"
+      },
+      {
+        "legacy_code": "05",
+        "title": "مفصلات"
+      },
+      {
+        "legacy_code": "06",
+        "title": "قطاعات بلاستيك"
+      },
+      {
+        "legacy_code": "07",
+        "title": "كالونات"
+      },
+      {
+        "legacy_code": "08",
+        "title": "تروس"
+      },
+      {
+        "legacy_code": "09",
+        "title": "ترباس وهوكات"
+      },
+      {
+        "legacy_code": "10",
+        "title": "سوست"
+      },
+      {
+        "legacy_code": "11",
+        "title": "ماكينات أبواب"
+      },
+      {
+        "legacy_code": "12",
+        "title": "أشرطة لاصقة"
+      },
+      {
+        "legacy_code": "13",
+        "title": "سيفتي"
+      },
+      {
+        "legacy_code": "14",
+        "title": "سحابات"
+      },
+      {
+        "legacy_code": "15",
+        "title": "جريلات تهوية"
+      },
+      {
+        "legacy_code": "16",
+        "title": "مطبقيات"
+      },
+      {
+        "legacy_code": "17",
+        "title": "أدوات مكتبية"
+      },
+      {
+        "legacy_code": "18",
+        "title": "متفرقات"
+      }
     ]
   },
   {
-    "code": "11",
-    "name": { "ar": "العدد والأدوات", "en": "Tools & Equipment" },
+    "legacy_code": "11",
+    "title": "العدد والأدوات",
     "subcategories": [
-      { "code": "01", "name": { "ar": "بنط", "en": "Drill Bits" } },
-      { "code": "02", "name": { "ar": "طقم أرقام وحروف", "en": "Number & Letter Stamping Sets" } },
-      { "code": "03", "name": { "ar": "أحجار جلخ وقطع", "en": "Grinding & Cutting Discs" } },
-      { "code": "04", "name": { "ar": "لباد وتجليخ", "en": "Polishing & Buffing Materials" } },
-      { "code": "05", "name": { "ar": "دكر قلاوظ", "en": "Threading Taps" } },
-      { "code": "06", "name": { "ar": "عدة متنوعة", "en": "General Tools" } },
-      { "code": "07", "name": { "ar": "صواني خشابي", "en": "Wooden Trays" } }
+      {
+        "legacy_code": "01",
+        "title": "بنط"
+      },
+      {
+        "legacy_code": "02",
+        "title": "طقم أرقام وحروف"
+      },
+      {
+        "legacy_code": "03",
+        "title": "أحجار جلخ وقطع"
+      },
+      {
+        "legacy_code": "04",
+        "title": "لباد وتجليخ"
+      },
+      {
+        "legacy_code": "05",
+        "title": "دكر قلاوظ"
+      },
+      {
+        "legacy_code": "06",
+        "title": "عدة متنوعة"
+      },
+      {
+        "legacy_code": "07",
+        "title": "صواني خشابي"
+      }
     ]
   },
   {
-    "code": "12",
-    "name": { "ar": "الزجاج", "en": "Glass" },
-    "subcategories": [{ "code": "01", "name": { "ar": "زجاج", "en": "Glass" } }]
-  },
-  {
-    "code": "13",
-    "name": { "ar": "المعادن - الأستانلس", "en": "Stainless Steel Materials" },
+    "legacy_code": "12",
+    "title": "الزجاج",
     "subcategories": [
-      { "code": "01", "name": { "ar": "ألواح ستانلس", "en": "Stainless Steel Sheets" } },
-      { "code": "02", "name": { "ar": "مواسير ستانلس دائرية", "en": "Round Stainless Steel Tubes" } },
-      { "code": "03", "name": { "ar": "مواسير ستانلس مربعة", "en": "Square Stainless Steel Tubes" } },
-      { "code": "04", "name": { "ar": "أسياخ ستانلس", "en": "Stainless Steel Rods" } },
-      { "code": "05", "name": { "ar": "حلل ستانلس", "en": "Stainless Steel Pots" } }
+      {
+        "legacy_code": "01",
+        "title": "زجاج"
+      }
     ]
   },
   {
-    "code": "14",
-    "name": { "ar": "المعادن - صاج وحديد", "en": "Steel & Sheet Metal" },
+    "legacy_code": "13",
+    "title": "المعادن - الأستانلس",
     "subcategories": [
-      { "code": "01", "name": { "ar": "مواسير", "en": "Pipes & Tubes" } },
-      { "code": "02", "name": { "ar": "مواسير مربعة ومستطيلة", "en": "Square & Rectangular Tubes" } },
-      { "code": "03", "name": { "ar": "زوايا", "en": "Angles" } },
-      { "code": "04", "name": { "ar": "خوص", "en": "Flat Bars" } },
-      { "code": "05", "name": { "ar": "أسياخ", "en": "Steel Rods" } },
-      { "code": "06", "name": { "ar": "بلاطات زهر", "en": "Cast Iron Plates" } },
-      { "code": "07", "name": { "ar": "صاج مجلفن", "en": "Galvanized Sheets" } },
-      { "code": "08", "name": { "ar": "شكربليت وقطاعات ألومنيوم", "en": "Chequered Plates & Aluminum Profiles" } },
-      { "code": "09", "name": { "ar": "كمر وأعمدة", "en": "Beams & Columns" } }
+      {
+        "legacy_code": "01",
+        "title": "ألواح ستانلس"
+      },
+      {
+        "legacy_code": "02",
+        "title": "مواسير ستانلس دائرية"
+      },
+      {
+        "legacy_code": "03",
+        "title": "مواسير ستانلس مربعة"
+      },
+      {
+        "legacy_code": "04",
+        "title": "أسياخ ستانلس"
+      },
+      {
+        "legacy_code": "05",
+        "title": "حلل ستانلس"
+      }
+    ]
+  },
+  {
+    "legacy_code": "14",
+    "title": "المعادن - صاج وحديد",
+    "subcategories": [
+      {
+        "legacy_code": "01",
+        "title": "مواسير"
+      },
+      {
+        "legacy_code": "02",
+        "title": "مواسير مربعة ومستطيلة"
+      },
+      {
+        "legacy_code": "03",
+        "title": "زوايا"
+      },
+      {
+        "legacy_code": "04",
+        "title": "خوص"
+      },
+      {
+        "legacy_code": "05",
+        "title": "أسياخ"
+      },
+      {
+        "legacy_code": "06",
+        "title": "بلاطات زهر"
+      },
+      {
+        "legacy_code": "07",
+        "title": "صاج مجلفن"
+      },
+      {
+        "legacy_code": "08",
+        "title": "شكربليت وقطاعات ألومنيوم"
+      },
+      {
+        "legacy_code": "09",
+        "title": "كمر وأعمدة"
+      }
     ]
   }
 ]
