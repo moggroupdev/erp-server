@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, unique, check, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, unique, check, index, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
@@ -67,9 +67,7 @@ export const productionPlanItemNotes = pgTable(
   'production_plan_item_notes',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    planItemId: uuid('plan_item_id')
-      .notNull()
-      .references(() => productionPlanItems.id),
+    planItemId: uuid('plan_item_id').notNull(),
     note: text('note').notNull(),
     createdBy: uuid('created_by')
       .notNull()
@@ -77,6 +75,11 @@ export const productionPlanItemNotes = pgTable(
     createdAt,
   },
   (table) => [
+    foreignKey({
+      name: 'pp_item_notes_plan_item_id_fk',
+      columns: [table.planItemId],
+      foreignColumns: [productionPlanItems.id],
+    }),
     index('production_plan_item_notes_plan_item_id_idx').on(table.planItemId),
     index('production_plan_item_notes_created_by_idx').on(table.createdBy),
   ],

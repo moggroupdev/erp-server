@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, index, check, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, inventoryTransactionTypeEnum, numeric } from './common';
 import { users } from './users';
@@ -27,19 +27,32 @@ export const inventoryTransactionItems = pgTable(
   'inventory_transaction_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    transactionId: uuid('transaction_id')
-      .notNull()
-      .references(() => inventoryTransactions.id),
+    transactionId: uuid('transaction_id').notNull(),
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     // Source:
-    purchaseReceiptItemId: uuid('purchase_receipt_item_id').references(() => purchaseReceiptItems.id),
-    productionPlanItemId: uuid('production_plan_item_id').references(() => productionPlanItems.id),
+    purchaseReceiptItemId: uuid('purchase_receipt_item_id'),
+    productionPlanItemId: uuid('production_plan_item_id'),
   },
   (table) => [
+    foreignKey({
+      name: 'inv_tx_items_tx_id_fk',
+      columns: [table.transactionId],
+      foreignColumns: [inventoryTransactions.id],
+    }),
+    foreignKey({
+      name: 'inv_tx_items_pr_item_id_fk',
+      columns: [table.purchaseReceiptItemId],
+      foreignColumns: [purchaseReceiptItems.id],
+    }),
+    foreignKey({
+      name: 'inv_tx_items_pp_item_id_fk',
+      columns: [table.productionPlanItemId],
+      foreignColumns: [productionPlanItems.id],
+    }),
     index('inventory_transaction_items_transaction_id_idx').on(table.transactionId),
     index('inventory_transaction_items_material_code_idx').on(table.materialCode),
     index('inventory_transaction_items_purchase_receipt_item_id_idx').on(table.purchaseReceiptItemId),

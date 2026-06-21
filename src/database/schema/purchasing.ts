@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createdAt, numeric, purchaseOrderStatusEnum, purchaseReceiptStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
@@ -75,17 +75,23 @@ export const purchaseReceiptItems = pgTable(
   'purchase_receipt_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    purchaseReceiptId: uuid('purchase_receipt_id')
-      .notNull()
-      .references(() => purchaseReceipts.id),
-    purchaseOrderItemId: uuid('purchase_order_item_id')
-      .notNull()
-      .references(() => purchaseOrderItems.id),
+    purchaseReceiptId: uuid('purchase_receipt_id').notNull(),
+    purchaseOrderItemId: uuid('purchase_order_item_id').notNull(),
     quantityReceived: numeric('quantity_received').notNull(),
     quantityRejected: numeric('quantity_rejected').notNull().default(0),
     inspectionNotes: text('inspection_notes'),
   },
   (table) => [
+    foreignKey({
+      name: 'pr_items_receipt_id_fk',
+      columns: [table.purchaseReceiptId],
+      foreignColumns: [purchaseReceipts.id],
+    }),
+    foreignKey({
+      name: 'pr_items_po_item_id_fk',
+      columns: [table.purchaseOrderItemId],
+      foreignColumns: [purchaseOrderItems.id],
+    }),
     index('purchase_receipt_items_purchase_receipt_id_idx').on(table.purchaseReceiptId),
     index('purchase_receipt_items_purchase_order_item_id_idx').on(table.purchaseOrderItemId),
     nonNegativeQuantityCheck('purchase_receipt_items_quantity_received_non_negative', table.quantityReceived),
