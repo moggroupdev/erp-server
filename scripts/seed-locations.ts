@@ -1,12 +1,19 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
+import { parse } from 'csv-parse/sync';
 import * as schema from '../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 
 dotenv.config();
+
+type CountryCsvRow = {
+  code: string;
+  name_en: string;
+  name_ar: string;
+};
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
@@ -16,6 +23,30 @@ async function main() {
   const db = drizzle(pool, { schema });
 
   try {
+    console.log('Seeding Countries...');
+
+    const countriesCsvPath = path.join(__dirname, '../locations/countries.csv');
+    const countriesData = fs.readFileSync(countriesCsvPath, 'utf-8');
+    const countriesRows = parse<CountryCsvRow>(countriesData, { columns: true, skip_empty_lines: true });
+
+    const countriesToInsert: (typeof schema.countries.$inferInsert)[] = countriesRows.map((country) => ({
+      code: country.code,
+      nameEn: country.name_en,
+      nameAr: country.name_ar,
+    }));
+
+    if (countriesToInsert.length > 0) {
+      await db
+        .insert(schema.countries)
+        .values(countriesToInsert)
+        .onConflictDoUpdate({
+          target: schema.countries.code,
+          set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar` },
+        });
+    }
+
+    console.log(`Seeded ${countriesToInsert.length} countries.`);
+
     console.log('Seeding Governorates...');
 
     const governoratesCsvPath = path.join(__dirname, '../locations/governorates.csv');

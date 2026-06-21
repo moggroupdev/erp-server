@@ -1,7 +1,8 @@
 import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, deletedAt } from './common';
+import { createdAt, deletedAt, egyptianCityRequiredCheck } from './common';
 import { users } from './users';
+import { countries } from './countries';
 import { cities } from './cities';
 
 export const customers = pgTable(
@@ -33,15 +34,18 @@ export const customerAddresses = pgTable(
     customerId: uuid('customer_id')
       .notNull()
       .references(() => customers.id),
-    cityId: uuid('city_id')
+    countryId: uuid('country_id')
       .notNull()
-      .references(() => cities.id),
+      .references(() => countries.id),
+    cityId: uuid('city_id').references(() => cities.id),
     addressLine: text('address_line').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
   },
   (table) => [
     index('customer_addresses_customer_id_idx').on(table.customerId),
     index('customer_addresses_city_id_idx').on(table.cityId),
+    index('customer_addresses_country_id_idx').on(table.countryId),
+    egyptianCityRequiredCheck('customer_addresses_egyptian_city_required', table.countryId, table.cityId),
     uniqueIndex('customer_addresses_one_default')
       .on(table.customerId)
       .where(sql`${table.isDefault} = true`),
@@ -62,6 +66,10 @@ export const customerAddressesRelations = relations(customerAddresses, ({ one })
   customer: one(customers, {
     fields: [customerAddresses.customerId],
     references: [customers.id],
+  }),
+  country: one(countries, {
+    fields: [customerAddresses.countryId],
+    references: [countries.id],
   }),
   city: one(cities, {
     fields: [customerAddresses.cityId],

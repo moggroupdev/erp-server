@@ -16,6 +16,18 @@ export const positiveQuantityCheck = (name: string, column: AnyPgColumn) => chec
 export const nonNegativeNullableQuantityCheck = (name: string, column: AnyPgColumn) =>
   check(name, sql`${column} IS NULL OR ${column} >= 0`);
 
+export const EGYPT_COUNTRY_CODE = 'EG';
+
+export const egyptianCityRequiredCheck = (name: string, countryIdColumn: AnyPgColumn, cityIdColumn: AnyPgColumn) =>
+  check(
+    name,
+    sql`(
+      (SELECT code FROM countries WHERE id = ${countryIdColumn}) = 'EG' AND ${cityIdColumn} IS NOT NULL
+    ) OR (
+      (SELECT code FROM countries WHERE id = ${countryIdColumn}) <> 'EG' AND ${cityIdColumn} IS NULL
+    )`,
+  );
+
 export const deletedAt = timestamp('deleted_at', { withTimezone: true });
 export const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
 

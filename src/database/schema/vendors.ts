@@ -1,7 +1,8 @@
-import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, deletedAt } from './common';
+import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { createdAt, deletedAt, egyptianCityRequiredCheck } from './common';
 import { users } from './users';
+import { countries } from './countries';
 import { cities } from './cities';
 
 export const vendors = pgTable(
@@ -33,15 +34,18 @@ export const vendorAddresses = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    cityId: uuid('city_id')
+    countryId: uuid('country_id')
       .notNull()
-      .references(() => cities.id),
+      .references(() => countries.id),
+    cityId: uuid('city_id').references(() => cities.id),
     addressLine: text('address_line').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
   },
   (table) => [
     index('vendor_addresses_vendor_id_idx').on(table.vendorId),
     index('vendor_addresses_city_id_idx').on(table.cityId),
+    index('vendor_addresses_country_id_idx').on(table.countryId),
+    egyptianCityRequiredCheck('vendor_addresses_egyptian_city_required', table.countryId, table.cityId),
     uniqueIndex('vendor_addresses_one_default')
       .on(table.vendorId)
       .where(sql`${table.isDefault} = true`),
@@ -62,6 +66,10 @@ export const vendorAddressesRelations = relations(vendorAddresses, ({ one }) => 
   vendor: one(vendors, {
     fields: [vendorAddresses.vendorId],
     references: [vendors.id],
+  }),
+  country: one(countries, {
+    fields: [vendorAddresses.countryId],
+    references: [countries.id],
   }),
   city: one(cities, {
     fields: [vendorAddresses.cityId],
