@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, unique, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const materialCategoryMains = pgTable('material_category_mains', {
@@ -19,7 +19,10 @@ export const materialCategorySubs = pgTable(
       .notNull()
       .references(() => materialCategoryMains.id),
   },
-  (table) => [unique('material_category_subs_main_code_unique').on(table.mainCategoryId, table.code)],
+  (table) => [
+    unique('material_category_subs_main_code_unique').on(table.mainCategoryId, table.code),
+    index('material_category_subs_main_category_id_idx').on(table.mainCategoryId),
+  ],
 );
 
 export const productCategoryMains = pgTable('product_category_mains', {
@@ -40,8 +43,13 @@ export const productCategorySubs = pgTable(
       .notNull()
       .references(() => productCategoryMains.id),
   },
-  (table) => [unique('product_category_subs_main_code_unique').on(table.mainCategoryId, table.code)],
+  (table) => [
+    unique('product_category_subs_main_code_unique').on(table.mainCategoryId, table.code),
+    index('product_category_subs_main_category_id_idx').on(table.mainCategoryId),
+  ],
 );
+
+// ============================== RELATIONS ==============================
 
 export const materialCategoryMainsRelations = relations(materialCategoryMains, ({ many }) => ({
   subcategories: many(materialCategorySubs),

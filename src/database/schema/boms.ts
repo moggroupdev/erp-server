@@ -1,4 +1,4 @@
-import { pgTable, uuid, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, unique, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
@@ -22,7 +22,13 @@ export const boms = pgTable(
       .notNull()
       .references(() => users.id),
   },
-  (table) => [nonNegativeQuantityCheck('boms_quantity_required_non_negative', table.quantityRequired)],
+  (table) => [
+    unique('boms_order_item_material_unique').on(table.orderItemId, table.materialCode),
+    index('boms_order_item_id_idx').on(table.orderItemId),
+    index('boms_material_code_idx').on(table.materialCode),
+    index('boms_created_by_idx').on(table.createdBy),
+    nonNegativeQuantityCheck('boms_quantity_required_non_negative', table.quantityRequired),
+  ],
 );
 
 export const bomsRelations = relations(boms, ({ one }) => ({

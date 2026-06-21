@@ -1,23 +1,31 @@
-import { pgTable, uuid, text, integer } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, inquiryStatusEnum, nonNegativeQuantityCheck } from './common';
+import { createdAt, inquiryStatusEnum, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { customers } from './customers';
 import { products } from './products';
 import { offers } from './offers';
 
-export const inquiries = pgTable('inquiries', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  customerId: uuid('customer_id')
-    .notNull()
-    .references(() => customers.id),
-  status: inquiryStatusEnum('status').notNull().default('pending'),
-  notes: text('notes'),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id),
-  createdAt,
-});
+export const inquiries = pgTable(
+  'inquiries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    status: inquiryStatusEnum('status').notNull().default('pending'),
+    notes: text('notes'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt,
+  },
+  (table) => [
+    index('inquiries_customer_id_idx').on(table.customerId),
+    index('inquiries_created_by_idx').on(table.createdBy),
+    index('inquiries_status_idx').on(table.status),
+  ],
+);
 
 export const inquiryItems = pgTable(
   'inquiry_items',
@@ -33,8 +41,14 @@ export const inquiryItems = pgTable(
     quantity: integer('quantity').notNull().default(1),
     notes: text('notes'),
   },
-  (table) => [nonNegativeQuantityCheck('inquiry_items_quantity_non_negative', table.quantity)],
+  (table) => [
+    index('inquiry_items_inquiry_id_idx').on(table.inquiryId),
+    index('inquiry_items_product_code_idx').on(table.productCode),
+    positiveQuantityCheck('inquiry_items_quantity_positive', table.quantity),
+  ],
 );
+
+// ============================== RELATIONS ==============================
 
 export const inquiriesRelations = relations(inquiries, ({ one, many }) => ({
   customer: one(customers, {

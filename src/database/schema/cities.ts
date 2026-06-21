@@ -1,15 +1,25 @@
-import { pgTable, uuid, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { governorates } from './governorates';
 
-export const cities = pgTable('cities', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  governorateId: uuid('governorate_id')
-    .notNull()
-    .references(() => governorates.id),
-  nameEn: text('name_en').notNull(),
-  nameAr: text('name_ar').notNull(),
-});
+export const cities = pgTable(
+  'cities',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    governorateId: uuid('governorate_id')
+      .notNull()
+      .references(() => governorates.id),
+    nameEn: text('name_en').notNull(),
+    nameAr: text('name_ar').notNull(),
+  },
+  (table) => [
+    index('cities_governorate_id_idx').on(table.governorateId),
+    index('cities_name_en_idx').on(table.nameEn),
+    index('cities_name_ar_idx').on(table.nameAr),
+  ],
+);
+
+// ============================== RELATIONS ==============================
 
 export const citiesRelations = relations(cities, ({ one }) => ({
   governorate: one(governorates, {

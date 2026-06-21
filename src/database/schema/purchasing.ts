@@ -1,23 +1,31 @@
-import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createdAt, numeric, purchaseOrderStatusEnum, purchaseReceiptStatusEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
 
-export const purchaseOrders = pgTable('purchase_orders', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  vendorId: uuid('vendor_id')
-    .notNull()
-    .references(() => vendors.id),
-  status: purchaseOrderStatusEnum('status').notNull().default('pending'),
-  totalAmount: numeric('total_amount').notNull(),
-  notes: text('notes'),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id),
-  createdAt,
-});
+export const purchaseOrders = pgTable(
+  'purchase_orders',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    vendorId: uuid('vendor_id')
+      .notNull()
+      .references(() => vendors.id),
+    status: purchaseOrderStatusEnum('status').notNull().default('pending'),
+    totalAmount: numeric('total_amount').notNull(),
+    notes: text('notes'),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt,
+  },
+  (table) => [
+    index('purchase_orders_vendor_id_idx').on(table.vendorId),
+    index('purchase_orders_created_by_idx').on(table.createdBy),
+    index('purchase_orders_status_idx').on(table.status),
+  ],
+);
 
 export const purchaseOrderItems = pgTable(
   'purchase_order_items',
@@ -32,23 +40,36 @@ export const purchaseOrderItems = pgTable(
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
   },
-  (table) => [nonNegativeQuantityCheck('purchase_order_items_quantity_ordered_non_negative', table.quantityOrdered)],
+  (table) => [
+    index('purchase_order_items_purchase_order_id_idx').on(table.purchaseOrderId),
+    index('purchase_order_items_material_code_idx').on(table.materialCode),
+    nonNegativeQuantityCheck('purchase_order_items_quantity_ordered_non_negative', table.quantityOrdered),
+  ],
 );
 
-export const purchaseReceipts = pgTable('purchase_receipts', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  purchaseOrderId: uuid('purchase_order_id')
-    .notNull()
-    .references(() => purchaseOrders.id),
-  status: purchaseReceiptStatusEnum('status').notNull().default('pending'),
-  receivedAt: timestamp('received_at', { withTimezone: true }),
-  receivedBy: uuid('received_by').references(() => users.id),
-  notes: text('notes'),
-  createdAt,
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id),
-});
+export const purchaseReceipts = pgTable(
+  'purchase_receipts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    purchaseOrderId: uuid('purchase_order_id')
+      .notNull()
+      .references(() => purchaseOrders.id),
+    status: purchaseReceiptStatusEnum('status').notNull().default('pending'),
+    receivedAt: timestamp('received_at', { withTimezone: true }),
+    receivedBy: uuid('received_by').references(() => users.id),
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('purchase_receipts_purchase_order_id_idx').on(table.purchaseOrderId),
+    index('purchase_receipts_received_by_idx').on(table.receivedBy),
+    index('purchase_receipts_created_by_idx').on(table.createdBy),
+    index('purchase_receipts_status_idx').on(table.status),
+  ],
+);
 
 export const purchaseReceiptItems = pgTable(
   'purchase_receipt_items',
@@ -65,10 +86,14 @@ export const purchaseReceiptItems = pgTable(
     inspectionNotes: text('inspection_notes'),
   },
   (table) => [
+    index('purchase_receipt_items_purchase_receipt_id_idx').on(table.purchaseReceiptId),
+    index('purchase_receipt_items_purchase_order_item_id_idx').on(table.purchaseOrderItemId),
     nonNegativeQuantityCheck('purchase_receipt_items_quantity_received_non_negative', table.quantityReceived),
     nonNegativeQuantityCheck('purchase_receipt_items_quantity_rejected_non_negative', table.quantityRejected),
   ],
 );
+
+// ============================== RELATIONS ==============================
 
 export const purchaseOrdersRelations = relations(purchaseOrders, ({ one, many }) => ({
   vendor: one(vendors, {

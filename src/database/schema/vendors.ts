@@ -1,37 +1,54 @@
-import { pgTable, uuid, text, boolean } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 import { createdAt, deletedAt } from './common';
 import { users } from './users';
-import { governorates } from './governorates';
 import { cities } from './cities';
 
-export const vendors = pgTable('vendors', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull(),
-  phone: text('phone'),
-  email: text('email'),
-  notes: text('notes'),
-  deletedAt,
-  createdAt,
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id),
-});
+export const vendors = pgTable(
+  'vendors',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    phone: text('phone').unique(),
+    email: text('email').unique(),
+    notes: text('notes'),
+    deletedAt,
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('vendors_created_by_idx').on(table.createdBy),
+    index('vendors_name_idx').on(table.name),
+    index('vendors_phone_idx').on(table.phone),
+    index('vendors_email_idx').on(table.email),
+  ],
+);
 
-export const vendorAddresses = pgTable('vendor_addresses', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  vendorId: uuid('vendor_id')
-    .notNull()
-    .references(() => vendors.id),
-  governorateId: uuid('governorate_id')
-    .notNull()
-    .references(() => governorates.id),
-  cityId: uuid('city_id')
-    .notNull()
-    .references(() => cities.id),
-  addressLine: text('address_line').notNull(),
-  isDefault: boolean('is_default').notNull().default(false),
-});
+export const vendorAddresses = pgTable(
+  'vendor_addresses',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    vendorId: uuid('vendor_id')
+      .notNull()
+      .references(() => vendors.id),
+    cityId: uuid('city_id')
+      .notNull()
+      .references(() => cities.id),
+    addressLine: text('address_line').notNull(),
+    isDefault: boolean('is_default').notNull().default(false),
+  },
+  (table) => [
+    index('vendor_addresses_vendor_id_idx').on(table.vendorId),
+    index('vendor_addresses_city_id_idx').on(table.cityId),
+    uniqueIndex('vendor_addresses_one_default')
+      .on(table.vendorId)
+      .where(sql`${table.isDefault} = true`),
+  ],
+);
+
+// ============================== RELATIONS ==============================
 
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
   createdBy: one(users, {
@@ -45,10 +62,6 @@ export const vendorAddressesRelations = relations(vendorAddresses, ({ one }) => 
   vendor: one(vendors, {
     fields: [vendorAddresses.vendorId],
     references: [vendors.id],
-  }),
-  governorate: one(governorates, {
-    fields: [vendorAddresses.governorateId],
-    references: [governorates.id],
   }),
   city: one(cities, {
     fields: [vendorAddresses.cityId],

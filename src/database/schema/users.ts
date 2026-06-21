@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, check, primaryKey, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, deletedAt, permissionEnum } from './common';
 
@@ -18,18 +18,30 @@ export const users = pgTable(
     createdAt,
     deletedAt,
   },
-  (table) => [check('users_admin_or_role_check', sql`${table.isAdmin} = true OR ${table.roleId} IS NOT NULL`)],
+  (table) => [
+    index('users_role_id_idx').on(table.roleId),
+    index('users_created_by_idx').on(table.createdBy),
+    index('users_name_idx').on(table.name),
+    check(
+      'users_admin_or_role_check',
+      sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.roleId} IS NOT NULL)`,
+    ),
+  ],
 );
 
-export const roles = pgTable('roles', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  name: text('name').notNull().unique(),
-  description: text('description'),
-  createdAt,
-  createdBy: uuid('created_by')
-    .notNull()
-    .references((): AnyPgColumn => users.id),
-});
+export const roles = pgTable(
+  'roles',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull().unique(),
+    description: text('description'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references((): AnyPgColumn => users.id),
+  },
+  (table) => [index('roles_created_by_idx').on(table.createdBy)],
+);
 
 export const rolePermissions = pgTable(
   'role_permissions',
@@ -39,7 +51,10 @@ export const rolePermissions = pgTable(
       .references(() => roles.id),
     permission: permissionEnum('permission').notNull(),
   },
-  (table) => [primaryKey({ columns: [table.roleId, table.permission] })],
+  (table) => [
+    primaryKey({ columns: [table.roleId, table.permission] }),
+    index('role_permissions_role_id_idx').on(table.roleId),
+  ],
 );
 
 // ============================== RELATIONS ==============================

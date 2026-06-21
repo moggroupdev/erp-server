@@ -1,10 +1,9 @@
-import { pgTable, uuid, text, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, index, check } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, inventoryTransactionTypeEnum, numeric } from './common';
 import { users } from './users';
-import { purchaseReceipts } from './purchasing';
-import { productionPlans } from './production-plans';
-import { orders } from './orders';
+import { purchaseReceiptItems } from './purchasing';
+import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
 
 export const inventoryTransactions = pgTable(
@@ -12,9 +11,6 @@ export const inventoryTransactions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
-    purchaseReceiptId: uuid('purchase_receipt_id').references(() => purchaseReceipts.id),
-    productionPlanId: uuid('production_plan_id').references(() => productionPlans.id),
-    orderId: uuid('order_id').references(() => orders.id),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -22,24 +18,8 @@ export const inventoryTransactions = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    check(
-      'inventory_transactions_receipt_check',
-      sql`(
-        (
-          ${table.transactionType} = 'receipt'
-          AND ${table.purchaseReceiptId} IS NOT NULL
-          AND ${table.productionPlanId} IS NULL
-          AND ${table.orderId} IS NULL
-        )
-        OR
-        (
-          ${table.transactionType} = 'issue'
-          AND ${table.purchaseReceiptId} IS NULL
-          AND ${table.productionPlanId} IS NOT NULL
-          AND ${table.orderId} IS NOT NULL
-        )
-      )`,
-    ),
+    index('inventory_transactions_created_by_idx').on(table.createdBy),
+    index('inventory_transactions_transaction_type_idx').on(table.transactionType),
   ],
 );
 
@@ -54,28 +34,35 @@ export const inventoryTransactionItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
-    unitCost: numeric('unit_cost'),
+    unitCost: numeric('unit_cost').notNull(),
+    // Source:
+    purchaseReceiptItemId: uuid('purchase_receipt_item_id').references(() => purchaseReceiptItems.id),
+    productionPlanItemId: uuid('production_plan_item_id').references(() => productionPlanItems.id),
   },
-  (table) => [check('inventory_transaction_items_quantity_positive', sql`${table.quantity} > 0`)],
+  (table) => [
+    index('inventory_transaction_items_transaction_id_idx').on(table.transactionId),
+    index('inventory_transaction_items_material_code_idx').on(table.materialCode),
+    index('inventory_transaction_items_purchase_receipt_item_id_idx').on(table.purchaseReceiptItemId),
+    index('inventory_transaction_items_production_plan_item_id_idx').on(table.productionPlanItemId),
+    check('inventory_transaction_items_quantity_positive', sql`${table.quantity} > 0`),
+    check(
+      'inventory_transaction_items_source_xor',
+      sql`(
+        (${table.purchaseReceiptItemId} IS NOT NULL AND ${table.productionPlanItemId} IS NULL)
+        OR
+        (${table.purchaseReceiptItemId} IS NULL AND ${table.productionPlanItemId} IS NOT NULL)
+      )`,
+    ),
+  ],
 );
+
+// ============================== RELATIONS ==============================
 
 export const inventoryTransactionsRelations = relations(inventoryTransactions, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [inventoryTransactions.createdBy],
     references: [users.id],
     relationName: 'inventoryTransactionCreatedBy',
-  }),
-  purchaseReceipt: one(purchaseReceipts, {
-    fields: [inventoryTransactions.purchaseReceiptId],
-    references: [purchaseReceipts.id],
-  }),
-  productionPlan: one(productionPlans, {
-    fields: [inventoryTransactions.productionPlanId],
-    references: [productionPlans.id],
-  }),
-  order: one(orders, {
-    fields: [inventoryTransactions.orderId],
-    references: [orders.id],
   }),
   items: many(inventoryTransactionItems),
 }));
@@ -88,5 +75,13 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
   material: one(materials, {
     fields: [inventoryTransactionItems.materialCode],
     references: [materials.code],
+  }),
+  purchaseReceiptItem: one(purchaseReceiptItems, {
+    fields: [inventoryTransactionItems.purchaseReceiptItemId],
+    references: [purchaseReceiptItems.id],
+  }),
+  productionPlanItem: one(productionPlanItems, {
+    fields: [inventoryTransactionItems.productionPlanItemId],
+    references: [productionPlanItems.id],
   }),
 }));

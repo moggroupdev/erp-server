@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, unique, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, unique, check, index } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
@@ -17,7 +17,11 @@ export const productionPlans = pgTable(
       .notNull()
       .references(() => users.id),
   },
-  (table) => [check('production_plans_end_date_gte_start_date', sql`${table.endDate} >= ${table.startDate}`)],
+  (table) => [
+    index('production_plans_created_by_idx').on(table.createdBy),
+    index('production_plans_name_idx').on(table.name),
+    check('production_plans_end_date_gte_start_date', sql`${table.endDate} >= ${table.startDate}`),
+  ],
 );
 
 export const productionPlanItems = pgTable(
@@ -40,6 +44,8 @@ export const productionPlanItems = pgTable(
   },
   (table) => [
     unique('production_plan_items_plan_order_stage_unique').on(table.planId, table.orderItemId, table.stage),
+    index('production_plan_items_plan_id_idx').on(table.planId),
+    index('production_plan_items_order_item_id_idx').on(table.orderItemId),
     nonNegativeQuantityCheck('production_plan_items_quantity_planned_non_negative', table.quantityPlanned),
     nonNegativeQuantityCheck('production_plan_items_quantity_completed_non_negative', table.quantityCompleted),
     check(
@@ -57,17 +63,26 @@ export const productionPlanItems = pgTable(
   ],
 );
 
-export const productionPlanItemNotes = pgTable('production_plan_item_notes', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  planItemId: uuid('plan_item_id')
-    .notNull()
-    .references(() => productionPlanItems.id),
-  note: text('note').notNull(),
-  createdBy: uuid('created_by')
-    .notNull()
-    .references(() => users.id),
-  createdAt,
-});
+export const productionPlanItemNotes = pgTable(
+  'production_plan_item_notes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    planItemId: uuid('plan_item_id')
+      .notNull()
+      .references(() => productionPlanItems.id),
+    note: text('note').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt,
+  },
+  (table) => [
+    index('production_plan_item_notes_plan_item_id_idx').on(table.planItemId),
+    index('production_plan_item_notes_created_by_idx').on(table.createdBy),
+  ],
+);
+
+// ============================== RELATIONS ==============================
 
 export const productionPlansRelations = relations(productionPlans, ({ one, many }) => ({
   createdBy: one(users, {
