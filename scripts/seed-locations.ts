@@ -5,18 +5,8 @@ import * as schema from '../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 
 dotenv.config();
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-const askQuestion = (query: string): Promise<string> => {
-  return new Promise((resolve) => rl.question(query, resolve));
-};
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
@@ -26,10 +16,6 @@ async function main() {
   const db = drizzle(pool, { schema });
 
   try {
-    const shippingCostInput = await askQuestion('Enter shipping cost: ');
-    const shippingCost = parseFloat(shippingCostInput);
-    if (isNaN(shippingCost)) throw new Error('Invalid shipping cost entered');
-
     console.log('Seeding Governorates...');
 
     const governoratesCsvPath = path.join(__dirname, '../locations/governorates.csv');
@@ -43,7 +29,7 @@ async function main() {
       if (!line) continue;
       // id,name_en,name_ar
       const [id, nameEn, nameAr] = line.split(',');
-      if (id && nameEn && nameAr) governoratesToInsert.push({ id, nameEn, nameAr, shippingCost });
+      if (id && nameEn && nameAr) governoratesToInsert.push({ id, nameEn, nameAr });
     }
 
     if (governoratesToInsert.length > 0) {
@@ -52,7 +38,7 @@ async function main() {
         .values(governoratesToInsert)
         .onConflictDoUpdate({
           target: schema.governorates.id,
-          set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar`, shippingCost: sql`excluded.shipping_cost` },
+          set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar` },
         });
     }
 
@@ -96,7 +82,6 @@ async function main() {
   } catch (e) {
     console.error(e);
   } finally {
-    rl.close();
     await pool.end();
   }
 }
