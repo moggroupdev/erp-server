@@ -8,6 +8,7 @@
     "debug": "nest start --debug --watch",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:triggers": "ts-node -r tsconfig-paths/register src/database/apply-triggers.ts",
     "db:studio": "drizzle-kit studio",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
