@@ -1,6 +1,13 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, text, uuid, index, check } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt, dimensionUnitEnum, nonNegativeNullableQuantityCheck, numeric } from './common';
+import {
+  createdAt,
+  deletedAt,
+  dimensionUnitEnum,
+  nonNegativeNullableQuantityCheck,
+  numeric,
+  productSourceTypeEnum,
+} from './common';
 import { productCategorySubs } from './categories';
 import { users } from './users';
 
@@ -13,6 +20,7 @@ export const products = pgTable(
     subCategoryId: uuid('sub_category_id')
       .notNull()
       .references(() => productCategorySubs.id),
+    sourceType: productSourceTypeEnum('source_type').notNull(),
     length: numeric('length'),
     width: numeric('width'),
     height: numeric('height'),

@@ -56,6 +56,16 @@ export const materialUnitEnum = pgEnum('material_unit', [
 
 export const dimensionUnitEnum = pgEnum('dimension_unit', ['m', 'cm', 'mm']);
 
+export const productSourceTypeEnum = pgEnum('product_source_type', [
+  'manufactured', // مصنع
+  'imported', // مستورد
+]);
+
+export const materialTypeEnum = pgEnum('material_type', [
+  'raw_materials', // خامات
+  'spare_parts', // قطع غيار
+]);
+
 export const inquiryStatusEnum = pgEnum('inquiry_status', [
   'pending',
   'preview_scheduled',

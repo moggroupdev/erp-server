@@ -5,6 +5,7 @@ import {
   deletedAt,
   numeric,
   materialUnitEnum,
+  materialTypeEnum,
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
 } from './common';
@@ -20,6 +21,7 @@ export const materials = pgTable(
     subCategoryId: uuid('sub_category_id')
       .notNull()
       .references(() => materialCategorySubs.id),
+    materialType: materialTypeEnum('material_type').notNull(),
     unit: materialUnitEnum('unit').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     quantity: numeric('quantity').notNull().default(0),
