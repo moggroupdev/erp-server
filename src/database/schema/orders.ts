@@ -24,6 +24,7 @@ export const orders = pgTable(
     deliveryAddressId: uuid('delivery_address_id')
       .notNull()
       .references(() => customerAddresses.id),
+    deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(),
     // Order status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -37,7 +38,7 @@ export const orders = pgTable(
   (table) => [
     index('orders_inquiry_id_idx').on(table.inquiryId),
     index('orders_customer_id_idx').on(table.customerId),
-    index('orders_delivery_address_id_idx').on(table.deliveryAddressId),
+    index('orders_delivery_time_idx').on(table.deliveryTime),
     index('orders_completed_at_idx').on(table.completedAt),
     index('orders_cancelled_at_idx').on(table.cancelledAt),
     index('orders_created_by_idx').on(table.createdBy),
