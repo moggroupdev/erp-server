@@ -19,6 +19,7 @@ export * from './boms';
 export * from './purchasing';
 export * from './vendor-quotation-emails';
 export * from './deliveries';
+export * from './installations';
 export * from './inventory-transactions';
 
 /*
@@ -59,12 +60,14 @@ All Tables
 030. vendor_quotation_emails      - uuid        - NO          - YES       - YES (NOT NULL)
 031. deliveries                   - uuid        - NO          - YES       - YES (NOT NULL)
 032. delivery_items               - uuid        - NO          - NO        - NO
-033. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
-034. production_plan_items        - uuid        - NO          - NO        - NO
-035. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
-036. inventory_transactions       - uuid        - NO          - YES       - YES (NOT NULL)
-037. inventory_transaction_items  - uuid        - NO          - NO        - NO
-038. roles                        - uuid        - NO          - YES       - YES (NOT NULL)
-039. role_permissions             - composite   - NO          - NO        - NO
+033. installations                - uuid        - NO          - YES       - YES (NOT NULL)
+034. installation_items           - uuid        - NO          - NO        - NO
+035. production_plans             - uuid        - NO          - YES       - YES (NOT NULL)
+036. production_plan_items        - uuid        - NO          - NO        - NO
+037. production_plan_item_notes   - uuid        - NO          - YES       - YES (NOT NULL)
+038. inventory_transactions       - uuid        - NO          - YES       - YES (NOT NULL)
+039. inventory_transaction_items  - uuid        - NO          - NO        - NO
+040. roles                        - uuid        - NO          - YES       - YES (NOT NULL)
+041. role_permissions             - composite   - NO          - NO        - NO
 
 */

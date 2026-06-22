@@ -9,14 +9,12 @@ export const numeric = customType<{ data: number; driverData: string }>({
   toDriver: (value: number) => value.toString(),
 });
 
-export const nonNegativeQuantityCheck = (name: string, column: AnyPgColumn) => check(name, sql`${column} >= 0`);
-
 export const positiveQuantityCheck = (name: string, column: AnyPgColumn) => check(name, sql`${column} > 0`);
+
+export const nonNegativeQuantityCheck = (name: string, column: AnyPgColumn) => check(name, sql`${column} >= 0`);
 
 export const nonNegativeNullableQuantityCheck = (name: string, column: AnyPgColumn) =>
   check(name, sql`${column} IS NULL OR ${column} >= 0`);
-
-export const EGYPT_COUNTRY_CODE = 'EG';
 
 export const deletedAt = timestamp('deleted_at', { withTimezone: true });
 export const createdAt = timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
