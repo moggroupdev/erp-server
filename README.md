@@ -25,8 +25,9 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Products & Engineering
 
 - Product catalog organized by category (manufactured or imported items)
+- Standard product dimensions stored on catalog items, with a standard BOM template defining required materials and quantities for those dimensions
 - Custom dimensions captured during preview and carried through to the order
-- Bill of Materials (BOM) prepared by the Technical Office for each order line, defining required raw materials and quantities
+- Order-level Bill of Materials (BOM) prepared by the Technical Office for each order line (starting from the standard BOM when the item uses catalog dimensions)
 
 ### Manufacturing
 

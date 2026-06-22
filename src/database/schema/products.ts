@@ -1,14 +1,16 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, check, unique } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   deletedAt,
   dimensionUnitEnum,
   nonNegativeNullableQuantityCheck,
+  nonNegativeQuantityCheck,
   numeric,
   productSourceTypeEnum,
 } from './common';
 import { productCategorySubs } from './categories';
+import { materials } from './materials';
 import { users } from './users';
 
 export const products = pgTable(
@@ -48,9 +50,35 @@ export const products = pgTable(
   ],
 );
 
+// Standard BOM template for a catalog product at its default dimensions.
+export const productBoms = pgTable(
+  'product_boms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    productCode: text('product_code')
+      .notNull()
+      .references(() => products.code),
+    materialCode: text('material_code')
+      .notNull()
+      .references(() => materials.code),
+    quantityRequired: numeric('quantity_required').notNull(),
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    unique('product_boms_product_material_unique').on(table.productCode, table.materialCode),
+    index('product_boms_product_code_idx').on(table.productCode),
+    index('product_boms_material_code_idx').on(table.materialCode),
+    nonNegativeQuantityCheck('product_boms_quantity_required_non_negative', table.quantityRequired),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
-export const productsRelations = relations(products, ({ one }) => ({
+export const productsRelations = relations(products, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [products.createdBy],
     references: [users.id],
@@ -58,5 +86,21 @@ export const productsRelations = relations(products, ({ one }) => ({
   subCategory: one(productCategorySubs, {
     fields: [products.subCategoryId],
     references: [productCategorySubs.id],
+  }),
+  standardBoms: many(productBoms),
+}));
+
+export const productBomsRelations = relations(productBoms, ({ one }) => ({
+  product: one(products, {
+    fields: [productBoms.productCode],
+    references: [products.code],
+  }),
+  material: one(materials, {
+    fields: [productBoms.materialCode],
+    references: [materials.code],
+  }),
+  createdBy: one(users, {
+    fields: [productBoms.createdBy],
+    references: [users.id],
   }),
 }));
