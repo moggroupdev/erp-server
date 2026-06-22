@@ -5,6 +5,7 @@ import { users } from './users';
 import { purchaseReceiptItems } from './purchasing';
 import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
+import { products } from './products';
 
 export const inventoryTransactions = pgTable(
   'inventory_transactions',
@@ -30,8 +31,9 @@ export const inventoryTransactionItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     transactionId: uuid('transaction_id').notNull(),
     materialCode: text('material_code')
-      .notNull()
       .references(() => materials.code),
+    productCode: text('product_code')
+      .references(() => products.code),
     quantity: numeric('quantity').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     // Source:
@@ -56,6 +58,7 @@ export const inventoryTransactionItems = pgTable(
     }),
     index('inventory_transaction_items_transaction_id_idx').on(table.transactionId),
     index('inventory_transaction_items_material_code_idx').on(table.materialCode),
+    index('inventory_transaction_items_product_code_idx').on(table.productCode),
     index('inventory_transaction_items_purchase_receipt_item_id_idx').on(table.purchaseReceiptItemId),
     index('inventory_transaction_items_production_plan_item_id_idx').on(table.productionPlanItemId),
     check('inventory_transaction_items_quantity_positive', sql`${table.quantity} > 0`),
@@ -65,6 +68,14 @@ export const inventoryTransactionItems = pgTable(
         (${table.purchaseReceiptItemId} IS NOT NULL AND ${table.productionPlanItemId} IS NULL)
         OR
         (${table.purchaseReceiptItemId} IS NULL AND ${table.productionPlanItemId} IS NOT NULL)
+      )`,
+    ),
+    check(
+      'inventory_transaction_items_material_or_product_xor',
+      sql`(
+        (${table.materialCode} IS NOT NULL AND ${table.productCode} IS NULL)
+        OR
+        (${table.materialCode} IS NULL AND ${table.productCode} IS NOT NULL)
       )`,
     ),
   ],
@@ -89,6 +100,10 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
   material: one(materials, {
     fields: [inventoryTransactionItems.materialCode],
     references: [materials.code],
+  }),
+  product: one(products, {
+    fields: [inventoryTransactionItems.productCode],
+    references: [products.code],
   }),
   purchaseReceiptItem: one(purchaseReceiptItems, {
     fields: [inventoryTransactionItems.purchaseReceiptItemId],

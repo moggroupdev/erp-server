@@ -1,9 +1,10 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, index, foreignKey, check } from 'drizzle-orm/pg-core';
 import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
+import { products } from './products';
 
 export const purchaseOrders = pgTable(
   'purchase_orders',
@@ -39,15 +40,25 @@ export const purchaseOrderItems = pgTable(
       .notNull()
       .references(() => purchaseOrders.id),
     materialCode: text('material_code')
-      .notNull()
       .references(() => materials.code),
+    productCode: text('product_code')
+      .references(() => products.code),
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
   },
   (table) => [
     index('purchase_order_items_purchase_order_id_idx').on(table.purchaseOrderId),
     index('purchase_order_items_material_code_idx').on(table.materialCode),
+    index('purchase_order_items_product_code_idx').on(table.productCode),
     nonNegativeQuantityCheck('purchase_order_items_quantity_ordered_non_negative', table.quantityOrdered),
+    check(
+      'purchase_order_items_material_or_product_xor',
+      sql`(
+        (${table.materialCode} IS NOT NULL AND ${table.productCode} IS NULL)
+        OR
+        (${table.materialCode} IS NULL AND ${table.productCode} IS NOT NULL)
+      )`,
+    ),
   ],
 );
 
@@ -130,6 +141,10 @@ export const purchaseOrderItemsRelations = relations(purchaseOrderItems, ({ one,
   material: one(materials, {
     fields: [purchaseOrderItems.materialCode],
     references: [materials.code],
+  }),
+  product: one(products, {
+    fields: [purchaseOrderItems.productCode],
+    references: [products.code],
   }),
   receiptItems: many(purchaseReceiptItems),
 }));
