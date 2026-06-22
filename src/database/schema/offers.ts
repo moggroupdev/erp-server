@@ -39,6 +39,7 @@ export const offerItems = pgTable(
     inquiryItemId: uuid('inquiry_item_id')
       .notNull()
       .references(() => inquiryItems.id),
+    // The inquiry_items.product_code already exists, but we need the product_code in offer_items also as the sales team can substitute a different product during quoting.
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),

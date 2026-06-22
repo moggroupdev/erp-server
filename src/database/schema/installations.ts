@@ -13,6 +13,7 @@ export const installations = pgTable(
       .references(() => orders.id),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     installedAt: timestamp('installed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     assignedTo: uuid('assigned_to').references(() => users.id),
     notes: text('notes'),
     createdAt,
@@ -25,7 +26,7 @@ export const installations = pgTable(
     index('installations_assigned_to_idx').on(table.assignedTo),
     index('installations_scheduled_at_idx').on(table.scheduledAt),
     index('installations_installed_at_idx').on(table.installedAt),
-    index('installations_created_by_idx').on(table.createdBy),
+    index('installations_cancelled_at_idx').on(table.cancelledAt),
   ],
 );
 
