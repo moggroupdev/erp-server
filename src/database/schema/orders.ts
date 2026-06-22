@@ -7,6 +7,7 @@ import { products } from './products';
 import { inquiries } from './inquiries';
 import { offers, offerItems } from './offers';
 import { productionPlanItems } from './production-plans';
+import { purchaseOrderItems } from './purchasing';
 
 export const orders = pgTable(
   'orders',
@@ -138,6 +139,7 @@ export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
     references: [orderItemDimensions.orderItemId],
   }),
   planItems: many(productionPlanItems),
+  purchaseOrderItems: many(purchaseOrderItems),
 }));
 
 export const orderItemDimensionsRelations = relations(orderItemDimensions, ({ one }) => ({

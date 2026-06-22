@@ -4,6 +4,7 @@ import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { orderItems } from './orders';
 import { materials } from './materials';
+import { purchaseOrderItems } from './purchasing';
 
 export const boms = pgTable(
   'boms',
@@ -31,7 +32,7 @@ export const boms = pgTable(
   ],
 );
 
-export const bomsRelations = relations(boms, ({ one }) => ({
+export const bomsRelations = relations(boms, ({ one, many }) => ({
   orderItem: one(orderItems, {
     fields: [boms.orderItemId],
     references: [orderItems.id],
@@ -44,4 +45,5 @@ export const bomsRelations = relations(boms, ({ one }) => ({
     fields: [boms.createdBy],
     references: [users.id],
   }),
+  purchaseOrderItems: many(purchaseOrderItems),
 }));

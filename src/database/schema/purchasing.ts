@@ -5,6 +5,8 @@ import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
 import { products } from './products';
+import { boms } from './boms';
+import { orderItems } from './orders';
 
 export const purchaseOrders = pgTable(
   'purchase_orders',
@@ -43,13 +45,20 @@ export const purchaseOrderItems = pgTable(
       .references(() => materials.code),
     productCode: text('product_code')
       .references(() => products.code),
+    bomId: uuid('bom_id')
+      .references(() => boms.id),
+    orderItemId: uuid('order_item_id')
+      .references(() => orderItems.id),
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
+    notes: text('notes'),
   },
   (table) => [
     index('purchase_order_items_purchase_order_id_idx').on(table.purchaseOrderId),
     index('purchase_order_items_material_code_idx').on(table.materialCode),
     index('purchase_order_items_product_code_idx').on(table.productCode),
+    index('purchase_order_items_bom_id_idx').on(table.bomId),
+    index('purchase_order_items_order_item_id_idx').on(table.orderItemId),
     nonNegativeQuantityCheck('purchase_order_items_quantity_ordered_non_negative', table.quantityOrdered),
     check(
       'purchase_order_items_material_or_product_xor',
@@ -58,6 +67,14 @@ export const purchaseOrderItems = pgTable(
         OR
         (${table.materialCode} IS NULL AND ${table.productCode} IS NOT NULL)
       )`,
+    ),
+    check(
+      'purchase_order_items_bom_material_check',
+      sql`(${table.bomId} IS NULL OR ${table.materialCode} IS NOT NULL)`,
+    ),
+    check(
+      'purchase_order_items_order_item_product_check',
+      sql`(${table.orderItemId} IS NULL OR ${table.productCode} IS NOT NULL)`,
     ),
   ],
 );
@@ -145,6 +162,14 @@ export const purchaseOrderItemsRelations = relations(purchaseOrderItems, ({ one,
   product: one(products, {
     fields: [purchaseOrderItems.productCode],
     references: [products.code],
+  }),
+  bom: one(boms, {
+    fields: [purchaseOrderItems.bomId],
+    references: [boms.id],
+  }),
+  orderItem: one(orderItems, {
+    fields: [purchaseOrderItems.orderItemId],
+    references: [orderItems.id],
   }),
   receiptItems: many(purchaseReceiptItems),
 }));
