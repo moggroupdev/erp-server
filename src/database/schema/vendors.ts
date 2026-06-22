@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt, egyptianCityRequiredCheck } from './common';
+import { createdAt, deletedAt } from './common';
 import { users } from './users';
 import { countries } from './countries';
 import { cities } from './cities';
@@ -45,7 +45,6 @@ export const vendorAddresses = pgTable(
     index('vendor_addresses_vendor_id_idx').on(table.vendorId),
     index('vendor_addresses_city_id_idx').on(table.cityId),
     index('vendor_addresses_country_id_idx').on(table.countryId),
-    egyptianCityRequiredCheck('vendor_addresses_egyptian_city_required', table.countryId, table.cityId),
     uniqueIndex('vendor_addresses_one_default')
       .on(table.vendorId)
       .where(sql`${table.isDefault} = true`),
