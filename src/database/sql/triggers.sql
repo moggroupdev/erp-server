@@ -35,6 +35,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach offer total sync to offer_items writes.
 DROP TRIGGER IF EXISTS offer_items_sync_total_amount ON offer_items;
 CREATE TRIGGER offer_items_sync_total_amount
 AFTER INSERT OR UPDATE OR DELETE ON offer_items
@@ -67,6 +68,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach order total sync to order_items writes.
 DROP TRIGGER IF EXISTS order_items_sync_total_amount ON order_items;
 CREATE TRIGGER order_items_sync_total_amount
 AFTER INSERT OR UPDATE OR DELETE ON order_items
@@ -98,6 +100,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach source validation to inventory transaction item writes.
 DROP TRIGGER IF EXISTS inventory_transaction_items_validate_source ON inventory_transaction_items;
 CREATE TRIGGER inventory_transaction_items_validate_source
 BEFORE INSERT OR UPDATE ON inventory_transaction_items
@@ -112,8 +115,8 @@ RETURNS TRIGGER AS $$
 DECLARE
   old_txn_type inventory_transaction_type;
   new_txn_type inventory_transaction_type;
-  old_delta numeric;
-  new_delta numeric;
+  old_effect numeric := 0;
+  new_effect numeric := 0;
 BEGIN
   IF TG_OP = 'INSERT' THEN
     SELECT transaction_type INTO new_txn_type
@@ -122,13 +125,13 @@ BEGIN
 
     IF NEW.material_code IS NOT NULL THEN
       IF new_txn_type = 'receipt' THEN
-        new_delta := NEW.quantity;
+        new_effect := NEW.quantity;
       ELSE
-        new_delta := -NEW.quantity;
+        new_effect := -NEW.quantity;
       END IF;
 
       UPDATE materials
-      SET quantity = quantity + new_delta
+      SET quantity = quantity + new_effect
       WHERE code = NEW.material_code;
     END IF;
 
@@ -140,13 +143,13 @@ BEGIN
 
     IF OLD.material_code IS NOT NULL THEN
       IF old_txn_type = 'receipt' THEN
-        old_delta := -OLD.quantity;
+        old_effect := OLD.quantity;
       ELSE
-        old_delta := OLD.quantity;
+        old_effect := -OLD.quantity;
       END IF;
 
       UPDATE materials
-      SET quantity = quantity + old_delta
+      SET quantity = quantity - old_effect
       WHERE code = OLD.material_code;
     END IF;
 
@@ -156,32 +159,46 @@ BEGIN
     FROM inventory_transactions
     WHERE id = OLD.transaction_id;
 
-    SELECT transaction_type INTO new_txn_type
-    FROM inventory_transactions
-    WHERE id = NEW.transaction_id;
+    IF NEW.transaction_id = OLD.transaction_id THEN
+      new_txn_type := old_txn_type;
+    ELSE
+      SELECT transaction_type INTO new_txn_type
+      FROM inventory_transactions
+      WHERE id = NEW.transaction_id;
+    END IF;
 
     IF OLD.material_code IS NOT NULL THEN
       IF old_txn_type = 'receipt' THEN
-        old_delta := -OLD.quantity;
+        old_effect := OLD.quantity;
       ELSE
-        old_delta := OLD.quantity;
+        old_effect := -OLD.quantity;
       END IF;
-
-      UPDATE materials
-      SET quantity = quantity + old_delta
-      WHERE code = OLD.material_code;
     END IF;
 
     IF NEW.material_code IS NOT NULL THEN
       IF new_txn_type = 'receipt' THEN
-        new_delta := NEW.quantity;
+        new_effect := NEW.quantity;
       ELSE
-        new_delta := -NEW.quantity;
+        new_effect := -NEW.quantity;
+      END IF;
+    END IF;
+
+    IF OLD.material_code IS NOT NULL AND OLD.material_code = NEW.material_code THEN
+      UPDATE materials
+      SET quantity = quantity + new_effect - old_effect
+      WHERE code = OLD.material_code;
+    ELSE
+      IF OLD.material_code IS NOT NULL THEN
+        UPDATE materials
+        SET quantity = quantity - old_effect
+        WHERE code = OLD.material_code;
       END IF;
 
-      UPDATE materials
-      SET quantity = quantity + new_delta
-      WHERE code = NEW.material_code;
+      IF NEW.material_code IS NOT NULL THEN
+        UPDATE materials
+        SET quantity = quantity + new_effect
+        WHERE code = NEW.material_code;
+      END IF;
     END IF;
 
     RETURN NULL;
@@ -189,6 +206,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach material quantity sync to inventory transaction item writes.
 DROP TRIGGER IF EXISTS inventory_transaction_items_sync_material_quantity ON inventory_transaction_items;
 CREATE TRIGGER inventory_transaction_items_sync_material_quantity
 AFTER INSERT OR UPDATE OR DELETE ON inventory_transaction_items
@@ -208,11 +226,13 @@ BEGIN
   FROM purchase_order_items
   WHERE id = NEW.purchase_order_item_id;
 
-  SELECT COALESCE(SUM(quantity_received + quantity_rejected), 0)
+  SELECT COALESCE(SUM(pri.quantity_received + pri.quantity_rejected), 0)
   INTO total_received
-  FROM purchase_receipt_items
-  WHERE purchase_order_item_id = NEW.purchase_order_item_id
-    AND id IS DISTINCT FROM NEW.id;
+  FROM purchase_receipt_items pri
+  JOIN purchase_receipts pr ON pr.id = pri.purchase_receipt_id
+  WHERE pri.purchase_order_item_id = NEW.purchase_order_item_id
+    AND pri.id IS DISTINCT FROM NEW.id
+    AND pr.cancelled_at IS NULL;
 
   total_received := total_received + NEW.quantity_received + NEW.quantity_rejected;
 
@@ -225,6 +245,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach purchase receipt total validation to receipt item writes.
 DROP TRIGGER IF EXISTS purchase_receipt_items_validate_totals ON purchase_receipt_items;
 CREATE TRIGGER purchase_receipt_items_validate_totals
 BEFORE INSERT OR UPDATE ON purchase_receipt_items
@@ -258,7 +279,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger: attach order offer/status validation to order writes.
 DROP TRIGGER IF EXISTS orders_validate_offer_status ON orders;
 CREATE TRIGGER orders_validate_offer_status
 BEFORE INSERT OR UPDATE ON orders
 FOR EACH ROW EXECUTE PROCEDURE validate_order_offer_status();
+
+-- ---------------------------------------------------------------------------
+-- Offer status protection: prevent changing an accepted offer once an order exists.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION prevent_offer_status_downgrade_when_order_exists()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.status = 'accepted' AND NEW.status <> 'accepted' THEN
+    IF EXISTS (SELECT 1 FROM orders WHERE offer_id = OLD.id) THEN
+      RAISE EXCEPTION 'Cannot change status of an offer that has an existing order';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger: attach offer status protection to offers updates.
+DROP TRIGGER IF EXISTS offers_prevent_status_downgrade_when_order_exists ON offers;
+CREATE TRIGGER offers_prevent_status_downgrade_when_order_exists
+BEFORE UPDATE ON offers
+FOR EACH ROW EXECUTE PROCEDURE prevent_offer_status_downgrade_when_order_exists();
