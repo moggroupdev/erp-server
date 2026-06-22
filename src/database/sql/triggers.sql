@@ -104,36 +104,3 @@ DROP TRIGGER IF EXISTS inventory_transaction_items_validate_source ON inventory_
 CREATE TRIGGER inventory_transaction_items_validate_source
 BEFORE INSERT OR UPDATE ON inventory_transaction_items
 FOR EACH ROW EXECUTE PROCEDURE validate_inventory_transaction_item_source();
-
--- ---------------------------------------------------------------------------
--- Address city rules: Egyptian addresses require city_id; non-Egyptian must not set it.
--- PostgreSQL CHECK constraints cannot reference other tables, so this runs as a trigger.
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION validate_egyptian_city_required()
-RETURNS TRIGGER AS $$
-DECLARE
-  country_code text;
-BEGIN
-  SELECT code INTO country_code FROM countries WHERE id = NEW.country_id;
-
-  IF country_code = 'EG' AND NEW.city_id IS NULL THEN
-    RAISE EXCEPTION 'city_id is required when country is Egypt (EG)';
-  END IF;
-
-  IF country_code IS DISTINCT FROM 'EG' AND NEW.city_id IS NOT NULL THEN
-    RAISE EXCEPTION 'city_id must be NULL when country is not Egypt (EG)';
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS customer_addresses_validate_egyptian_city ON customer_addresses;
-CREATE TRIGGER customer_addresses_validate_egyptian_city
-BEFORE INSERT OR UPDATE ON customer_addresses
-FOR EACH ROW EXECUTE PROCEDURE validate_egyptian_city_required();
-
-DROP TRIGGER IF EXISTS vendor_addresses_validate_egyptian_city ON vendor_addresses;
-CREATE TRIGGER vendor_addresses_validate_egyptian_city
-BEFORE INSERT OR UPDATE ON vendor_addresses
-FOR EACH ROW EXECUTE PROCEDURE validate_egyptian_city_required();

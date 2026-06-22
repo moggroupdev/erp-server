@@ -41,14 +41,10 @@ export const purchaseOrderItems = pgTable(
     purchaseOrderId: uuid('purchase_order_id')
       .notNull()
       .references(() => purchaseOrders.id),
-    materialCode: text('material_code')
-      .references(() => materials.code),
-    productCode: text('product_code')
-      .references(() => products.code),
-    bomId: uuid('bom_id')
-      .references(() => boms.id),
-    orderItemId: uuid('order_item_id')
-      .references(() => orderItems.id),
+    materialCode: text('material_code').references(() => materials.code),
+    productCode: text('product_code').references(() => products.code),
+    bomId: uuid('bom_id').references(() => boms.id),
+    orderItemId: uuid('order_item_id').references(() => orderItems.id),
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     notes: text('notes'),
@@ -68,10 +64,7 @@ export const purchaseOrderItems = pgTable(
         (${table.materialCode} IS NULL AND ${table.productCode} IS NOT NULL)
       )`,
     ),
-    check(
-      'purchase_order_items_bom_material_check',
-      sql`(${table.bomId} IS NULL OR ${table.materialCode} IS NOT NULL)`,
-    ),
+    check('purchase_order_items_bom_material_check', sql`(${table.bomId} IS NULL OR ${table.materialCode} IS NOT NULL)`),
     check(
       'purchase_order_items_order_item_product_check',
       sql`(${table.orderItemId} IS NULL OR ${table.productCode} IS NOT NULL)`,

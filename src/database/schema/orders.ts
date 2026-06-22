@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, integer, boolean, index, check } from 'drizzle-orm/pg-core';
 import { numeric, createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
 import { users } from './users';
@@ -71,6 +71,7 @@ export const orderItems = pgTable(
     index('order_items_product_code_idx').on(table.productCode),
     positiveQuantityCheck('order_items_quantity_positive', table.quantity),
     nonNegativeQuantityCheck('order_items_quantity_produced_non_negative', table.quantityProduced),
+    check('order_items_quantity_produced_lte_quantity', sql`${table.quantityProduced} <= ${table.quantity}`),
   ],
 );
 
