@@ -12,6 +12,7 @@ export const purchaseOrders = pgTable(
   'purchase_orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: PO-000001
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
@@ -26,6 +27,7 @@ export const purchaseOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    index('purchase_orders_code_idx').on(table.code),
     index('purchase_orders_vendor_id_idx').on(table.vendorId),
     index('purchase_orders_completed_at_idx').on(table.completedAt),
     index('purchase_orders_cancelled_at_idx').on(table.cancelledAt),
@@ -76,6 +78,7 @@ export const purchaseReceipts = pgTable(
   'purchase_receipts',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: PR-000001
     purchaseOrderId: uuid('purchase_order_id')
       .notNull()
       .references(() => purchaseOrders.id),
@@ -90,6 +93,7 @@ export const purchaseReceipts = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    index('purchase_receipts_code_idx').on(table.code),
     index('purchase_receipts_purchase_order_id_idx').on(table.purchaseOrderId),
     index('purchase_receipts_received_at_idx').on(table.receivedAt),
     index('purchase_receipts_cancelled_at_idx').on(table.cancelledAt),

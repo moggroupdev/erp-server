@@ -9,6 +9,7 @@ export const vendors = pgTable(
   'vendors',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: VE-000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
@@ -20,7 +21,7 @@ export const vendors = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('vendors_created_by_idx').on(table.createdBy),
+    index('vendors_code_idx').on(table.code),
     index('vendors_name_idx').on(table.name),
     index('vendors_phone_idx').on(table.phone),
     index('vendors_email_idx').on(table.email),

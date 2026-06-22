@@ -8,6 +8,7 @@ export const productionPlans = pgTable(
   'production_plans',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: PP-000001
     name: text('name').notNull(),
     startDate: timestamp('start_date', { withTimezone: true }).notNull(),
     endDate: timestamp('end_date', { withTimezone: true }).notNull(),
@@ -18,7 +19,7 @@ export const productionPlans = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('production_plans_created_by_idx').on(table.createdBy),
+    index('production_plans_code_idx').on(table.code),
     index('production_plans_name_idx').on(table.name),
     check('production_plans_end_date_gte_start_date', sql`${table.endDate} >= ${table.startDate}`),
   ],

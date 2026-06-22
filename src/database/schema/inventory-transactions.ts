@@ -11,6 +11,7 @@ export const inventoryTransactions = pgTable(
   'inventory_transactions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: IT-000001
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
     notes: text('notes'),
     createdAt,
@@ -19,9 +20,10 @@ export const inventoryTransactions = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('inventory_transactions_created_by_idx').on(table.createdBy),
+    index('inventory_transactions_code_idx').on(table.code),
     index('inventory_transactions_transaction_type_idx').on(table.transactionType),
     index('inventory_transactions_created_at_idx').on(table.createdAt),
+    index('inventory_transactions_created_by_idx').on(table.createdBy),
   ],
 );
 

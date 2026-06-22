@@ -13,6 +13,7 @@ export const orders = pgTable(
   'orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: OR-000001
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
@@ -37,13 +38,14 @@ export const orders = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    index('orders_code_idx').on(table.code),
     index('orders_inquiry_id_idx').on(table.inquiryId),
     index('orders_customer_id_idx').on(table.customerId),
     index('orders_delivery_time_idx').on(table.deliveryTime),
     index('orders_completed_at_idx').on(table.completedAt),
     index('orders_cancelled_at_idx').on(table.cancelledAt),
-    index('orders_created_by_idx').on(table.createdBy),
     index('orders_created_at_idx').on(table.createdAt),
+    index('orders_created_by_idx').on(table.createdBy),
   ],
 );
 

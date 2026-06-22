@@ -8,6 +8,7 @@ export const deliveries = pgTable(
   'deliveries',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: DE-000001
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
@@ -21,6 +22,7 @@ export const deliveries = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    index('deliveries_code_idx').on(table.code),
     index('deliveries_order_id_idx').on(table.orderId),
     index('deliveries_scheduled_at_idx').on(table.scheduledAt),
     index('deliveries_delivered_at_idx').on(table.deliveredAt),

@@ -1,11 +1,12 @@
-import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { createdAt, deletedAt, permissionEnum } from './common';
 
 export const users = pgTable(
   'users',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: US-000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),
@@ -19,9 +20,11 @@ export const users = pgTable(
     deletedAt,
   },
   (table) => [
+    index('users_code_idx').on(table.code),
     index('users_role_id_idx').on(table.roleId),
-    index('users_created_by_idx').on(table.createdBy),
     index('users_name_idx').on(table.name),
+    index('users_phone_idx').on(table.phone),
+    index('users_email_idx').on(table.email),
     check(
       'users_admin_or_role_check',
       sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.roleId} IS NOT NULL)`,

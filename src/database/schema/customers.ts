@@ -2,13 +2,14 @@ import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, deletedAt } from './common';
 import { users } from './users';
-import { countries } from './countries';
 import { cities } from './cities';
+import { countries } from './countries';
 
 export const customers = pgTable(
   'customers',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: CU-000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
@@ -20,7 +21,7 @@ export const customers = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('customers_created_by_idx').on(table.createdBy),
+    index('customers_code_idx').on(table.code),
     index('customers_name_idx').on(table.name),
     index('customers_phone_idx').on(table.phone),
     index('customers_email_idx').on(table.email),

@@ -8,6 +8,7 @@ export const installations = pgTable(
   'installations',
   {
     id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: IN-000001
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
@@ -22,6 +23,7 @@ export const installations = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    index('installations_code_idx').on(table.code),
     index('installations_order_id_idx').on(table.orderId),
     index('installations_assigned_to_idx').on(table.assignedTo),
     index('installations_scheduled_at_idx').on(table.scheduledAt),
