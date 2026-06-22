@@ -1,8 +1,8 @@
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, deliveryStatusEnum, nonNegativeQuantityCheck } from './common';
-import { users } from './users';
+import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
+import { createdAt, nonNegativeQuantityCheck } from './common';
 import { orders, orderItems } from './orders';
+import { users } from './users';
 
 export const deliveries = pgTable(
   'deliveries',
@@ -11,20 +11,20 @@ export const deliveries = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
-    status: deliveryStatusEnum('status').notNull().default('pending'),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
+    createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
-    createdAt,
   },
   (table) => [
     index('deliveries_order_id_idx').on(table.orderId),
-    index('deliveries_created_by_idx').on(table.createdBy),
-    index('deliveries_status_idx').on(table.status),
-    index('deliveries_created_at_idx').on(table.createdAt),
+    index('deliveries_scheduled_at_idx').on(table.scheduledAt),
+    index('deliveries_delivered_at_idx').on(table.deliveredAt),
+    index('deliveries_cancelled_at_idx').on(table.cancelledAt),
   ],
 );
 
