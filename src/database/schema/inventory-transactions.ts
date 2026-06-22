@@ -30,10 +30,8 @@ export const inventoryTransactionItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     transactionId: uuid('transaction_id').notNull(),
-    materialCode: text('material_code')
-      .references(() => materials.code),
-    productCode: text('product_code')
-      .references(() => products.code),
+    materialCode: text('material_code').references(() => materials.code),
+    productCode: text('product_code').references(() => products.code),
     quantity: numeric('quantity').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     // Source:
@@ -63,11 +61,9 @@ export const inventoryTransactionItems = pgTable(
     index('inventory_transaction_items_production_plan_item_id_idx').on(table.productionPlanItemId),
     check('inventory_transaction_items_quantity_positive', sql`${table.quantity} > 0`),
     check(
-      'inventory_transaction_items_source_xor',
+      'inventory_transaction_items_source_non_conflicting',
       sql`(
-        (${table.purchaseReceiptItemId} IS NOT NULL AND ${table.productionPlanItemId} IS NULL)
-        OR
-        (${table.purchaseReceiptItemId} IS NULL AND ${table.productionPlanItemId} IS NOT NULL)
+        ${table.purchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL
       )`,
     ),
     check(

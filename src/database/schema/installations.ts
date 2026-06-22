@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, nonNegativeQuantityCheck } from './common';
+import { createdAt, positiveQuantityCheck } from './common';
 import { orders, orderItems } from './orders';
 import { users } from './users';
 
@@ -13,8 +13,7 @@ export const installations = pgTable(
       .references(() => orders.id),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     installedAt: timestamp('installed_at', { withTimezone: true }),
-    assignedTo: uuid('assigned_to')
-      .references(() => users.id),
+    assignedTo: uuid('assigned_to').references(() => users.id),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -27,7 +26,7 @@ export const installations = pgTable(
     index('installations_scheduled_at_idx').on(table.scheduledAt),
     index('installations_installed_at_idx').on(table.installedAt),
     index('installations_created_by_idx').on(table.createdBy),
-  ]
+  ],
 );
 
 export const installationItems = pgTable(
@@ -46,7 +45,7 @@ export const installationItems = pgTable(
   (table) => [
     index('installation_items_installation_id_idx').on(table.installationId),
     index('installation_items_order_item_id_idx').on(table.orderItemId),
-    nonNegativeQuantityCheck('installation_items_quantity_non_negative', table.quantity),
+    positiveQuantityCheck('installation_items_quantity_positive', table.quantity),
   ],
 );
 

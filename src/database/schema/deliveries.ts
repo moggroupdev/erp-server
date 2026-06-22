@@ -1,6 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, nonNegativeQuantityCheck } from './common';
+import { createdAt, positiveQuantityCheck } from './common';
 import { orders, orderItems } from './orders';
 import { users } from './users';
 
@@ -44,7 +44,7 @@ export const deliveryItems = pgTable(
   (table) => [
     index('delivery_items_delivery_id_idx').on(table.deliveryId),
     index('delivery_items_order_item_id_idx').on(table.orderItemId),
-    nonNegativeQuantityCheck('delivery_items_quantity_non_negative', table.quantity),
+    positiveQuantityCheck('delivery_items_quantity_positive', table.quantity),
   ],
 );
 
