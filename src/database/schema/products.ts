@@ -32,9 +32,8 @@ export const products = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('products_sub_category_id_idx').on(table.subCategoryId),
-    index('products_created_by_idx').on(table.createdBy),
     index('products_title_idx').on(table.title),
+    index('products_sub_category_id_idx').on(table.subCategoryId),
     check(
       'products_dimensions_all_or_none',
       sql`(

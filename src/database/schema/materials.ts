@@ -25,7 +25,8 @@ export const materials = pgTable(
     unit: materialUnitEnum('unit').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     quantity: numeric('quantity').notNull().default(0),
-    defaultPurchaseQuantity: numeric('default_purchase_quantity'),
+    initialQuantity: numeric('initial_quantity'),
+    minimumStock: numeric('minimum_stock'),
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
@@ -33,11 +34,11 @@ export const materials = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('materials_sub_category_id_idx').on(table.subCategoryId),
-    index('materials_created_by_idx').on(table.createdBy),
     index('materials_title_idx').on(table.title),
+    index('materials_sub_category_id_idx').on(table.subCategoryId),
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),
-    nonNegativeNullableQuantityCheck('materials_default_purchase_quantity_non_negative', table.defaultPurchaseQuantity),
+    nonNegativeNullableQuantityCheck('materials_initial_quantity_non_negative', table.initialQuantity),
+    nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
   ],
 );
 
