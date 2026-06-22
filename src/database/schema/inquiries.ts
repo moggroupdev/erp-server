@@ -24,6 +24,7 @@ export const inquiries = pgTable(
     index('inquiries_customer_id_idx').on(table.customerId),
     index('inquiries_created_by_idx').on(table.createdBy),
     index('inquiries_status_idx').on(table.status),
+    index('inquiries_created_at_idx').on(table.createdAt),
   ],
 );
 

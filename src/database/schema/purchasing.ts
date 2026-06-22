@@ -1,6 +1,6 @@
-import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, numeric, purchaseOrderStatusEnum, purchaseReceiptStatusEnum, nonNegativeQuantityCheck } from './common';
+import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
+import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
@@ -12,18 +12,22 @@ export const purchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    status: purchaseOrderStatusEnum('status').notNull().default('pending'),
     totalAmount: numeric('total_amount').notNull(),
+    // Purchase order status can be deduced from these dates:
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
+    createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
-    createdAt,
   },
   (table) => [
     index('purchase_orders_vendor_id_idx').on(table.vendorId),
+    index('purchase_orders_completed_at_idx').on(table.completedAt),
+    index('purchase_orders_cancelled_at_idx').on(table.cancelledAt),
     index('purchase_orders_created_by_idx').on(table.createdBy),
-    index('purchase_orders_status_idx').on(table.status),
+    index('purchase_orders_created_at_idx').on(table.createdAt),
   ],
 );
 
@@ -54,7 +58,8 @@ export const purchaseReceipts = pgTable(
     purchaseOrderId: uuid('purchase_order_id')
       .notNull()
       .references(() => purchaseOrders.id),
-    status: purchaseReceiptStatusEnum('status').notNull().default('pending'),
+    // Purchase receipt status can be deduced from these dates:
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     receivedAt: timestamp('received_at', { withTimezone: true }),
     receivedBy: uuid('received_by').references(() => users.id),
     notes: text('notes'),
@@ -65,9 +70,11 @@ export const purchaseReceipts = pgTable(
   },
   (table) => [
     index('purchase_receipts_purchase_order_id_idx').on(table.purchaseOrderId),
+    index('purchase_receipts_received_at_idx').on(table.receivedAt),
+    index('purchase_receipts_cancelled_at_idx').on(table.cancelledAt),
     index('purchase_receipts_received_by_idx').on(table.receivedBy),
     index('purchase_receipts_created_by_idx').on(table.createdBy),
-    index('purchase_receipts_status_idx').on(table.status),
+    index('purchase_receipts_created_at_idx').on(table.createdAt),
   ],
 );
 

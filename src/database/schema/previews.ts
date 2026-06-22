@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric, previewStatusEnum } from './common';
+import { createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric } from './common';
 import { users } from './users';
 import { inquiries, inquiryItems } from './inquiries';
 
@@ -11,13 +11,14 @@ export const previews = pgTable(
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
+    // Preview status can be deduced from these dates:
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
-    visitedAt: timestamp('visited_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    notes: text('notes'),
     assignedTo: uuid('assigned_to')
       .notNull()
       .references(() => users.id),
-    notes: text('notes'),
-    status: previewStatusEnum('status').notNull().default('scheduled'),
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -25,10 +26,12 @@ export const previews = pgTable(
   },
   (table) => [
     index('previews_inquiry_id_idx').on(table.inquiryId),
+    index('previews_scheduled_at_idx').on(table.scheduledAt),
+    index('previews_completed_at_idx').on(table.completedAt),
+    index('previews_cancelled_at_idx').on(table.cancelledAt),
     index('previews_assigned_to_idx').on(table.assignedTo),
     index('previews_created_by_idx').on(table.createdBy),
-    index('previews_status_idx').on(table.status),
-    index('previews_scheduled_at_idx').on(table.scheduledAt),
+    index('previews_created_at_idx').on(table.createdAt),
   ],
 );
 

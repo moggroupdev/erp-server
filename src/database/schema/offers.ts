@@ -25,6 +25,7 @@ export const offers = pgTable(
     index('offers_inquiry_id_idx').on(table.inquiryId),
     index('offers_created_by_idx').on(table.createdBy),
     index('offers_status_idx').on(table.status),
+    index('offers_created_at_idx').on(table.createdAt),
   ],
 );
 

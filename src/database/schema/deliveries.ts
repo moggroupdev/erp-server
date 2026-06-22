@@ -24,6 +24,7 @@ export const deliveries = pgTable(
     index('deliveries_order_id_idx').on(table.orderId),
     index('deliveries_created_by_idx').on(table.createdBy),
     index('deliveries_status_idx').on(table.status),
+    index('deliveries_created_at_idx').on(table.createdAt),
   ],
 );
 

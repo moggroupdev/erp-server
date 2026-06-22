@@ -1,15 +1,8 @@
-import { pgTable, uuid, text, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import {
-  numeric,
-  createdAt,
-  dimensionUnitEnum,
-  orderStatusEnum,
-  nonNegativeQuantityCheck,
-  positiveQuantityCheck,
-} from './common';
-import { users } from './users';
+import { pgTable, uuid, text, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
+import { numeric, createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
+import { users } from './users';
 import { products } from './products';
 import { inquiries } from './inquiries';
 import { offers, offerItems } from './offers';
@@ -31,9 +24,10 @@ export const orders = pgTable(
     deliveryAddressId: uuid('delivery_address_id')
       .notNull()
       .references(() => customerAddresses.id),
-    status: orderStatusEnum('status').notNull().default('pending'),
     totalAmount: numeric('total_amount').notNull(),
+    // Order status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -43,9 +37,11 @@ export const orders = pgTable(
   (table) => [
     index('orders_inquiry_id_idx').on(table.inquiryId),
     index('orders_customer_id_idx').on(table.customerId),
-    index('orders_created_by_idx').on(table.createdBy),
-    index('orders_status_idx').on(table.status),
     index('orders_delivery_address_id_idx').on(table.deliveryAddressId),
+    index('orders_completed_at_idx').on(table.completedAt),
+    index('orders_cancelled_at_idx').on(table.cancelledAt),
+    index('orders_created_by_idx').on(table.createdBy),
+    index('orders_created_at_idx').on(table.createdAt),
   ],
 );
 

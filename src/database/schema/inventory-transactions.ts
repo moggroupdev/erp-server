@@ -20,6 +20,7 @@ export const inventoryTransactions = pgTable(
   (table) => [
     index('inventory_transactions_created_by_idx').on(table.createdBy),
     index('inventory_transactions_transaction_type_idx').on(table.transactionType),
+    index('inventory_transactions_created_at_idx').on(table.createdAt),
   ],
 );
 

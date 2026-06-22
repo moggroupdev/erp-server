@@ -76,8 +76,6 @@ export const inquiryStatusEnum = pgEnum('inquiry_status', [
   'cancelled',
 ]);
 
-export const previewStatusEnum = pgEnum('preview_status', ['scheduled', 'done', 'cancelled']);
-
 export const offerStatusEnum = pgEnum('offer_status', ['draft', 'sent', 'accepted', 'rejected', 'cancelled']);
 
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
@@ -85,8 +83,6 @@ export const orderStatusEnum = pgEnum('order_status', ['pending', 'in_progress',
 export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'shipping', 'delivered', 'cancelled']);
 
 export const purchaseOrderStatusEnum = pgEnum('purchase_order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
-
-export const purchaseReceiptStatusEnum = pgEnum('purchase_receipt_status', ['pending', 'shipping', 'received', 'cancelled']);
 
 export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', ['draft', 'sent', 'failed']);
 
