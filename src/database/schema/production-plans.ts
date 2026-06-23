@@ -4,6 +4,7 @@ import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './comm
 import { users } from './users';
 import { orderItems } from './orders';
 import { materialTransferItems } from './material-transfers';
+import { productTransferItems } from './product-transfers';
 
 export const productionPlans = pgTable(
   'production_plans',
@@ -109,6 +110,7 @@ export const productionPlanItemsRelations = relations(productionPlanItems, ({ on
   notes: many(productionPlanItemNotes),
   fromTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemFromPlanItem' }),
   toTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemToPlanItem' }),
+  productTransferItems: many(productTransferItems, { relationName: 'productTransferItemPlanItem' }),
 }));
 
 export const productionPlanItemNotesRelations = relations(productionPlanItemNotes, ({ one }) => ({

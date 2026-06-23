@@ -211,3 +211,21 @@ DROP TRIGGER IF EXISTS material_transfers_generate_code ON material_transfers;
 CREATE TRIGGER material_transfers_generate_code
 BEFORE INSERT ON material_transfers
 FOR EACH ROW EXECUTE PROCEDURE generate_material_transfers_code();
+
+-- PRODUCT TRANSFERS: PT
+CREATE SEQUENCE IF NOT EXISTS product_transfers_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_product_transfers_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'PT-' || LPAD(nextval('product_transfers_code_seq')::text, 6, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS product_transfers_generate_code ON product_transfers;
+CREATE TRIGGER product_transfers_generate_code
+BEFORE INSERT ON product_transfers
+FOR EACH ROW EXECUTE PROCEDURE generate_product_transfers_code();
