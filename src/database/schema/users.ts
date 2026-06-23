@@ -12,7 +12,7 @@ export const users = pgTable(
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),
     email: text('email').unique(),
     isEmailVerified: boolean('is_email_verified').notNull().default(false),
-    password: text('password'), // Store hashed password
+    password: text('password').notNull(), // Store hashed password
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
@@ -46,8 +46,8 @@ export const roles = pgTable(
   (table) => [index('roles_created_by_idx').on(table.createdBy)],
 );
 
-export const rolePermissions = pgTable(
-  'role_permissions',
+export const permissions = pgTable(
+  'permissions',
   {
     roleId: uuid('role_id')
       .notNull()
@@ -84,13 +84,13 @@ export const rolesRelations = relations(roles, ({ one, many }) => ({
     references: [users.id],
     relationName: 'roleCreatedBy',
   }),
-  permissions: many(rolePermissions),
+  permissions: many(permissions),
   users: many(users, { relationName: 'userRole' }),
 }));
 
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+export const permissionsRelations = relations(permissions, ({ one }) => ({
   role: one(roles, {
-    fields: [rolePermissions.roleId],
+    fields: [permissions.roleId],
     references: [roles.id],
   }),
 }));
