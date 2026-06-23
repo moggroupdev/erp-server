@@ -12,7 +12,7 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
 } from './constants';
-import { users } from 'src/database/schema';
+import { roles, users } from 'src/database/schema';
 
 export type Pagination = {
   page: number;
@@ -52,7 +52,13 @@ export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES
 
 export type ProductionStage = (typeof PRODUCTION_STAGE_VALUES)[number];
 
-
 // ==================== ENTITIES ====================
 
 export type User = typeof users.$inferSelect;
+
+export type Role = typeof roles.$inferSelect;
+
+export type RoleWithPermissions = Role & { permissions: Permission[] };
+
+/** User with their role and the role's permissions joined in. */
+export type UserWithRoleWithPermissions = User & { role: RoleWithPermissions | null };
