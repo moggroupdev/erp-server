@@ -25,7 +25,7 @@ export const materials = pgTable(
     unit: materialUnitEnum('unit').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     quantity: numeric('quantity').notNull().default(0),
-    initialQuantity: numeric('initial_quantity'),
+    initialQuantity: numeric('initial_quantity').default(0), // Quantity on hand at the start of the project
     minimumStock: numeric('minimum_stock'),
     deletedAt,
     createdAt,
