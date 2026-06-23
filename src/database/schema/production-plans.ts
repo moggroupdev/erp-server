@@ -3,6 +3,7 @@ import { relations, sql } from 'drizzle-orm';
 import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './common';
 import { users } from './users';
 import { orderItems } from './orders';
+import { materialTransferItems } from './material-transfers';
 
 export const productionPlans = pgTable(
   'production_plans',
@@ -106,6 +107,8 @@ export const productionPlanItemsRelations = relations(productionPlanItems, ({ on
     references: [orderItems.id],
   }),
   notes: many(productionPlanItemNotes),
+  fromTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemFromPlanItem' }),
+  toTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemToPlanItem' }),
 }));
 
 export const productionPlanItemNotesRelations = relations(productionPlanItemNotes, ({ one }) => ({

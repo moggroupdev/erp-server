@@ -68,7 +68,7 @@ export const offerStatusEnum = pgEnum('offer_status', ['draft', 'sent', 'accepte
 
 export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', ['draft', 'sent', 'failed']);
 
-export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', ['receipt', 'issue']);
+export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', ['receipt', 'issue', 'return']);
 
 export const productionStageEnum = pgEnum('production_stage', [
   'cutting', // قسم المقص
@@ -85,4 +85,3 @@ export const productionStageEnum = pgEnum('production_stage', [
 ]);
 
 export const loginStatusEnum = pgEnum('login_status', ['success', 'failed']);
-

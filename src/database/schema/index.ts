@@ -21,6 +21,7 @@ export * from './purchasing';
 export * from './deliveries';
 export * from './installations';
 export * from './login-history';
+export * from './material-transfers';
 
 /*
 
@@ -71,5 +72,7 @@ All Tables
 041. inventory_transactions       - uuid        - NO                  - YES       - YES (NOT NULL)
 042. inventory_transaction_items  - uuid        - NO                  - NO        - NO
 043. login_history                - uuid        - NO                  - YES       - NO
+044. material_transfers           - uuid        - NO                  - YES       - YES (NOT NULL)
+045. material_transfer_items      - uuid        - NO                  - NO        - NO
 
 */
