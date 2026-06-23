@@ -83,3 +83,6 @@ export const productionStageEnum = pgEnum('production_stage', [
   'blacksmithing', // قسم الحدادة
   'maintenance', // قسم الصيانة
 ]);
+
+export const loginStatusEnum = pgEnum('login_status', ['success', 'failed']);
+

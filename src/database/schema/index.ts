@@ -20,6 +20,7 @@ export * from './vendor-quotation-emails';
 export * from './purchasing';
 export * from './deliveries';
 export * from './installations';
+export * from './login-history';
 
 /*
 
@@ -69,5 +70,6 @@ All Tables
 040. production_plan_item_notes   - uuid        - NO                  - YES       - YES (NOT NULL)
 041. inventory_transactions       - uuid        - NO                  - YES       - YES (NOT NULL)
 042. inventory_transaction_items  - uuid        - NO                  - NO        - NO
-  
+043. login_history                - uuid        - NO                  - YES       - NO
+
 */
