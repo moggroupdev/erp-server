@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { eq, or, sql } from 'drizzle-orm';
+import { eq, or, and, isNull, sql } from 'drizzle-orm';
 import { users } from 'src/database/schema';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { JwtPayload, User, UserWithRoleWithPermissions } from 'src/utils/types';
@@ -69,7 +69,10 @@ export class AuthService {
 
     // Step 2: Find user by email or phone
     const user = await this.db.query.users.findFirst({
-      where: or(dto.email ? eq(users.email, dto.email) : undefined, dto.phone ? eq(users.phone, dto.phone) : undefined),
+      where: and(
+        or(dto.email ? eq(users.email, dto.email) : undefined, dto.phone ? eq(users.phone, dto.phone) : undefined),
+        isNull(users.deletedAt),
+      ),
     });
 
     if (!user) throw new UnauthorizedException('Invalid credentials.');
@@ -108,7 +111,10 @@ export class AuthService {
   }
 
   public async getUser(id: string) {
-    const [user] = await this.db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)));
     if (!user) throw new UnauthorizedException('Access denied: User does not exist.');
     return user;
   }
@@ -122,7 +128,7 @@ export class AuthService {
   /** Fetches the user along with their role and the role's permissions. Used by `PermissionGuard`. */
   public async getSanitizedUserWithRoleWithPermissions(id: string): Promise<SanitizedUserWithRoleWithPermissions> {
     const rawUser = await this.db.query.users.findFirst({
-      where: eq(users.id, id),
+      where: and(eq(users.id, id), isNull(users.deletedAt)),
       with: { role: { with: { permissions: true } } },
     });
 
