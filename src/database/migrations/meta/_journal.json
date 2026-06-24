@@ -15,6 +15,13 @@
       "when": 1782219925592,
       "tag": "0001_slippery_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782278771827,
+      "tag": "0002_wandering_lightspeed",
+      "breakpoints": true
     }
   ]
 }

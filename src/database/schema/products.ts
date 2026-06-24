@@ -1,12 +1,12 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, check, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, check, unique, integer } from 'drizzle-orm/pg-core';
 import {
+  numeric,
   createdAt,
   deletedAt,
   dimensionUnitEnum,
   nonNegativeNullableQuantityCheck,
   nonNegativeQuantityCheck,
-  numeric,
   productSourceTypeEnum,
 } from './common';
 import { productCategorySubs } from './categories';
@@ -27,6 +27,7 @@ export const products = pgTable(
     width: numeric('width'),
     height: numeric('height'),
     dimensionUnit: dimensionUnitEnum('dimension_unit'),
+    estimatedProductionTime: integer('estimated_production_time'), // In Days
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
