@@ -14,8 +14,8 @@ export const productPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // Drived value
-    completedAt: timestamp('completed_at', { withTimezone: true }), // Drived value
+    totalAmount: numeric('total_amount').notNull(), // app-synced
+    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,

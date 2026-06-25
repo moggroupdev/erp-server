@@ -29,8 +29,8 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 - **Default:** no redundancy. Prefer FKs + joins over duplicated codes, names, or IDs.
 - **Exception:** a denormalized column is allowed when it avoids a hot join on frequent reads (list/filter APIs). Keep these rare.
-- **Every intentional duplication** must be listed in `src/database/docs/db-duplications.md` (column, canonical source, why kept, sync rule).
-- **Derived/cached values** (totals, timestamps synced from other tables) belong in `src/database/docs/app-logic-reminder.md`, not duplications doc.
+- Mark performance duplications with `// RFP` (redundancy for performance) on the column; list them in `src/database/docs/db-duplications.md` with sync rules.
+- Mark application-maintained derived columns with `// app-synced`; document behavior in `src/database/docs/app-logic-reminder.md`.
 
 ### Performance
 
@@ -77,8 +77,7 @@ Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, th
 
 1. Constants first → common → schema.
 2. Schema is the contract (FKs, indexes, checks, relations).
-3. Minimize redundancy; document exceptions in `db-duplications.md`.
-4. Document derived logic in `app-logic-reminder.md`; implement in services.
-5. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
-6. Do not commit unless asked.
-7. Do not add markdown files unless requested.
+3. Minimize redundancy; `// RFP` + `db-duplications.md` for performance copies; `// app-synced` + `app-logic-reminder.md` for derived fields.
+4. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
+5. Do not commit unless asked.
+6. Do not add markdown files unless requested.

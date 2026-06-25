@@ -16,7 +16,7 @@ export const boms = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityRequired: numeric('quantity_required').notNull(), // Quantity of material required
-    unitCost: numeric('unit_cost').notNull(), // Unit cost of the material at the time of the BOM creation (Historical snapshot)
+    unitCost: numeric('unit_cost').notNull(), // Historical snapshot at BOM creation
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

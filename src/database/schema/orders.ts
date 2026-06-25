@@ -24,14 +24,14 @@ export const orders = pgTable(
     offerId: uuid('offer_id') // Offer ID is nullable as some orders are not from offers
       .unique()
       .references(() => offers.id),
-    customerId: uuid('customer_id') // Small redundancy is fine for better performance
+    customerId: uuid('customer_id') // RFP
       .notNull()
       .references(() => customers.id),
     deliveryAddressId: uuid('delivery_address_id')
       .notNull()
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
-    totalAmount: numeric('total_amount').notNull(), // Drived value
+    totalAmount: numeric('total_amount').notNull(), // app-synced
     // Order status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),

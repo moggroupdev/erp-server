@@ -14,11 +14,11 @@ export const productUnits = pgTable(
     orderItemId: uuid('order_item_id')
       .notNull()
       .references(() => orderItems.id),
-    // All the following timestamps are drived from other tables
-    producedAt: timestamp('produced_at', { withTimezone: true }), // For the manufactured products
-    receivedAt: timestamp('received_at', { withTimezone: true }), // For the imported products
-    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
-    installedAt: timestamp('installed_at', { withTimezone: true }),
+    // Status can be deduced from the following timestamps. The following timestamps are app-synced (which means they are derived from other tables)
+    producedAt: timestamp('produced_at', { withTimezone: true }), // app-synced
+    receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced
+    installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
