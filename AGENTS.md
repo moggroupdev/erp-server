@@ -1,0 +1,84 @@
+# AGENTS.md — ERP Server
+
+NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep changes focused.
+
+---
+
+## Enums & constants
+
+| Layer | File                                  | Role                                                                                                              |
+| ----- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| App   | `src/utils/constants.ts`              | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere. |
+| DB    | `src/database/schema/common/index.ts` | `pgEnum`, shared columns (`createdAt`, `numeric`, …), check helpers. Imports values from constants.               |
+
+**New enum:** constants → common → schema. Migration is done manually by a developer (see Migrations).
+
+---
+
+## Schema
+
+- One file per domain under `src/database/schema/`; export tables + `relations`; register in `index.ts`.
+- **Fully define** FKs, indexes, checks, and Drizzle relations in schema — not only in app code.
+- Index FKs and filter/sort columns. Use `check` for DB-level invariants.
+- **Uniqueness:** use `.unique()` on a column **or** `uniqueIndex()` — never both with the same name (breaks migrations).
+- Use `uniqueIndex()` only for partial uniqueness (e.g. one default address).
+- Status often comes from timestamps (`cancelledAt`, `deliveredAt`) — avoid redundant status enums.
+- **Materials** → `purchasing-materials.ts` · **Products** → `purchasing-products.ts` (symmetric naming).
+
+### DRY vs. performance
+
+- **Default:** no redundancy. Prefer FKs + joins over duplicated codes, names, or IDs.
+- **Exception:** a denormalized column is allowed when it avoids a hot join on frequent reads (list/filter APIs). Keep these rare.
+- **Every intentional duplication** must be listed in `src/database/docs/db-duplications.md` (column, canonical source, why kept, sync rule).
+- **Derived/cached values** (totals, timestamps synced from other tables) belong in `src/database/docs/app-logic-reminder.md`, not duplications doc.
+
+### Performance
+
+- Index columns used in `WHERE`, `ORDER BY`, and join keys.
+- Prefer narrow selects; use Drizzle `with` only when needed.
+- Use `src/utils/services/query-builder.service.ts` for list/filter/pagination.
+- Quantity updates: `sql\`quantity + ${n}\`` in transactions — never read-modify-write in Node.
+
+---
+
+## Docs & triggers
+
+| File                                      | Purpose                                                                                                                                                    |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/database/docs/app-logic-reminder.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
+| `src/database/docs/db-duplications.md`    | Intentional redundant columns for performance.                                                                                                             |
+| `src/database/sql/triggers.sql`           | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
+
+**Triggers example:** `OR-000001` via sequence + `BEFORE INSERT` on `orders`. Add new coded entities here; omit `code` from create DTOs.
+
+---
+
+## Migrations
+
+**Agents must not run** `db:generate`, `db:migrate`, or `db:triggers` after schema changes. Stop at schema (and related docs/triggers SQL edits); a developer runs the workflow manually:
+
+```bash
+npm run db:generate → db:migrate → db:triggers
+```
+
+Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, then full workflow. Keep `schema/index.ts` table list current.
+
+---
+
+## NestJS
+
+- Transactions for multi-table writes and recalculations.
+- Nest HTTP exceptions with clear messages; omit immutable fields (`code`, `createdAt`) from update DTOs.
+- Permissions from `PERMISSION_VALUES` in constants.
+
+---
+
+## Agent rules
+
+1. Constants first → common → schema.
+2. Schema is the contract (FKs, indexes, checks, relations).
+3. Minimize redundancy; document exceptions in `db-duplications.md`.
+4. Document derived logic in `app-logic-reminder.md`; implement in services.
+5. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
+6. Do not commit unless asked.
+7. Do not add markdown files unless requested.

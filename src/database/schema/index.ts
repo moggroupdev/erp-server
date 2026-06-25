@@ -29,7 +29,7 @@ export * from './product-units';
 
 All Tables
 
-###  table                        - primaryKey  - deleting            - createdAt - createdBy
+###  table                           - primaryKey  - deleting            - createdAt - createdBy
 
 001. users                           - uuid        - deletedAt field     - YES       - YES (nullable)
 002. roles                           - uuid        - NO                  - YES       - YES (NOT NULL)
