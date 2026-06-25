@@ -1,9 +1,9 @@
-import { pgTable, uuid, text, timestamp, check, index, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, check, index, foreignKey, unique } from 'drizzle-orm/pg-core';
 import { createdAt, productionStageEnum } from './common';
-import { users } from './users';
 import { materialTransferItems } from './material-transfers';
 import { productUnits } from './product-units';
+import { users } from './users';
 
 export const productionPlans = pgTable(
   'production_plans',
@@ -22,6 +22,8 @@ export const productionPlans = pgTable(
   (table) => [
     index('production_plans_code_idx').on(table.code),
     index('production_plans_name_idx').on(table.name),
+    index('production_plans_start_date_idx').on(table.startDate),
+    index('production_plans_end_date_idx').on(table.endDate),
     check('production_plans_end_date_gte_start_date', sql`${table.endDate} >= ${table.startDate}`),
   ],
 );
@@ -45,6 +47,9 @@ export const productionPlanItems = pgTable(
   (table) => [
     index('production_plan_items_plan_id_idx').on(table.planId),
     index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
+    index('production_plan_items_stage_idx').on(table.stage),
+    index('production_plan_items_completed_at_idx').on(table.completedAt),
+    unique('production_plan_items_plan_unit_stage_unique').on(table.planId, table.productUnitId, table.stage),
     check(
       'production_plan_items_estimated_end_date_gte_start_date',
       sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,

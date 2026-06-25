@@ -1,6 +1,6 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
+import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
@@ -29,6 +29,8 @@ export const materialPurchaseOrders = pgTable(
     index('mpo_cancelled_at_idx').on(table.cancelledAt),
     index('mpo_created_by_idx').on(table.createdBy),
     index('mpo_created_at_idx').on(table.createdAt),
+    check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
   ],
 );
 
@@ -49,7 +51,9 @@ export const materialPurchaseOrderItems = pgTable(
   (table) => [
     index('mpoi_mpo_id_idx').on(table.materialPurchaseOrderId),
     index('mpoi_material_code_idx').on(table.materialCode),
-    nonNegativeQuantityCheck('mpoi_quantity_ordered_non_negative', table.quantityOrdered),
+    unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
+    positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
+    positiveQuantityCheck('mpoi_unit_cost_positive', table.unitCost),
   ],
 );
 
@@ -102,6 +106,7 @@ export const materialPurchaseReceiptItems = pgTable(
     }),
     index('mpri_receipt_id_idx').on(table.materialPurchaseReceiptId),
     index('mpri_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    unique('mpri_receipt_mpoi_unique').on(table.materialPurchaseReceiptId, table.materialPurchaseOrderItemId),
     nonNegativeQuantityCheck('mpri_quantity_received_non_negative', table.quantityReceived),
     nonNegativeQuantityCheck('mpri_quantity_rejected_non_negative', table.quantityRejected),
   ],

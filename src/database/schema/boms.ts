@@ -1,9 +1,9 @@
 import { pgTable, uuid, text, unique, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
-import { users } from './users';
+import { createdAt, numeric, positiveQuantityCheck } from './common';
 import { productUnits } from './product-units';
 import { materials } from './materials';
+import { users } from './users';
 
 export const boms = pgTable(
   'boms',
@@ -28,7 +28,8 @@ export const boms = pgTable(
     index('boms_product_unit_id_idx').on(table.productUnitId),
     index('boms_material_code_idx').on(table.materialCode),
     index('boms_created_by_idx').on(table.createdBy),
-    nonNegativeQuantityCheck('boms_quantity_required_non_negative', table.quantityRequired),
+    positiveQuantityCheck('boms_quantity_required_positive', table.quantityRequired),
+    positiveQuantityCheck('boms_unit_cost_positive', table.unitCost),
   ],
 );
 

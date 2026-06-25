@@ -1,7 +1,8 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, offerStatusEnum, positiveQuantityCheck } from './common';
+import { createdAt, numeric, offerStatusEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { inquiries } from './inquiries';
+import { contracts } from './contracts';
 import { products } from './products';
 import { users } from './users';
 
@@ -26,6 +27,7 @@ export const offers = pgTable(
     index('offers_created_by_idx').on(table.createdBy),
     index('offers_status_idx').on(table.status),
     index('offers_created_at_idx').on(table.createdAt),
+    nonNegativeQuantityCheck('offers_total_amount_non_negative', table.totalAmount),
   ],
 );
 
@@ -48,6 +50,7 @@ export const offerItems = pgTable(
     index('offer_items_offer_id_idx').on(table.offerId),
     index('offer_items_product_code_idx').on(table.productCode),
     positiveQuantityCheck('offer_items_quantity_positive', table.quantity),
+    positiveQuantityCheck('offer_items_unit_price_positive', table.unitPrice),
   ],
 );
 
@@ -63,6 +66,7 @@ export const offersRelations = relations(offers, ({ one, many }) => ({
     references: [users.id],
   }),
   items: many(offerItems),
+  contracts: many(contracts),
 }));
 
 export const offerItemsRelations = relations(offerItems, ({ one }) => ({

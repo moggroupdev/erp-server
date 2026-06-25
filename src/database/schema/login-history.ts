@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, varchar, text, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, numeric, index } from 'drizzle-orm/pg-core';
 import { createdAt, loginStatusEnum } from './common';
 import { users } from './users';
 
@@ -19,6 +19,11 @@ export const loginHistory = pgTable(
     failureReason: text('failure_reason'),
     createdAt,
   },
+  (table) => [
+    index('login_history_user_id_idx').on(table.userId),
+    index('login_history_status_idx').on(table.status),
+    index('login_history_created_at_idx').on(table.createdAt),
+  ],
 );
 
 export const loginHistoryRelations = relations(loginHistory, ({ one }) => ({

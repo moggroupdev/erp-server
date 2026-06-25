@@ -1,8 +1,9 @@
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core';
 import { createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric } from './common';
-import { users } from './users';
 import { inquiries, inquiryItems } from './inquiries';
+import { contracts } from './contracts';
+import { users } from './users';
 
 export const previews = pgTable(
   'previews',
@@ -32,6 +33,15 @@ export const previews = pgTable(
     index('previews_assigned_to_idx').on(table.assignedTo),
     index('previews_created_by_idx').on(table.createdBy),
     index('previews_created_at_idx').on(table.createdAt),
+    check('previews_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    check(
+      'previews_completed_at_gte_scheduled_at',
+      sql`${table.completedAt} IS NULL OR ${table.completedAt} >= ${table.scheduledAt}`,
+    ),
+    check(
+      'previews_cancelled_at_gte_scheduled_at',
+      sql`${table.cancelledAt} IS NULL OR ${table.cancelledAt} >= ${table.scheduledAt}`,
+    ),
   ],
 );
 
@@ -91,6 +101,7 @@ export const previewsRelations = relations(previews, ({ one, many }) => ({
     relationName: 'previewCreatedBy',
   }),
   items: many(previewItems),
+  contracts: many(contracts),
 }));
 
 export const previewItemsRelations = relations(previewItems, ({ one }) => ({

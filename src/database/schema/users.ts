@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { createdAt, deletedAt, permissionEnum } from './common';
+import { loginHistory } from './login-history';
 
 export const users = pgTable(
   'users',
@@ -76,6 +77,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [roles.id],
     relationName: 'userRole',
   }),
+  loginHistory: many(loginHistory),
 }));
 
 export const rolesRelations = relations(roles, ({ one, many }) => ({
