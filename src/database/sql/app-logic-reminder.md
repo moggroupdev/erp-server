@@ -34,14 +34,14 @@ Perform validation checks at the application level to throw readable HTTP except
 ### 📦 Inventory Transaction Item Source Validation
 * **Database Table**: `inventory_transaction_items`
 * **Validation Rule**:
-  - `purchase_receipt_item_id` can **only** be set if the parent `inventory_transactions.transaction_type` is `'receipt'`.
+  - `material_purchase_receipt_item_id` can **only** be set if the parent `inventory_transactions.transaction_type` is `'receipt'`.
   - `production_plan_item_id` can **only** be set if the parent `inventory_transactions.transaction_type` is `'issue'`.
 * **NestJS Exception**: Throw `BadRequestException('Invalid item source for transaction type')` if violated.
 
 ### 🧾 Purchase Receipt Item Quantities Validation
-* **Database Table**: `purchase_receipt_items`
+* **Database Table**: `material_purchase_receipt_items`
 * **Validation Rule**:
-  - The sum of `quantity_received + quantity_rejected` for a specific `purchase_order_item_id` (across all non-cancelled receipts) must not exceed the ordered quantity `quantity_ordered` on the related `purchase_order_items`.
+  - The sum of `quantity_received + quantity_rejected` for a specific `material_purchase_order_item_id` (across all non-cancelled receipts) must not exceed the ordered quantity `quantity_ordered` on the related `material_purchase_order_items`.
 * **NestJS Exception**: Throw `BadRequestException('Purchase receipt totals exceed ordered quantity')` if violated.
 
 ---
@@ -92,37 +92,3 @@ Ensure generated codes (e.g. `US-xxxxxx`, `PO-xxxxxx`) cannot be modified after 
 * **Rules**:
   - Omit the `code` field from NestJS update DTOs (e.g. `UpdateOrderDto`).
   - Do not map or pass the `code` column in any SQL update statement.
-
----
-
-## 6. Product Transfer — `quantityProduced` Synchronization
-
-When a `product_transfer_items` record is created (or deleted/reversed), the application layer **must** adjust `order_items.quantity_produced` for both sides inside a single transaction.
-
-The **"from" order item is not stored** on `product_transfer_items` — derive it from `productionPlanItem.orderItemId`:
-
-### 📦 On Create (transfer units from → to)
-* **Source Table**: `product_transfer_items`
-* **Behavior**:
-  - `fromOrderItem.quantityProduced -= quantity` (give up produced units)
-  - `toOrderItem.quantityProduced += quantity` (receive produced units)
-* **Pre-condition checks** (throw `BadRequestException` if violated):
-  - `toOrderItemId !== planItem.orderItemId` — cannot transfer to the same order item the plan item already belongs to.
-  - `fromOrderItem.quantityProduced >= quantity` — cannot transfer more than what has been produced on the source item.
-  - `toOrderItem.quantityProduced + quantity <= toOrderItem.quantity` — cannot exceed destination demand.
-  - `fromOrderItem.productCode === toOrderItem.productCode` — must be the same product.
-* **⚠️ Concurrency** — use incremental SQL expressions, not read-modify-write:
-  ```typescript
-  await tx.update(orderItems)
-    .set({ quantityProduced: sql`quantity_produced - ${quantity}` })
-    .where(eq(orderItems.id, fromOrderItemId));
-
-  await tx.update(orderItems)
-    .set({ quantityProduced: sql`quantity_produced + ${quantity}` })
-    .where(eq(orderItems.id, toOrderItemId));
-  ```
-
-### ↩️ On Delete / Reversal
-* Re-derive `fromOrderItemId` from the stored `productionPlanItemId`.
-* Revert both sides symmetrically (add back to `from`, subtract from `to`).
-* Apply the same pre-condition checks in reverse before reverting.

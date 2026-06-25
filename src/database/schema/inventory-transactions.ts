@@ -1,11 +1,10 @@
 import { pgTable, uuid, text, index, check, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, inventoryTransactionTypeEnum, numeric } from './common';
+import { createdAt, inventoryTransactionTypeEnum, numeric, positiveQuantityCheck } from './common';
 import { users } from './users';
-import { purchaseReceiptItems } from './purchasing';
+import { materialPurchaseReceiptItems } from './purchasing-materials';
 import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
-import { products } from './products';
 
 export const inventoryTransactions = pgTable(
   'inventory_transactions',
@@ -32,12 +31,12 @@ export const inventoryTransactionItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     transactionId: uuid('transaction_id').notNull(),
-    materialCode: text('material_code').references(() => materials.code),
-    productCode: text('product_code').references(() => products.code),
+    materialCode: text('material_code')
+      .notNull()
+      .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
     unitCost: numeric('unit_cost').notNull(),
-    // Source:
-    purchaseReceiptItemId: uuid('purchase_receipt_item_id'),
+    materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'),
     productionPlanItemId: uuid('production_plan_item_id'),
   },
   (table) => [
@@ -47,33 +46,24 @@ export const inventoryTransactionItems = pgTable(
       foreignColumns: [inventoryTransactions.id],
     }),
     foreignKey({
-      name: 'inv_tx_items_pr_item_id_fk',
-      columns: [table.purchaseReceiptItemId],
-      foreignColumns: [purchaseReceiptItems.id],
+      name: 'inv_tx_items_mpri_id_fk',
+      columns: [table.materialPurchaseReceiptItemId],
+      foreignColumns: [materialPurchaseReceiptItems.id],
     }),
     foreignKey({
       name: 'inv_tx_items_pp_item_id_fk',
       columns: [table.productionPlanItemId],
       foreignColumns: [productionPlanItems.id],
     }),
-    index('inventory_transaction_items_transaction_id_idx').on(table.transactionId),
-    index('inventory_transaction_items_material_code_idx').on(table.materialCode),
-    index('inventory_transaction_items_product_code_idx').on(table.productCode),
-    index('inventory_transaction_items_purchase_receipt_item_id_idx').on(table.purchaseReceiptItemId),
-    index('inventory_transaction_items_production_plan_item_id_idx').on(table.productionPlanItemId),
-    check('inventory_transaction_items_quantity_positive', sql`${table.quantity} > 0`),
+    index('inv_tx_items_transaction_id_idx').on(table.transactionId),
+    index('inv_tx_items_material_code_idx').on(table.materialCode),
+    index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
+    index('inv_tx_items_pp_item_id_idx').on(table.productionPlanItemId),
+    positiveQuantityCheck('inv_tx_items_quantity_positive', table.quantity),
     check(
-      'inventory_transaction_items_source_non_conflicting',
+      'inv_tx_items_source_non_conflicting',
       sql`(
-        ${table.purchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL
-      )`,
-    ),
-    check(
-      'inventory_transaction_items_material_or_product_xor',
-      sql`(
-        (${table.materialCode} IS NOT NULL AND ${table.productCode} IS NULL)
-        OR
-        (${table.materialCode} IS NULL AND ${table.productCode} IS NOT NULL)
+        ${table.materialPurchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL
       )`,
     ),
   ],
@@ -99,13 +89,9 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
     fields: [inventoryTransactionItems.materialCode],
     references: [materials.code],
   }),
-  product: one(products, {
-    fields: [inventoryTransactionItems.productCode],
-    references: [products.code],
-  }),
-  purchaseReceiptItem: one(purchaseReceiptItems, {
-    fields: [inventoryTransactionItems.purchaseReceiptItemId],
-    references: [purchaseReceiptItems.id],
+  materialPurchaseReceiptItem: one(materialPurchaseReceiptItems, {
+    fields: [inventoryTransactionItems.materialPurchaseReceiptItemId],
+    references: [materialPurchaseReceiptItems.id],
   }),
   productionPlanItem: one(productionPlanItems, {
     fields: [inventoryTransactionItems.productionPlanItemId],

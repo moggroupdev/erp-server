@@ -1,8 +1,9 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, positiveQuantityCheck } from './common';
-import { orders, orderItems } from './orders';
+import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { createdAt } from './common';
+import { orders } from './orders';
 import { users } from './users';
+import { productUnits } from './product-units';
 
 export const installations = pgTable(
   'installations',
@@ -12,6 +13,7 @@ export const installations = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
+    // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     installedAt: timestamp('installed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -39,16 +41,15 @@ export const installationItems = pgTable(
     installationId: uuid('installation_id')
       .notNull()
       .references(() => installations.id),
-    orderItemId: uuid('order_item_id')
+    productUnitId: uuid('product_unit_id')
       .notNull()
-      .references(() => orderItems.id),
-    quantity: integer('quantity').notNull(),
+      .unique()
+      .references(() => productUnits.id),
     notes: text('notes'),
   },
   (table) => [
     index('installation_items_installation_id_idx').on(table.installationId),
-    index('installation_items_order_item_id_idx').on(table.orderItemId),
-    positiveQuantityCheck('installation_items_quantity_positive', table.quantity),
+    index('installation_items_product_unit_id_unique').on(table.productUnitId),
   ],
 );
 
@@ -77,8 +78,8 @@ export const installationItemsRelations = relations(installationItems, ({ one })
     fields: [installationItems.installationId],
     references: [installations.id],
   }),
-  orderItem: one(orderItems, {
-    fields: [installationItems.orderItemId],
-    references: [orderItems.id],
+  productUnit: one(productUnits, {
+    fields: [installationItems.productUnitId],
+    references: [productUnits.id],
   }),
 }));

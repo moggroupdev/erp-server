@@ -1,10 +1,9 @@
-import { pgTable, uuid, text, timestamp, integer, unique, check, index, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, check, index, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, productionStageEnum, nonNegativeQuantityCheck } from './common';
+import { createdAt, productionStageEnum } from './common';
 import { users } from './users';
-import { orderItems } from './orders';
 import { materialTransferItems } from './material-transfers';
-import { productTransferItems } from './product-transfers';
+import { productUnits } from './product-units';
 
 export const productionPlans = pgTable(
   'production_plans',
@@ -34,27 +33,18 @@ export const productionPlanItems = pgTable(
     planId: uuid('plan_id')
       .notNull()
       .references(() => productionPlans.id),
-    orderItemId: uuid('order_item_id')
+    productUnitId: uuid('product_unit_id')
       .notNull()
-      .references(() => orderItems.id),
+      .references(() => productUnits.id),
     stage: productionStageEnum('stage').notNull(),
     startDate: timestamp('start_date', { withTimezone: true }),
     estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
-    quantityPlanned: integer('quantity_planned').notNull().default(1),
-    quantityCompleted: integer('quantity_completed').notNull().default(0),
     notes: text('notes'),
   },
   (table) => [
-    unique('production_plan_items_plan_order_stage_unique').on(table.planId, table.orderItemId, table.stage),
     index('production_plan_items_plan_id_idx').on(table.planId),
-    index('production_plan_items_order_item_id_idx').on(table.orderItemId),
-    nonNegativeQuantityCheck('production_plan_items_quantity_planned_non_negative', table.quantityPlanned),
-    nonNegativeQuantityCheck('production_plan_items_quantity_completed_non_negative', table.quantityCompleted),
-    check(
-      'production_plan_items_quantity_completed_lte_planned',
-      sql`${table.quantityCompleted} <= ${table.quantityPlanned}`,
-    ),
+    index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
     check(
       'production_plan_items_estimated_end_date_gte_start_date',
       sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,
@@ -103,14 +93,13 @@ export const productionPlanItemsRelations = relations(productionPlanItems, ({ on
     fields: [productionPlanItems.planId],
     references: [productionPlans.id],
   }),
-  orderItem: one(orderItems, {
-    fields: [productionPlanItems.orderItemId],
-    references: [orderItems.id],
+  productUnit: one(productUnits, {
+    fields: [productionPlanItems.productUnitId],
+    references: [productUnits.id],
   }),
   notes: many(productionPlanItemNotes),
   fromTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemFromPlanItem' }),
   toTransferItems: many(materialTransferItems, { relationName: 'materialTransferItemToPlanItem' }),
-  productTransferItems: many(productTransferItems, { relationName: 'productTransferItemPlanItem' }),
 }));
 
 export const productionPlanItemNotesRelations = relations(productionPlanItemNotes, ({ one }) => ({

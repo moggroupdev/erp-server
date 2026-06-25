@@ -54,4 +54,4 @@ export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_sta
 
 export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', INVENTORY_TRANSACTION_TYPE_VALUES);
 
-export const productionStageEnum = pgEnum('production_stage', PRODUCTION_STAGE_VALUES); ``
+export const productionStageEnum = pgEnum('production_stage', PRODUCTION_STAGE_VALUES);

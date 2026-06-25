@@ -1,14 +1,14 @@
-import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, boolean, index, check } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { numeric, createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
 import { users } from './users';
 import { products } from './products';
 import { inquiries } from './inquiries';
-import { offers, offerItems } from './offers';
-import { productionPlanItems } from './production-plans';
-import { purchaseOrderItems } from './purchasing';
-import { productTransferItems } from './product-transfers';
+import { previews } from './previews';
+import { offers } from './offers';
+import { productUnits } from './product-units';
+import { productPurchaseOrderItems } from './purchasing-products';
 
 export const orders = pgTable(
   'orders',
@@ -18,17 +18,20 @@ export const orders = pgTable(
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
-    offerId: uuid('offer_id')
+    previewId: uuid('preview_id') // Perview ID is nullable as some orders are not from previews
+      .unique()
+      .references(() => previews.id),
+    offerId: uuid('offer_id') // Offer ID is nullable as some orders are not from offers
       .unique()
       .references(() => offers.id),
-    customerId: uuid('customer_id')
+    customerId: uuid('customer_id') // Small redundancy is fine for better performance
       .notNull()
       .references(() => customers.id),
     deliveryAddressId: uuid('delivery_address_id')
       .notNull()
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
-    totalAmount: numeric('total_amount').notNull(),
+    totalAmount: numeric('total_amount').notNull(), // Drived value
     // Order status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -57,24 +60,18 @@ export const orderItems = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
-    offerItemId: uuid('offer_item_id').references(() => offerItems.id), // Nullable as not all orders are from offers
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
     title: text('title'),
-    standard: boolean('standard').notNull().default(true),
+    notes: text('notes'),
     unitPrice: numeric('unit_price').notNull(),
     quantity: integer('quantity').notNull().default(1),
-    quantityProduced: integer('quantity_produced').notNull().default(0),
-    notes: text('notes'),
   },
   (table) => [
     index('order_items_order_id_idx').on(table.orderId),
-    index('order_items_offer_item_id_idx').on(table.offerItemId),
     index('order_items_product_code_idx').on(table.productCode),
     positiveQuantityCheck('order_items_quantity_positive', table.quantity),
-    nonNegativeQuantityCheck('order_items_quantity_produced_non_negative', table.quantityProduced),
-    check('order_items_quantity_produced_lte_quantity', sql`${table.quantityProduced} <= ${table.quantity}`),
   ],
 );
 
@@ -106,6 +103,10 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.inquiryId],
     references: [inquiries.id],
   }),
+  preview: one(previews, {
+    fields: [orders.previewId],
+    references: [previews.id],
+  }),
   offer: one(offers, {
     fields: [orders.offerId],
     references: [offers.id],
@@ -130,10 +131,6 @@ export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
     fields: [orderItems.orderId],
     references: [orders.id],
   }),
-  offerItem: one(offerItems, {
-    fields: [orderItems.offerItemId],
-    references: [offerItems.id],
-  }),
   product: one(products, {
     fields: [orderItems.productCode],
     references: [products.code],
@@ -142,9 +139,8 @@ export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
     fields: [orderItems.id],
     references: [orderItemDimensions.orderItemId],
   }),
-  planItems: many(productionPlanItems),
-  purchaseOrderItems: many(purchaseOrderItems),
-  toProductTransferItems: many(productTransferItems, { relationName: 'productTransferItemToOrderItem' }),
+  productUnits: many(productUnits),
+  productPurchaseOrderItems: many(productPurchaseOrderItems),
 }));
 
 export const orderItemDimensionsRelations = relations(orderItemDimensions, ({ one }) => ({

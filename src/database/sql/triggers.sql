@@ -86,41 +86,41 @@ CREATE TRIGGER orders_generate_code
 BEFORE INSERT ON orders
 FOR EACH ROW EXECUTE PROCEDURE generate_orders_code();
 
--- PURCHASE ORDERS: PO
-CREATE SEQUENCE IF NOT EXISTS purchase_orders_code_seq START 1 INCREMENT 1;
+-- MATERIAL PURCHASE ORDERS: MPO
+CREATE SEQUENCE IF NOT EXISTS material_purchase_orders_code_seq START 1 INCREMENT 1;
 
-CREATE OR REPLACE FUNCTION generate_purchase_orders_code()
+CREATE OR REPLACE FUNCTION generate_material_purchase_orders_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PO-' || LPAD(nextval('purchase_orders_code_seq')::text, 6, '0');
+    NEW.code := 'MPO-' || LPAD(nextval('material_purchase_orders_code_seq')::text, 6, '0');
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS purchase_orders_generate_code ON purchase_orders;
-CREATE TRIGGER purchase_orders_generate_code
-BEFORE INSERT ON purchase_orders
-FOR EACH ROW EXECUTE PROCEDURE generate_purchase_orders_code();
+DROP TRIGGER IF EXISTS material_purchase_orders_generate_code ON material_purchase_orders;
+CREATE TRIGGER material_purchase_orders_generate_code
+BEFORE INSERT ON material_purchase_orders
+FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_orders_code();
 
--- PURCHASE RECEIPTS: PR
-CREATE SEQUENCE IF NOT EXISTS purchase_receipts_code_seq START 1 INCREMENT 1;
+-- MATERIAL PURCHASE RECEIPTS: MPR
+CREATE SEQUENCE IF NOT EXISTS material_purchase_receipts_code_seq START 1 INCREMENT 1;
 
-CREATE OR REPLACE FUNCTION generate_purchase_receipts_code()
+CREATE OR REPLACE FUNCTION generate_material_purchase_receipts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PR-' || LPAD(nextval('purchase_receipts_code_seq')::text, 6, '0');
+    NEW.code := 'MPR-' || LPAD(nextval('material_purchase_receipts_code_seq')::text, 6, '0');
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS purchase_receipts_generate_code ON purchase_receipts;
-CREATE TRIGGER purchase_receipts_generate_code
-BEFORE INSERT ON purchase_receipts
-FOR EACH ROW EXECUTE PROCEDURE generate_purchase_receipts_code();
+DROP TRIGGER IF EXISTS material_purchase_receipts_generate_code ON material_purchase_receipts;
+CREATE TRIGGER material_purchase_receipts_generate_code
+BEFORE INSERT ON material_purchase_receipts
+FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_receipts_code();
 
 -- DELIVERIES: DE
 CREATE SEQUENCE IF NOT EXISTS deliveries_code_seq START 1 INCREMENT 1;
@@ -212,20 +212,38 @@ CREATE TRIGGER material_transfers_generate_code
 BEFORE INSERT ON material_transfers
 FOR EACH ROW EXECUTE PROCEDURE generate_material_transfers_code();
 
--- PRODUCT TRANSFERS: PT
-CREATE SEQUENCE IF NOT EXISTS product_transfers_code_seq START 1 INCREMENT 1;
+-- PRODUCT PURCHASE ORDERS: PPO
+CREATE SEQUENCE IF NOT EXISTS product_purchase_orders_code_seq START 1 INCREMENT 1;
 
-CREATE OR REPLACE FUNCTION generate_product_transfers_code()
+CREATE OR REPLACE FUNCTION generate_product_purchase_orders_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PT-' || LPAD(nextval('product_transfers_code_seq')::text, 6, '0');
+    NEW.code := 'PPO-' || LPAD(nextval('product_purchase_orders_code_seq')::text, 6, '0');
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS product_transfers_generate_code ON product_transfers;
-CREATE TRIGGER product_transfers_generate_code
-BEFORE INSERT ON product_transfers
-FOR EACH ROW EXECUTE PROCEDURE generate_product_transfers_code();
+DROP TRIGGER IF EXISTS product_purchase_orders_generate_code ON product_purchase_orders;
+CREATE TRIGGER product_purchase_orders_generate_code
+BEFORE INSERT ON product_purchase_orders
+FOR EACH ROW EXECUTE PROCEDURE generate_product_purchase_orders_code();
+
+-- PRODUCT PURCHASE RECEIPTS: PPR
+CREATE SEQUENCE IF NOT EXISTS product_purchase_receipts_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_product_purchase_receipts_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'PPR-' || LPAD(nextval('product_purchase_receipts_code_seq')::text, 6, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS product_purchase_receipts_generate_code ON product_purchase_receipts;
+CREATE TRIGGER product_purchase_receipts_generate_code
+BEFORE INSERT ON product_purchase_receipts
+FOR EACH ROW EXECUTE PROCEDURE generate_product_purchase_receipts_code();

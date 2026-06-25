@@ -1,0 +1,165 @@
+import { relations } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, index, foreignKey } from 'drizzle-orm/pg-core';
+import { createdAt, numeric, nonNegativeQuantityCheck } from './common';
+import { users } from './users';
+import { vendors } from './vendors';
+import { materials } from './materials';
+
+export const materialPurchaseOrders = pgTable(
+  'material_purchase_orders',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: MPO-000001
+    vendorId: uuid('vendor_id')
+      .notNull()
+      .references(() => vendors.id),
+    totalAmount: numeric('total_amount').notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('mpo_code_idx').on(table.code),
+    index('mpo_vendor_id_idx').on(table.vendorId),
+    index('mpo_completed_at_idx').on(table.completedAt),
+    index('mpo_cancelled_at_idx').on(table.cancelledAt),
+    index('mpo_created_by_idx').on(table.createdBy),
+    index('mpo_created_at_idx').on(table.createdAt),
+  ],
+);
+
+export const materialPurchaseOrderItems = pgTable(
+  'material_purchase_order_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderId: uuid('material_purchase_order_id')
+      .notNull()
+      .references(() => materialPurchaseOrders.id),
+    materialCode: text('material_code')
+      .notNull()
+      .references(() => materials.code),
+    quantityOrdered: numeric('quantity_ordered').notNull(),
+    unitCost: numeric('unit_cost').notNull(),
+    notes: text('notes'),
+  },
+  (table) => [
+    index('mpoi_mpo_id_idx').on(table.materialPurchaseOrderId),
+    index('mpoi_material_code_idx').on(table.materialCode),
+    nonNegativeQuantityCheck('mpoi_quantity_ordered_non_negative', table.quantityOrdered),
+  ],
+);
+
+export const materialPurchaseReceipts = pgTable(
+  'material_purchase_receipts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: MPR-000001
+    materialPurchaseOrderId: uuid('material_purchase_order_id')
+      .notNull()
+      .references(() => materialPurchaseOrders.id),
+    receivedAt: timestamp('received_at', { withTimezone: true }),
+    receivedBy: uuid('received_by').references(() => users.id),
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('mpr_code_idx').on(table.code),
+    index('mpr_mpo_id_idx').on(table.materialPurchaseOrderId),
+    index('mpr_received_at_idx').on(table.receivedAt),
+    index('mpr_received_by_idx').on(table.receivedBy),
+    index('mpr_created_by_idx').on(table.createdBy),
+    index('mpr_created_at_idx').on(table.createdAt),
+  ],
+);
+
+export const materialPurchaseReceiptItems = pgTable(
+  'material_purchase_receipt_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseReceiptId: uuid('material_purchase_receipt_id').notNull(),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    quantityReceived: numeric('quantity_received').notNull(),
+    quantityRejected: numeric('quantity_rejected').notNull().default(0),
+    inspectionNotes: text('inspection_notes'),
+  },
+  (table) => [
+    foreignKey({
+      name: 'mpri_receipt_id_fk',
+      columns: [table.materialPurchaseReceiptId],
+      foreignColumns: [materialPurchaseReceipts.id],
+    }),
+    foreignKey({
+      name: 'mpri_mpoi_id_fk',
+      columns: [table.materialPurchaseOrderItemId],
+      foreignColumns: [materialPurchaseOrderItems.id],
+    }),
+    index('mpri_receipt_id_idx').on(table.materialPurchaseReceiptId),
+    index('mpri_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    nonNegativeQuantityCheck('mpri_quantity_received_non_negative', table.quantityReceived),
+    nonNegativeQuantityCheck('mpri_quantity_rejected_non_negative', table.quantityRejected),
+  ],
+);
+
+// ============================== RELATIONS ==============================
+
+export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders, ({ one, many }) => ({
+  vendor: one(vendors, {
+    fields: [materialPurchaseOrders.vendorId],
+    references: [vendors.id],
+  }),
+  createdBy: one(users, {
+    fields: [materialPurchaseOrders.createdBy],
+    references: [users.id],
+    relationName: 'materialPurchaseOrderCreatedBy',
+  }),
+  items: many(materialPurchaseOrderItems),
+  receipts: many(materialPurchaseReceipts),
+}));
+
+export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrderItems, ({ one, many }) => ({
+  materialPurchaseOrder: one(materialPurchaseOrders, {
+    fields: [materialPurchaseOrderItems.materialPurchaseOrderId],
+    references: [materialPurchaseOrders.id],
+  }),
+  material: one(materials, {
+    fields: [materialPurchaseOrderItems.materialCode],
+    references: [materials.code],
+  }),
+  receiptItems: many(materialPurchaseReceiptItems),
+}));
+
+export const materialPurchaseReceiptsRelations = relations(materialPurchaseReceipts, ({ one, many }) => ({
+  materialPurchaseOrder: one(materialPurchaseOrders, {
+    fields: [materialPurchaseReceipts.materialPurchaseOrderId],
+    references: [materialPurchaseOrders.id],
+  }),
+  receivedBy: one(users, {
+    fields: [materialPurchaseReceipts.receivedBy],
+    references: [users.id],
+    relationName: 'materialPurchaseReceiptReceivedBy',
+  }),
+  createdBy: one(users, {
+    fields: [materialPurchaseReceipts.createdBy],
+    references: [users.id],
+    relationName: 'materialPurchaseReceiptCreatedBy',
+  }),
+  items: many(materialPurchaseReceiptItems),
+}));
+
+export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseReceiptItems, ({ one }) => ({
+  materialPurchaseReceipt: one(materialPurchaseReceipts, {
+    fields: [materialPurchaseReceiptItems.materialPurchaseReceiptId],
+    references: [materialPurchaseReceipts.id],
+  }),
+  materialPurchaseOrderItem: one(materialPurchaseOrderItems, {
+    fields: [materialPurchaseReceiptItems.materialPurchaseOrderItemId],
+    references: [materialPurchaseOrderItems.id],
+  }),
+}));

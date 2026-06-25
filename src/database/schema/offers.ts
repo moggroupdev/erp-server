@@ -1,9 +1,9 @@
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
 import { createdAt, numeric, offerStatusEnum, positiveQuantityCheck } from './common';
-import { users } from './users';
-import { inquiries, inquiryItems } from './inquiries';
+import { inquiries } from './inquiries';
 import { products } from './products';
+import { users } from './users';
 
 export const offers = pgTable(
   'offers',
@@ -13,8 +13,8 @@ export const offers = pgTable(
       .notNull()
       .references(() => inquiries.id),
     status: offerStatusEnum('status').notNull().default('draft'),
-    totalAmount: numeric('total_amount').notNull(),
     validUntil: timestamp('valid_until', { withTimezone: true }),
+    totalAmount: numeric('total_amount').notNull(), // Drived Value
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -36,21 +36,16 @@ export const offerItems = pgTable(
     offerId: uuid('offer_id')
       .notNull()
       .references(() => offers.id),
-    inquiryItemId: uuid('inquiry_item_id')
-      .notNull()
-      .references(() => inquiryItems.id),
-    // The inquiry_items.product_code already exists, but we need the product_code in offer_items also as the sales team can substitute a different product during quoting.
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
-    title: text('title').notNull(),
+    title: text('title'),
+    notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),
     unitPrice: numeric('unit_price').notNull(),
-    notes: text('notes'),
   },
   (table) => [
     index('offer_items_offer_id_idx').on(table.offerId),
-    index('offer_items_inquiry_item_id_idx').on(table.inquiryItemId),
     index('offer_items_product_code_idx').on(table.productCode),
     positiveQuantityCheck('offer_items_quantity_positive', table.quantity),
   ],
@@ -74,10 +69,6 @@ export const offerItemsRelations = relations(offerItems, ({ one }) => ({
   offer: one(offers, {
     fields: [offerItems.offerId],
     references: [offers.id],
-  }),
-  inquiryItem: one(inquiryItems, {
-    fields: [offerItems.inquiryItemId],
-    references: [inquiryItems.id],
   }),
   product: one(products, {
     fields: [offerItems.productCode],

@@ -15,10 +15,10 @@ export const inquiries = pgTable(
       .references(() => customers.id),
     status: inquiryStatusEnum('status').notNull().default('pending'),
     notes: text('notes'),
+    createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
-    createdAt,
   },
   (table) => [
     index('inquiries_customer_id_idx').on(table.customerId),
@@ -39,8 +39,8 @@ export const inquiryItems = pgTable(
       .notNull()
       .references(() => products.code),
     title: text('title'),
-    quantity: integer('quantity').notNull().default(1),
     notes: text('notes'),
+    quantity: integer('quantity').notNull().default(1),
   },
   (table) => [
     index('inquiry_items_inquiry_id_idx').on(table.inquiryId),

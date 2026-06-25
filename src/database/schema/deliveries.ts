@@ -1,8 +1,9 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, positiveQuantityCheck } from './common';
-import { orders, orderItems } from './orders';
+import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { createdAt } from './common';
+import { orders } from './orders';
 import { users } from './users';
+import { productUnits } from './product-units';
 
 export const deliveries = pgTable(
   'deliveries',
@@ -12,9 +13,11 @@ export const deliveries = pgTable(
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),
+    // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    assignedTo: uuid('assigned_to').references(() => users.id),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -24,6 +27,7 @@ export const deliveries = pgTable(
   (table) => [
     index('deliveries_code_idx').on(table.code),
     index('deliveries_order_id_idx').on(table.orderId),
+    index('deliveries_assigned_to_idx').on(table.assignedTo),
     index('deliveries_scheduled_at_idx').on(table.scheduledAt),
     index('deliveries_delivered_at_idx').on(table.deliveredAt),
     index('deliveries_cancelled_at_idx').on(table.cancelledAt),
@@ -37,16 +41,15 @@ export const deliveryItems = pgTable(
     deliveryId: uuid('delivery_id')
       .notNull()
       .references(() => deliveries.id),
-    orderItemId: uuid('order_item_id')
+    productUnitId: uuid('product_unit_id')
       .notNull()
-      .references(() => orderItems.id),
-    quantity: integer('quantity').notNull(),
+      .unique()
+      .references(() => productUnits.id),
     notes: text('notes'),
   },
   (table) => [
     index('delivery_items_delivery_id_idx').on(table.deliveryId),
-    index('delivery_items_order_item_id_idx').on(table.orderItemId),
-    positiveQuantityCheck('delivery_items_quantity_positive', table.quantity),
+    index('delivery_items_product_unit_id_unique').on(table.productUnitId),
   ],
 );
 
@@ -60,6 +63,12 @@ export const deliveriesRelations = relations(deliveries, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [deliveries.createdBy],
     references: [users.id],
+    relationName: 'deliveryCreatedBy',
+  }),
+  assignedTo: one(users, {
+    fields: [deliveries.assignedTo],
+    references: [users.id],
+    relationName: 'deliveryAssignedTo',
   }),
   items: many(deliveryItems),
 }));
@@ -69,8 +78,8 @@ export const deliveryItemsRelations = relations(deliveryItems, ({ one }) => ({
     fields: [deliveryItems.deliveryId],
     references: [deliveries.id],
   }),
-  orderItem: one(orderItems, {
-    fields: [deliveryItems.orderItemId],
-    references: [orderItems.id],
+  productUnit: one(productUnits, {
+    fields: [deliveryItems.productUnitId],
+    references: [productUnits.id],
   }),
 }));
