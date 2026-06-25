@@ -82,3 +82,4 @@ Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, th
 4. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
 5. Do not commit unless asked.
 6. Do not add markdown files unless requested.
+7. **Comments:** brief inline comments are allowed to explain non-obvious business logic, schema intent. Keep them short — do not restate what the code already says.
