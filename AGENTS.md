@@ -9,9 +9,9 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 | Layer | File                                  | Role                                                                                                              |
 | ----- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | App   | `src/utils/constants.ts`              | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere. |
-| DB    | `src/database/schema/common/index.ts` | `pgEnum`, shared columns (`createdAt`, `numeric`, …), check helpers. Imports values from constants.               |
+| DB    | `src/database/schema/common/`         | Shared schema primitives: `enums.ts` (`pgEnum`), `properties.ts` (shared columns), `types.ts` (`numeric`), `constraints.ts` (check helpers). Imports enum values from constants. |
 
-**New enum:** constants → common → schema. Migration is done manually by a developer (see Migrations).
+**New enum:** constants → `common/enums.ts` → schema. Migration is done manually by a developer (see Migrations).
 
 ---
 

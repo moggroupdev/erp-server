@@ -32,6 +32,8 @@ CREATE TRIGGER users_generate_code
 BEFORE INSERT ON users
 FOR EACH ROW EXECUTE PROCEDURE generate_users_code();
 
+-- ---------------------------------------------------------------------------
+
 -- CUSTOMERS: CUS
 CREATE SEQUENCE IF NOT EXISTS customers_code_seq START 1 INCREMENT 1;
 
@@ -49,6 +51,8 @@ DROP TRIGGER IF EXISTS customers_generate_code ON customers;
 CREATE TRIGGER customers_generate_code
 BEFORE INSERT ON customers
 FOR EACH ROW EXECUTE PROCEDURE generate_customers_code();
+
+-- ---------------------------------------------------------------------------
 
 -- VENDORS: VEN
 CREATE SEQUENCE IF NOT EXISTS vendors_code_seq START 1 INCREMENT 1;
@@ -68,6 +72,8 @@ CREATE TRIGGER vendors_generate_code
 BEFORE INSERT ON vendors
 FOR EACH ROW EXECUTE PROCEDURE generate_vendors_code();
 
+-- ---------------------------------------------------------------------------
+
 -- CONTRACTS: CTR
 CREATE SEQUENCE IF NOT EXISTS contracts_code_seq START 1 INCREMENT 1;
 
@@ -85,6 +91,8 @@ DROP TRIGGER IF EXISTS contracts_generate_code ON contracts;
 CREATE TRIGGER contracts_generate_code
 BEFORE INSERT ON contracts
 FOR EACH ROW EXECUTE PROCEDURE generate_contracts_code();
+
+-- ---------------------------------------------------------------------------
 
 -- MATERIAL PURCHASE ORDERS: MPO
 CREATE SEQUENCE IF NOT EXISTS material_purchase_orders_code_seq START 1 INCREMENT 1;
@@ -104,6 +112,8 @@ CREATE TRIGGER material_purchase_orders_generate_code
 BEFORE INSERT ON material_purchase_orders
 FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_orders_code();
 
+-- ---------------------------------------------------------------------------
+
 -- MATERIAL PURCHASE RECEIPTS: MPR
 CREATE SEQUENCE IF NOT EXISTS material_purchase_receipts_code_seq START 1 INCREMENT 1;
 
@@ -121,6 +131,8 @@ DROP TRIGGER IF EXISTS material_purchase_receipts_generate_code ON material_purc
 CREATE TRIGGER material_purchase_receipts_generate_code
 BEFORE INSERT ON material_purchase_receipts
 FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_receipts_code();
+
+-- ---------------------------------------------------------------------------
 
 -- DELIVERIES: DEL
 CREATE SEQUENCE IF NOT EXISTS deliveries_code_seq START 1 INCREMENT 1;
@@ -140,6 +152,8 @@ CREATE TRIGGER deliveries_generate_code
 BEFORE INSERT ON deliveries
 FOR EACH ROW EXECUTE PROCEDURE generate_deliveries_code();
 
+-- ---------------------------------------------------------------------------
+
 -- INSTALLATIONS: INS
 CREATE SEQUENCE IF NOT EXISTS installations_code_seq START 1 INCREMENT 1;
 
@@ -157,6 +171,8 @@ DROP TRIGGER IF EXISTS installations_generate_code ON installations;
 CREATE TRIGGER installations_generate_code
 BEFORE INSERT ON installations
 FOR EACH ROW EXECUTE PROCEDURE generate_installations_code();
+
+-- ---------------------------------------------------------------------------
 
 -- PRODUCTION PLANS: PPL
 CREATE SEQUENCE IF NOT EXISTS production_plans_code_seq START 1 INCREMENT 1;
@@ -176,6 +192,8 @@ CREATE TRIGGER production_plans_generate_code
 BEFORE INSERT ON production_plans
 FOR EACH ROW EXECUTE PROCEDURE generate_production_plans_code();
 
+-- ---------------------------------------------------------------------------
+
 -- INVENTORY TRANSACTIONS: IVT
 CREATE SEQUENCE IF NOT EXISTS inventory_transactions_code_seq START 1 INCREMENT 1;
 
@@ -193,6 +211,8 @@ DROP TRIGGER IF EXISTS inventory_transactions_generate_code ON inventory_transac
 CREATE TRIGGER inventory_transactions_generate_code
 BEFORE INSERT ON inventory_transactions
 FOR EACH ROW EXECUTE PROCEDURE generate_inventory_transactions_code();
+
+-- ---------------------------------------------------------------------------
 
 -- MATERIAL TRANSFERS: MTR
 CREATE SEQUENCE IF NOT EXISTS material_transfers_code_seq START 1 INCREMENT 1;
@@ -212,6 +232,8 @@ CREATE TRIGGER material_transfers_generate_code
 BEFORE INSERT ON material_transfers
 FOR EACH ROW EXECUTE PROCEDURE generate_material_transfers_code();
 
+-- ---------------------------------------------------------------------------
+
 -- PRODUCT PURCHASE ORDERS: PPO
 CREATE SEQUENCE IF NOT EXISTS product_purchase_orders_code_seq START 1 INCREMENT 1;
 
@@ -229,6 +251,8 @@ DROP TRIGGER IF EXISTS product_purchase_orders_generate_code ON product_purchase
 CREATE TRIGGER product_purchase_orders_generate_code
 BEFORE INSERT ON product_purchase_orders
 FOR EACH ROW EXECUTE PROCEDURE generate_product_purchase_orders_code();
+
+-- ---------------------------------------------------------------------------
 
 -- PRODUCT PURCHASE RECEIPTS: PPR
 CREATE SEQUENCE IF NOT EXISTS product_purchase_receipts_code_seq START 1 INCREMENT 1;
