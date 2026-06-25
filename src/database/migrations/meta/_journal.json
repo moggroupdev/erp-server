@@ -22,6 +22,13 @@
       "when": 1782278771827,
       "tag": "0002_wandering_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782377276154,
+      "tag": "0003_absurd_jubilee",
+      "breakpoints": true
     }
   ]
 }
