@@ -78,6 +78,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     relationName: 'userRole',
   }),
   loginHistory: many(loginHistory),
+  createdRoles: many(roles, { relationName: 'roleCreatedBy' }),
 }));
 
 export const rolesRelations = relations(roles, ({ one, many }) => ({

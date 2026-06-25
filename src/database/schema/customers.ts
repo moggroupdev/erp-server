@@ -4,6 +4,8 @@ import { createdAt, deletedAt } from './common';
 import { users } from './users';
 import { cities } from './cities';
 import { countries } from './countries';
+import { inquiries } from './inquiries';
+import { contracts } from './contracts';
 
 export const customers = pgTable(
   'customers',
@@ -60,6 +62,8 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
     references: [users.id],
   }),
   addresses: many(customerAddresses),
+  inquiries: many(inquiries),
+  contracts: many(contracts),
 }));
 
 export const customerAddressesRelations = relations(customerAddresses, ({ one }) => ({

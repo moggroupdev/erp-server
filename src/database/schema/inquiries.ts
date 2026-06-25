@@ -5,7 +5,7 @@ import { users } from './users';
 import { customers } from './customers';
 import { products } from './products';
 import { offers } from './offers';
-import { previews } from './previews';
+import { previews, previewItems } from './previews';
 import { contracts } from './contracts';
 
 export const inquiries = pgTable(
@@ -68,7 +68,7 @@ export const inquiriesRelations = relations(inquiries, ({ one, many }) => ({
   contracts: many(contracts),
 }));
 
-export const inquiryItemsRelations = relations(inquiryItems, ({ one }) => ({
+export const inquiryItemsRelations = relations(inquiryItems, ({ one, many }) => ({
   inquiry: one(inquiries, {
     fields: [inquiryItems.inquiryId],
     references: [inquiries.id],
@@ -77,4 +77,5 @@ export const inquiryItemsRelations = relations(inquiryItems, ({ one }) => ({
     fields: [inquiryItems.productCode],
     references: [products.code],
   }),
+  previewItems: many(previewItems),
 }));

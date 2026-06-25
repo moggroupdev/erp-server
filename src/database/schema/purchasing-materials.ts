@@ -4,6 +4,7 @@ import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } f
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
+import { inventoryTransactionItems } from './inventory-transactions';
 
 export const materialPurchaseOrders = pgTable(
   'material_purchase_orders',
@@ -158,7 +159,7 @@ export const materialPurchaseReceiptsRelations = relations(materialPurchaseRecei
   items: many(materialPurchaseReceiptItems),
 }));
 
-export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseReceiptItems, ({ one }) => ({
+export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseReceiptItems, ({ one, many }) => ({
   materialPurchaseReceipt: one(materialPurchaseReceipts, {
     fields: [materialPurchaseReceiptItems.materialPurchaseReceiptId],
     references: [materialPurchaseReceipts.id],
@@ -167,4 +168,5 @@ export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseR
     fields: [materialPurchaseReceiptItems.materialPurchaseOrderItemId],
     references: [materialPurchaseOrderItems.id],
   }),
+  inventoryTransactionItems: many(inventoryTransactionItems),
 }));

@@ -4,6 +4,10 @@ import { createdAt } from './common';
 import { users } from './users';
 import { contractItems } from './contracts';
 import { productionPlanItems } from './production-plans';
+import { boms } from './boms';
+import { deliveryItems } from './deliveries';
+import { installationItems } from './installations';
+import { productPurchaseReceiptItems } from './purchasing-products';
 
 export const productUnits = pgTable(
   'product_units',
@@ -43,6 +47,19 @@ export const productUnitsRelations = relations(productUnits, ({ one, many }) => 
     references: [contractItems.id],
   }),
   productionPlanItems: many(productionPlanItems),
+  boms: many(boms),
+  deliveryItem: one(deliveryItems, {
+    fields: [productUnits.id],
+    references: [deliveryItems.productUnitId],
+  }),
+  installationItem: one(installationItems, {
+    fields: [productUnits.id],
+    references: [installationItems.productUnitId],
+  }),
+  purchaseReceiptItem: one(productPurchaseReceiptItems, {
+    fields: [productUnits.id],
+    references: [productPurchaseReceiptItems.productUnitId],
+  }),
   createdBy: one(users, {
     fields: [productUnits.createdBy],
     references: [users.id],
