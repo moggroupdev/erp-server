@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1782200419967,
-      "tag": "0000_motionless_ben_urich",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1782219925592,
-      "tag": "0001_slippery_thing",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1782278771827,
-      "tag": "0002_wandering_lightspeed",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1782377276154,
-      "tag": "0003_absurd_jubilee",
+      "when": 1782377942082,
+      "tag": "0000_hard_marten_broadcloak",
       "breakpoints": true
     }
   ]

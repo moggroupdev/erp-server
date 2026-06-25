@@ -11,14 +11,14 @@ CREATE TYPE "public"."production_stage" AS ENUM('cutting', 'bending', 'refrigera
 CREATE TYPE "public"."vendor_quotation_email_status" AS ENUM('draft', 'sent', 'failed');--> statement-breakpoint
 CREATE TABLE "boms" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"order_item_id" uuid NOT NULL,
+	"product_unit_id" uuid NOT NULL,
 	"material_code" text NOT NULL,
 	"quantity_required" numeric(15, 3) NOT NULL,
 	"unit_cost" numeric(15, 3) NOT NULL,
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
-	CONSTRAINT "boms_order_item_material_unique" UNIQUE("order_item_id","material_code"),
+	CONSTRAINT "boms_product_unit_material_unique" UNIQUE("product_unit_id","material_code"),
 	CONSTRAINT "boms_quantity_required_non_negative" CHECK ("boms"."quantity_required" >= 0)
 );
 --> statement-breakpoint
@@ -98,6 +98,7 @@ CREATE TABLE "deliveries" (
 	"scheduled_at" timestamp with time zone,
 	"delivered_at" timestamp with time zone,
 	"cancelled_at" timestamp with time zone,
+	"assigned_to" uuid,
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
@@ -107,10 +108,9 @@ CREATE TABLE "deliveries" (
 CREATE TABLE "delivery_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"delivery_id" uuid NOT NULL,
-	"order_item_id" uuid NOT NULL,
-	"quantity" integer NOT NULL,
+	"product_unit_id" uuid NOT NULL,
 	"notes" text,
-	CONSTRAINT "delivery_items_quantity_positive" CHECK ("delivery_items"."quantity" > 0)
+	CONSTRAINT "delivery_items_product_unit_id_unique" UNIQUE("product_unit_id")
 );
 --> statement-breakpoint
 CREATE TABLE "governorates" (
@@ -119,10 +119,10 @@ CREATE TABLE "governorates" (
 	"name_ar" text NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "role_permissions" (
+CREATE TABLE "permissions" (
 	"role_id" uuid NOT NULL,
 	"permission" "permission" NOT NULL,
-	CONSTRAINT "role_permissions_role_id_permission_pk" PRIMARY KEY("role_id","permission")
+	CONSTRAINT "permissions_role_id_permission_pk" PRIMARY KEY("role_id","permission")
 );
 --> statement-breakpoint
 CREATE TABLE "roles" (
@@ -142,7 +142,7 @@ CREATE TABLE "users" (
 	"is_phone_verified" boolean DEFAULT false NOT NULL,
 	"email" text,
 	"is_email_verified" boolean DEFAULT false NOT NULL,
-	"password" text,
+	"password" text NOT NULL,
 	"is_admin" boolean DEFAULT false NOT NULL,
 	"role_id" uuid,
 	"created_by" uuid,
@@ -200,6 +200,7 @@ CREATE TABLE "products" (
 	"width" numeric(15, 3),
 	"height" numeric(15, 3),
 	"dimension_unit" "dimension_unit",
+	"estimated_production_time" integer,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
@@ -237,8 +238,8 @@ CREATE TABLE "inquiries" (
 	"customer_id" uuid NOT NULL,
 	"status" "inquiry_status" DEFAULT 'pending' NOT NULL,
 	"notes" text,
-	"created_by" uuid NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by" uuid NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "inquiry_items" (
@@ -246,8 +247,8 @@ CREATE TABLE "inquiry_items" (
 	"inquiry_id" uuid NOT NULL,
 	"product_code" text NOT NULL,
 	"title" text,
-	"quantity" integer DEFAULT 1 NOT NULL,
 	"notes" text,
+	"quantity" integer DEFAULT 1 NOT NULL,
 	CONSTRAINT "inquiry_items_quantity_positive" CHECK ("inquiry_items"."quantity" > 0)
 );
 --> statement-breakpoint
@@ -286,12 +287,11 @@ CREATE TABLE "previews" (
 CREATE TABLE "offer_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"offer_id" uuid NOT NULL,
-	"inquiry_item_id" uuid NOT NULL,
 	"product_code" text NOT NULL,
-	"title" text NOT NULL,
+	"title" text,
+	"notes" text,
 	"quantity" integer DEFAULT 1 NOT NULL,
 	"unit_price" numeric(15, 3) NOT NULL,
-	"notes" text,
 	CONSTRAINT "offer_items_quantity_positive" CHECK ("offer_items"."quantity" > 0)
 );
 --> statement-breakpoint
@@ -299,8 +299,8 @@ CREATE TABLE "offers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"inquiry_id" uuid NOT NULL,
 	"status" "offer_status" DEFAULT 'draft' NOT NULL,
-	"total_amount" numeric(15, 3) NOT NULL,
 	"valid_until" timestamp with time zone,
+	"total_amount" numeric(15, 3) NOT NULL,
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL
@@ -322,23 +322,19 @@ CREATE TABLE "order_item_dimensions" (
 CREATE TABLE "order_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"order_id" uuid NOT NULL,
-	"offer_item_id" uuid,
 	"product_code" text NOT NULL,
 	"title" text,
-	"standard" boolean DEFAULT true NOT NULL,
+	"notes" text,
 	"unit_price" numeric(15, 3) NOT NULL,
 	"quantity" integer DEFAULT 1 NOT NULL,
-	"quantity_produced" integer DEFAULT 0 NOT NULL,
-	"notes" text,
-	CONSTRAINT "order_items_quantity_positive" CHECK ("order_items"."quantity" > 0),
-	CONSTRAINT "order_items_quantity_produced_non_negative" CHECK ("order_items"."quantity_produced" >= 0),
-	CONSTRAINT "order_items_quantity_produced_lte_quantity" CHECK ("order_items"."quantity_produced" <= "order_items"."quantity")
+	CONSTRAINT "order_items_quantity_positive" CHECK ("order_items"."quantity" > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "orders" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" text NOT NULL,
 	"inquiry_id" uuid NOT NULL,
+	"preview_id" uuid,
 	"offer_id" uuid,
 	"customer_id" uuid NOT NULL,
 	"delivery_address_id" uuid NOT NULL,
@@ -350,6 +346,7 @@ CREATE TABLE "orders" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
 	CONSTRAINT "orders_code_unique" UNIQUE("code"),
+	CONSTRAINT "orders_preview_id_unique" UNIQUE("preview_id"),
 	CONSTRAINT "orders_offer_id_unique" UNIQUE("offer_id")
 );
 --> statement-breakpoint
@@ -364,18 +361,12 @@ CREATE TABLE "production_plan_item_notes" (
 CREATE TABLE "production_plan_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"plan_id" uuid NOT NULL,
-	"order_item_id" uuid NOT NULL,
+	"product_unit_id" uuid NOT NULL,
 	"stage" "production_stage" NOT NULL,
 	"start_date" timestamp with time zone,
 	"estimated_end_date" timestamp with time zone,
 	"completed_at" timestamp with time zone,
-	"quantity_planned" integer DEFAULT 1 NOT NULL,
-	"quantity_completed" integer DEFAULT 0 NOT NULL,
 	"notes" text,
-	CONSTRAINT "production_plan_items_plan_order_stage_unique" UNIQUE("plan_id","order_item_id","stage"),
-	CONSTRAINT "production_plan_items_quantity_planned_non_negative" CHECK ("production_plan_items"."quantity_planned" >= 0),
-	CONSTRAINT "production_plan_items_quantity_completed_non_negative" CHECK ("production_plan_items"."quantity_completed" >= 0),
-	CONSTRAINT "production_plan_items_quantity_completed_lte_planned" CHECK ("production_plan_items"."quantity_completed" <= "production_plan_items"."quantity_planned"),
 	CONSTRAINT "production_plan_items_estimated_end_date_gte_start_date" CHECK ("production_plan_items"."estimated_end_date" IS NULL OR "production_plan_items"."start_date" IS NULL OR "production_plan_items"."estimated_end_date" >= "production_plan_items"."start_date"),
 	CONSTRAINT "production_plan_items_completed_at_gte_start_date" CHECK ("production_plan_items"."completed_at" IS NULL OR "production_plan_items"."start_date" IS NULL OR "production_plan_items"."completed_at" >= "production_plan_items"."start_date")
 );
@@ -396,20 +387,14 @@ CREATE TABLE "production_plans" (
 CREATE TABLE "inventory_transaction_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"transaction_id" uuid NOT NULL,
-	"material_code" text,
-	"product_code" text,
+	"material_code" text NOT NULL,
 	"quantity" numeric(15, 3) NOT NULL,
 	"unit_cost" numeric(15, 3) NOT NULL,
-	"purchase_receipt_item_id" uuid,
+	"material_purchase_receipt_item_id" uuid,
 	"production_plan_item_id" uuid,
-	CONSTRAINT "inventory_transaction_items_quantity_positive" CHECK ("inventory_transaction_items"."quantity" > 0),
-	CONSTRAINT "inventory_transaction_items_source_non_conflicting" CHECK ((
-        "inventory_transaction_items"."purchase_receipt_item_id" IS NULL OR "inventory_transaction_items"."production_plan_item_id" IS NULL
-      )),
-	CONSTRAINT "inventory_transaction_items_material_or_product_xor" CHECK ((
-        ("inventory_transaction_items"."material_code" IS NOT NULL AND "inventory_transaction_items"."product_code" IS NULL)
-        OR
-        ("inventory_transaction_items"."material_code" IS NULL AND "inventory_transaction_items"."product_code" IS NOT NULL)
+	CONSTRAINT "inv_tx_items_quantity_positive" CHECK ("inventory_transaction_items"."quantity" > 0),
+	CONSTRAINT "inv_tx_items_source_non_conflicting" CHECK ((
+        "inventory_transaction_items"."material_purchase_receipt_item_id" IS NULL OR "inventory_transaction_items"."production_plan_item_id" IS NULL
       ))
 );
 --> statement-breakpoint
@@ -434,27 +419,17 @@ CREATE TABLE "vendor_quotation_emails" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "purchase_order_items" (
+CREATE TABLE "material_purchase_order_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"purchase_order_id" uuid NOT NULL,
-	"material_code" text,
-	"product_code" text,
-	"bom_id" uuid,
-	"order_item_id" uuid,
+	"material_purchase_order_id" uuid NOT NULL,
+	"material_code" text NOT NULL,
 	"quantity_ordered" numeric(15, 3) NOT NULL,
 	"unit_cost" numeric(15, 3) NOT NULL,
 	"notes" text,
-	CONSTRAINT "purchase_order_items_quantity_ordered_non_negative" CHECK ("purchase_order_items"."quantity_ordered" >= 0),
-	CONSTRAINT "purchase_order_items_material_or_product_xor" CHECK ((
-        ("purchase_order_items"."material_code" IS NOT NULL AND "purchase_order_items"."product_code" IS NULL)
-        OR
-        ("purchase_order_items"."material_code" IS NULL AND "purchase_order_items"."product_code" IS NOT NULL)
-      )),
-	CONSTRAINT "purchase_order_items_bom_material_check" CHECK (("purchase_order_items"."bom_id" IS NULL OR "purchase_order_items"."material_code" IS NOT NULL)),
-	CONSTRAINT "purchase_order_items_order_item_product_check" CHECK (("purchase_order_items"."order_item_id" IS NULL OR "purchase_order_items"."product_code" IS NOT NULL))
+	CONSTRAINT "mpoi_quantity_ordered_non_negative" CHECK ("material_purchase_order_items"."quantity_ordered" >= 0)
 );
 --> statement-breakpoint
-CREATE TABLE "purchase_orders" (
+CREATE TABLE "material_purchase_orders" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" text NOT NULL,
 	"vendor_id" uuid NOT NULL,
@@ -464,40 +439,82 @@ CREATE TABLE "purchase_orders" (
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
-	CONSTRAINT "purchase_orders_code_unique" UNIQUE("code")
+	CONSTRAINT "material_purchase_orders_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "purchase_receipt_items" (
+CREATE TABLE "material_purchase_receipt_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"purchase_receipt_id" uuid NOT NULL,
-	"purchase_order_item_id" uuid NOT NULL,
+	"material_purchase_receipt_id" uuid NOT NULL,
+	"material_purchase_order_item_id" uuid NOT NULL,
 	"quantity_received" numeric(15, 3) NOT NULL,
 	"quantity_rejected" numeric(15, 3) DEFAULT 0 NOT NULL,
 	"inspection_notes" text,
-	CONSTRAINT "purchase_receipt_items_quantity_received_non_negative" CHECK ("purchase_receipt_items"."quantity_received" >= 0),
-	CONSTRAINT "purchase_receipt_items_quantity_rejected_non_negative" CHECK ("purchase_receipt_items"."quantity_rejected" >= 0)
+	CONSTRAINT "mpri_quantity_received_non_negative" CHECK ("material_purchase_receipt_items"."quantity_received" >= 0),
+	CONSTRAINT "mpri_quantity_rejected_non_negative" CHECK ("material_purchase_receipt_items"."quantity_rejected" >= 0)
 );
 --> statement-breakpoint
-CREATE TABLE "purchase_receipts" (
+CREATE TABLE "material_purchase_receipts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" text NOT NULL,
-	"purchase_order_id" uuid NOT NULL,
-	"cancelled_at" timestamp with time zone,
+	"material_purchase_order_id" uuid NOT NULL,
 	"received_at" timestamp with time zone,
 	"received_by" uuid,
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
-	CONSTRAINT "purchase_receipts_code_unique" UNIQUE("code")
+	CONSTRAINT "material_purchase_receipts_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "product_purchase_order_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"product_purchase_order_id" uuid NOT NULL,
+	"order_item_id" uuid NOT NULL,
+	"quantity_ordered" integer NOT NULL,
+	"unit_cost" numeric(15, 3) NOT NULL,
+	"notes" text,
+	CONSTRAINT "ppoi_quantity_ordered_positive" CHECK ("product_purchase_order_items"."quantity_ordered" > 0)
+);
+--> statement-breakpoint
+CREATE TABLE "product_purchase_orders" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"vendor_id" uuid NOT NULL,
+	"total_amount" numeric(15, 3) NOT NULL,
+	"completed_at" timestamp with time zone,
+	"cancelled_at" timestamp with time zone,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by" uuid NOT NULL,
+	CONSTRAINT "product_purchase_orders_code_unique" UNIQUE("code")
+);
+--> statement-breakpoint
+CREATE TABLE "product_purchase_receipt_items" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"product_purchase_receipt_id" uuid NOT NULL,
+	"product_purchase_order_item_id" uuid NOT NULL,
+	"product_unit_id" uuid NOT NULL,
+	"inspection_notes" text,
+	CONSTRAINT "product_purchase_receipt_items_product_unit_id_unique" UNIQUE("product_unit_id")
+);
+--> statement-breakpoint
+CREATE TABLE "product_purchase_receipts" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"code" text NOT NULL,
+	"product_purchase_order_id" uuid NOT NULL,
+	"received_at" timestamp with time zone,
+	"received_by" uuid,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by" uuid NOT NULL,
+	CONSTRAINT "product_purchase_receipts_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
 CREATE TABLE "installation_items" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"installation_id" uuid NOT NULL,
-	"order_item_id" uuid NOT NULL,
-	"quantity" integer NOT NULL,
+	"product_unit_id" uuid NOT NULL,
 	"notes" text,
-	CONSTRAINT "installation_items_quantity_positive" CHECK ("installation_items"."quantity" > 0)
+	CONSTRAINT "installation_items_product_unit_id_unique" UNIQUE("product_unit_id")
 );
 --> statement-breakpoint
 CREATE TABLE "installations" (
@@ -550,26 +567,23 @@ CREATE TABLE "material_transfers" (
 	CONSTRAINT "material_transfers_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "product_transfer_items" (
+CREATE TABLE "product_units" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"transfer_id" uuid NOT NULL,
-	"production_plan_item_id" uuid NOT NULL,
-	"to_order_item_id" uuid NOT NULL,
-	"quantity" integer NOT NULL,
-	"notes" text,
-	CONSTRAINT "product_transfer_items_quantity_positive" CHECK ("product_transfer_items"."quantity" > 0)
-);
---> statement-breakpoint
-CREATE TABLE "product_transfers" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"code" text NOT NULL,
+	"serial_number" text NOT NULL,
+	"vendor_serial_number" text,
+	"order_item_id" uuid NOT NULL,
+	"produced_at" timestamp with time zone,
+	"received_at" timestamp with time zone,
+	"delivered_at" timestamp with time zone,
+	"installed_at" timestamp with time zone,
 	"notes" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
-	CONSTRAINT "product_transfers_code_unique" UNIQUE("code")
+	CONSTRAINT "product_units_serial_number_unique" UNIQUE("serial_number"),
+	CONSTRAINT "product_units_vendor_serial_number_unique" UNIQUE("vendor_serial_number")
 );
 --> statement-breakpoint
-ALTER TABLE "boms" ADD CONSTRAINT "boms_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "boms" ADD CONSTRAINT "boms_product_unit_id_product_units_id_fk" FOREIGN KEY ("product_unit_id") REFERENCES "public"."product_units"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "boms" ADD CONSTRAINT "boms_material_code_materials_code_fk" FOREIGN KEY ("material_code") REFERENCES "public"."materials"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "boms" ADD CONSTRAINT "boms_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "material_category_subs" ADD CONSTRAINT "mat_cat_subs_main_cat_id_fk" FOREIGN KEY ("main_category_id") REFERENCES "public"."material_category_mains"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -580,10 +594,11 @@ ALTER TABLE "customer_addresses" ADD CONSTRAINT "customer_addresses_country_id_c
 ALTER TABLE "customer_addresses" ADD CONSTRAINT "customer_addresses_city_id_cities_id_fk" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_assigned_to_users_id_fk" FOREIGN KEY ("assigned_to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "delivery_items" ADD CONSTRAINT "delivery_items_delivery_id_deliveries_id_fk" FOREIGN KEY ("delivery_id") REFERENCES "public"."deliveries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "delivery_items" ADD CONSTRAINT "delivery_items_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "delivery_items" ADD CONSTRAINT "delivery_items_product_unit_id_product_units_id_fk" FOREIGN KEY ("product_unit_id") REFERENCES "public"."product_units"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "permissions" ADD CONSTRAINT "permissions_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roles" ADD CONSTRAINT "roles_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -609,15 +624,14 @@ ALTER TABLE "previews" ADD CONSTRAINT "previews_inquiry_id_inquiries_id_fk" FORE
 ALTER TABLE "previews" ADD CONSTRAINT "previews_assigned_to_users_id_fk" FOREIGN KEY ("assigned_to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "previews" ADD CONSTRAINT "previews_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offer_items" ADD CONSTRAINT "offer_items_offer_id_offers_id_fk" FOREIGN KEY ("offer_id") REFERENCES "public"."offers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "offer_items" ADD CONSTRAINT "offer_items_inquiry_item_id_inquiry_items_id_fk" FOREIGN KEY ("inquiry_item_id") REFERENCES "public"."inquiry_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offer_items" ADD CONSTRAINT "offer_items_product_code_products_code_fk" FOREIGN KEY ("product_code") REFERENCES "public"."products"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offers" ADD CONSTRAINT "offers_inquiry_id_inquiries_id_fk" FOREIGN KEY ("inquiry_id") REFERENCES "public"."inquiries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "offers" ADD CONSTRAINT "offers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_item_dimensions" ADD CONSTRAINT "order_item_dimensions_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "order_items" ADD CONSTRAINT "order_items_offer_item_id_offer_items_id_fk" FOREIGN KEY ("offer_item_id") REFERENCES "public"."offer_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_code_products_code_fk" FOREIGN KEY ("product_code") REFERENCES "public"."products"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_inquiry_id_inquiries_id_fk" FOREIGN KEY ("inquiry_id") REFERENCES "public"."inquiries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_preview_id_previews_id_fk" FOREIGN KEY ("preview_id") REFERENCES "public"."previews"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_offer_id_offers_id_fk" FOREIGN KEY ("offer_id") REFERENCES "public"."offers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_delivery_address_id_customer_addresses_id_fk" FOREIGN KEY ("delivery_address_id") REFERENCES "public"."customer_addresses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -625,30 +639,36 @@ ALTER TABLE "orders" ADD CONSTRAINT "orders_created_by_users_id_fk" FOREIGN KEY 
 ALTER TABLE "production_plan_item_notes" ADD CONSTRAINT "production_plan_item_notes_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "production_plan_item_notes" ADD CONSTRAINT "pp_item_notes_plan_item_id_fk" FOREIGN KEY ("plan_item_id") REFERENCES "public"."production_plan_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "production_plan_items" ADD CONSTRAINT "production_plan_items_plan_id_production_plans_id_fk" FOREIGN KEY ("plan_id") REFERENCES "public"."production_plans"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "production_plan_items" ADD CONSTRAINT "production_plan_items_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "production_plan_items" ADD CONSTRAINT "production_plan_items_product_unit_id_product_units_id_fk" FOREIGN KEY ("product_unit_id") REFERENCES "public"."product_units"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "production_plans" ADD CONSTRAINT "production_plans_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inventory_transaction_items_material_code_materials_code_fk" FOREIGN KEY ("material_code") REFERENCES "public"."materials"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inventory_transaction_items_product_code_products_code_fk" FOREIGN KEY ("product_code") REFERENCES "public"."products"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inv_tx_items_tx_id_fk" FOREIGN KEY ("transaction_id") REFERENCES "public"."inventory_transactions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inv_tx_items_pr_item_id_fk" FOREIGN KEY ("purchase_receipt_item_id") REFERENCES "public"."purchase_receipt_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inv_tx_items_mpri_id_fk" FOREIGN KEY ("material_purchase_receipt_item_id") REFERENCES "public"."material_purchase_receipt_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory_transaction_items" ADD CONSTRAINT "inv_tx_items_pp_item_id_fk" FOREIGN KEY ("production_plan_item_id") REFERENCES "public"."production_plan_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "inventory_transactions" ADD CONSTRAINT "inventory_transactions_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "vendor_quotation_emails" ADD CONSTRAINT "vendor_quotation_emails_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "vendor_quotation_emails" ADD CONSTRAINT "vendor_quotation_emails_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_order_items" ADD CONSTRAINT "purchase_order_items_purchase_order_id_purchase_orders_id_fk" FOREIGN KEY ("purchase_order_id") REFERENCES "public"."purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_order_items" ADD CONSTRAINT "purchase_order_items_material_code_materials_code_fk" FOREIGN KEY ("material_code") REFERENCES "public"."materials"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_order_items" ADD CONSTRAINT "purchase_order_items_product_code_products_code_fk" FOREIGN KEY ("product_code") REFERENCES "public"."products"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_order_items" ADD CONSTRAINT "purchase_order_items_bom_id_boms_id_fk" FOREIGN KEY ("bom_id") REFERENCES "public"."boms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_order_items" ADD CONSTRAINT "purchase_order_items_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_orders" ADD CONSTRAINT "purchase_orders_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_orders" ADD CONSTRAINT "purchase_orders_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_receipt_items" ADD CONSTRAINT "pr_items_receipt_id_fk" FOREIGN KEY ("purchase_receipt_id") REFERENCES "public"."purchase_receipts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_receipt_items" ADD CONSTRAINT "pr_items_po_item_id_fk" FOREIGN KEY ("purchase_order_item_id") REFERENCES "public"."purchase_order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_receipts" ADD CONSTRAINT "purchase_receipts_purchase_order_id_purchase_orders_id_fk" FOREIGN KEY ("purchase_order_id") REFERENCES "public"."purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_receipts" ADD CONSTRAINT "purchase_receipts_received_by_users_id_fk" FOREIGN KEY ("received_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "purchase_receipts" ADD CONSTRAINT "purchase_receipts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_order_items" ADD CONSTRAINT "material_purchase_order_items_material_purchase_order_id_material_purchase_orders_id_fk" FOREIGN KEY ("material_purchase_order_id") REFERENCES "public"."material_purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_order_items" ADD CONSTRAINT "material_purchase_order_items_material_code_materials_code_fk" FOREIGN KEY ("material_code") REFERENCES "public"."materials"("code") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_orders" ADD CONSTRAINT "material_purchase_orders_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_orders" ADD CONSTRAINT "material_purchase_orders_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_receipt_items" ADD CONSTRAINT "mpri_receipt_id_fk" FOREIGN KEY ("material_purchase_receipt_id") REFERENCES "public"."material_purchase_receipts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_receipt_items" ADD CONSTRAINT "mpri_mpoi_id_fk" FOREIGN KEY ("material_purchase_order_item_id") REFERENCES "public"."material_purchase_order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_receipts" ADD CONSTRAINT "material_purchase_receipts_material_purchase_order_id_material_purchase_orders_id_fk" FOREIGN KEY ("material_purchase_order_id") REFERENCES "public"."material_purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_receipts" ADD CONSTRAINT "material_purchase_receipts_received_by_users_id_fk" FOREIGN KEY ("received_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "material_purchase_receipts" ADD CONSTRAINT "material_purchase_receipts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_order_items" ADD CONSTRAINT "product_purchase_order_items_product_purchase_order_id_product_purchase_orders_id_fk" FOREIGN KEY ("product_purchase_order_id") REFERENCES "public"."product_purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_order_items" ADD CONSTRAINT "product_purchase_order_items_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_orders" ADD CONSTRAINT "product_purchase_orders_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_orders" ADD CONSTRAINT "product_purchase_orders_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipt_items" ADD CONSTRAINT "product_purchase_receipt_items_product_unit_id_product_units_id_fk" FOREIGN KEY ("product_unit_id") REFERENCES "public"."product_units"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipt_items" ADD CONSTRAINT "ppri_receipt_id_fk" FOREIGN KEY ("product_purchase_receipt_id") REFERENCES "public"."product_purchase_receipts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipt_items" ADD CONSTRAINT "ppri_ppoi_id_fk" FOREIGN KEY ("product_purchase_order_item_id") REFERENCES "public"."product_purchase_order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipts" ADD CONSTRAINT "product_purchase_receipts_product_purchase_order_id_product_purchase_orders_id_fk" FOREIGN KEY ("product_purchase_order_id") REFERENCES "public"."product_purchase_orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipts" ADD CONSTRAINT "product_purchase_receipts_received_by_users_id_fk" FOREIGN KEY ("received_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_purchase_receipts" ADD CONSTRAINT "product_purchase_receipts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "installation_items" ADD CONSTRAINT "installation_items_installation_id_installations_id_fk" FOREIGN KEY ("installation_id") REFERENCES "public"."installations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "installation_items" ADD CONSTRAINT "installation_items_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "installation_items" ADD CONSTRAINT "installation_items_product_unit_id_product_units_id_fk" FOREIGN KEY ("product_unit_id") REFERENCES "public"."product_units"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "installations" ADD CONSTRAINT "installations_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "installations" ADD CONSTRAINT "installations_assigned_to_users_id_fk" FOREIGN KEY ("assigned_to") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "installations" ADD CONSTRAINT "installations_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -658,11 +678,9 @@ ALTER TABLE "material_transfer_items" ADD CONSTRAINT "mat_transfer_items_transfe
 ALTER TABLE "material_transfer_items" ADD CONSTRAINT "mat_transfer_items_from_pp_item_id_fk" FOREIGN KEY ("from_production_plan_item_id") REFERENCES "public"."production_plan_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "material_transfer_items" ADD CONSTRAINT "mat_transfer_items_to_pp_item_id_fk" FOREIGN KEY ("to_production_plan_item_id") REFERENCES "public"."production_plan_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "material_transfers" ADD CONSTRAINT "material_transfers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_transfer_items" ADD CONSTRAINT "prod_transfer_items_transfer_id_fk" FOREIGN KEY ("transfer_id") REFERENCES "public"."product_transfers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_transfer_items" ADD CONSTRAINT "prod_transfer_items_pp_item_id_fk" FOREIGN KEY ("production_plan_item_id") REFERENCES "public"."production_plan_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_transfer_items" ADD CONSTRAINT "prod_transfer_items_to_order_item_id_fk" FOREIGN KEY ("to_order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "product_transfers" ADD CONSTRAINT "product_transfers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "boms_order_item_id_idx" ON "boms" USING btree ("order_item_id");--> statement-breakpoint
+ALTER TABLE "product_units" ADD CONSTRAINT "product_units_order_item_id_order_items_id_fk" FOREIGN KEY ("order_item_id") REFERENCES "public"."order_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_units" ADD CONSTRAINT "product_units_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "boms_product_unit_id_idx" ON "boms" USING btree ("product_unit_id");--> statement-breakpoint
 CREATE INDEX "boms_material_code_idx" ON "boms" USING btree ("material_code");--> statement-breakpoint
 CREATE INDEX "boms_created_by_idx" ON "boms" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "material_category_subs_main_category_id_idx" ON "material_category_subs" USING btree ("main_category_id");--> statement-breakpoint
@@ -682,14 +700,15 @@ CREATE INDEX "customers_phone_idx" ON "customers" USING btree ("phone");--> stat
 CREATE INDEX "customers_email_idx" ON "customers" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "deliveries_code_idx" ON "deliveries" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "deliveries_order_id_idx" ON "deliveries" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "deliveries_assigned_to_idx" ON "deliveries" USING btree ("assigned_to");--> statement-breakpoint
 CREATE INDEX "deliveries_scheduled_at_idx" ON "deliveries" USING btree ("scheduled_at");--> statement-breakpoint
 CREATE INDEX "deliveries_delivered_at_idx" ON "deliveries" USING btree ("delivered_at");--> statement-breakpoint
 CREATE INDEX "deliveries_cancelled_at_idx" ON "deliveries" USING btree ("cancelled_at");--> statement-breakpoint
 CREATE INDEX "delivery_items_delivery_id_idx" ON "delivery_items" USING btree ("delivery_id");--> statement-breakpoint
-CREATE INDEX "delivery_items_order_item_id_idx" ON "delivery_items" USING btree ("order_item_id");--> statement-breakpoint
+CREATE INDEX "delivery_items_product_unit_id_unique" ON "delivery_items" USING btree ("product_unit_id");--> statement-breakpoint
 CREATE INDEX "governorates_name_en_idx" ON "governorates" USING btree ("name_en");--> statement-breakpoint
 CREATE INDEX "governorates_name_ar_idx" ON "governorates" USING btree ("name_ar");--> statement-breakpoint
-CREATE INDEX "role_permissions_role_id_idx" ON "role_permissions" USING btree ("role_id");--> statement-breakpoint
+CREATE INDEX "role_permissions_role_id_idx" ON "permissions" USING btree ("role_id");--> statement-breakpoint
 CREATE INDEX "roles_created_by_idx" ON "roles" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "users_code_idx" ON "users" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "users_role_id_idx" ON "users" USING btree ("role_id");--> statement-breakpoint
@@ -726,14 +745,12 @@ CREATE INDEX "previews_assigned_to_idx" ON "previews" USING btree ("assigned_to"
 CREATE INDEX "previews_created_by_idx" ON "previews" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "previews_created_at_idx" ON "previews" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "offer_items_offer_id_idx" ON "offer_items" USING btree ("offer_id");--> statement-breakpoint
-CREATE INDEX "offer_items_inquiry_item_id_idx" ON "offer_items" USING btree ("inquiry_item_id");--> statement-breakpoint
 CREATE INDEX "offer_items_product_code_idx" ON "offer_items" USING btree ("product_code");--> statement-breakpoint
 CREATE INDEX "offers_inquiry_id_idx" ON "offers" USING btree ("inquiry_id");--> statement-breakpoint
 CREATE INDEX "offers_created_by_idx" ON "offers" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "offers_status_idx" ON "offers" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "offers_created_at_idx" ON "offers" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "order_items_order_id_idx" ON "order_items" USING btree ("order_id");--> statement-breakpoint
-CREATE INDEX "order_items_offer_item_id_idx" ON "order_items" USING btree ("offer_item_id");--> statement-breakpoint
 CREATE INDEX "order_items_product_code_idx" ON "order_items" USING btree ("product_code");--> statement-breakpoint
 CREATE INDEX "orders_code_idx" ON "orders" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "orders_inquiry_id_idx" ON "orders" USING btree ("inquiry_id");--> statement-breakpoint
@@ -746,14 +763,13 @@ CREATE INDEX "orders_created_by_idx" ON "orders" USING btree ("created_by");--> 
 CREATE INDEX "production_plan_item_notes_plan_item_id_idx" ON "production_plan_item_notes" USING btree ("plan_item_id");--> statement-breakpoint
 CREATE INDEX "production_plan_item_notes_created_by_idx" ON "production_plan_item_notes" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "production_plan_items_plan_id_idx" ON "production_plan_items" USING btree ("plan_id");--> statement-breakpoint
-CREATE INDEX "production_plan_items_order_item_id_idx" ON "production_plan_items" USING btree ("order_item_id");--> statement-breakpoint
+CREATE INDEX "production_plan_items_product_unit_id_idx" ON "production_plan_items" USING btree ("product_unit_id");--> statement-breakpoint
 CREATE INDEX "production_plans_code_idx" ON "production_plans" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "production_plans_name_idx" ON "production_plans" USING btree ("name");--> statement-breakpoint
-CREATE INDEX "inventory_transaction_items_transaction_id_idx" ON "inventory_transaction_items" USING btree ("transaction_id");--> statement-breakpoint
-CREATE INDEX "inventory_transaction_items_material_code_idx" ON "inventory_transaction_items" USING btree ("material_code");--> statement-breakpoint
-CREATE INDEX "inventory_transaction_items_product_code_idx" ON "inventory_transaction_items" USING btree ("product_code");--> statement-breakpoint
-CREATE INDEX "inventory_transaction_items_purchase_receipt_item_id_idx" ON "inventory_transaction_items" USING btree ("purchase_receipt_item_id");--> statement-breakpoint
-CREATE INDEX "inventory_transaction_items_production_plan_item_id_idx" ON "inventory_transaction_items" USING btree ("production_plan_item_id");--> statement-breakpoint
+CREATE INDEX "inv_tx_items_transaction_id_idx" ON "inventory_transaction_items" USING btree ("transaction_id");--> statement-breakpoint
+CREATE INDEX "inv_tx_items_material_code_idx" ON "inventory_transaction_items" USING btree ("material_code");--> statement-breakpoint
+CREATE INDEX "inv_tx_items_mpri_id_idx" ON "inventory_transaction_items" USING btree ("material_purchase_receipt_item_id");--> statement-breakpoint
+CREATE INDEX "inv_tx_items_pp_item_id_idx" ON "inventory_transaction_items" USING btree ("production_plan_item_id");--> statement-breakpoint
 CREATE INDEX "inventory_transactions_code_idx" ON "inventory_transactions" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "inventory_transactions_transaction_type_idx" ON "inventory_transactions" USING btree ("transaction_type");--> statement-breakpoint
 CREATE INDEX "inventory_transactions_created_at_idx" ON "inventory_transactions" USING btree ("created_at");--> statement-breakpoint
@@ -761,28 +777,41 @@ CREATE INDEX "inventory_transactions_created_by_idx" ON "inventory_transactions"
 CREATE INDEX "vendor_quotation_emails_vendor_id_idx" ON "vendor_quotation_emails" USING btree ("vendor_id");--> statement-breakpoint
 CREATE INDEX "vendor_quotation_emails_created_by_idx" ON "vendor_quotation_emails" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "vendor_quotation_emails_status_idx" ON "vendor_quotation_emails" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "purchase_order_items_purchase_order_id_idx" ON "purchase_order_items" USING btree ("purchase_order_id");--> statement-breakpoint
-CREATE INDEX "purchase_order_items_material_code_idx" ON "purchase_order_items" USING btree ("material_code");--> statement-breakpoint
-CREATE INDEX "purchase_order_items_product_code_idx" ON "purchase_order_items" USING btree ("product_code");--> statement-breakpoint
-CREATE INDEX "purchase_order_items_bom_id_idx" ON "purchase_order_items" USING btree ("bom_id");--> statement-breakpoint
-CREATE INDEX "purchase_order_items_order_item_id_idx" ON "purchase_order_items" USING btree ("order_item_id");--> statement-breakpoint
-CREATE INDEX "purchase_orders_code_idx" ON "purchase_orders" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "purchase_orders_vendor_id_idx" ON "purchase_orders" USING btree ("vendor_id");--> statement-breakpoint
-CREATE INDEX "purchase_orders_completed_at_idx" ON "purchase_orders" USING btree ("completed_at");--> statement-breakpoint
-CREATE INDEX "purchase_orders_cancelled_at_idx" ON "purchase_orders" USING btree ("cancelled_at");--> statement-breakpoint
-CREATE INDEX "purchase_orders_created_by_idx" ON "purchase_orders" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "purchase_orders_created_at_idx" ON "purchase_orders" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "purchase_receipt_items_purchase_receipt_id_idx" ON "purchase_receipt_items" USING btree ("purchase_receipt_id");--> statement-breakpoint
-CREATE INDEX "purchase_receipt_items_purchase_order_item_id_idx" ON "purchase_receipt_items" USING btree ("purchase_order_item_id");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_code_idx" ON "purchase_receipts" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_purchase_order_id_idx" ON "purchase_receipts" USING btree ("purchase_order_id");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_received_at_idx" ON "purchase_receipts" USING btree ("received_at");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_cancelled_at_idx" ON "purchase_receipts" USING btree ("cancelled_at");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_received_by_idx" ON "purchase_receipts" USING btree ("received_by");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_created_by_idx" ON "purchase_receipts" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "purchase_receipts_created_at_idx" ON "purchase_receipts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "mpoi_mpo_id_idx" ON "material_purchase_order_items" USING btree ("material_purchase_order_id");--> statement-breakpoint
+CREATE INDEX "mpoi_material_code_idx" ON "material_purchase_order_items" USING btree ("material_code");--> statement-breakpoint
+CREATE INDEX "mpo_code_idx" ON "material_purchase_orders" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "mpo_vendor_id_idx" ON "material_purchase_orders" USING btree ("vendor_id");--> statement-breakpoint
+CREATE INDEX "mpo_completed_at_idx" ON "material_purchase_orders" USING btree ("completed_at");--> statement-breakpoint
+CREATE INDEX "mpo_cancelled_at_idx" ON "material_purchase_orders" USING btree ("cancelled_at");--> statement-breakpoint
+CREATE INDEX "mpo_created_by_idx" ON "material_purchase_orders" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX "mpo_created_at_idx" ON "material_purchase_orders" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "mpri_receipt_id_idx" ON "material_purchase_receipt_items" USING btree ("material_purchase_receipt_id");--> statement-breakpoint
+CREATE INDEX "mpri_mpoi_id_idx" ON "material_purchase_receipt_items" USING btree ("material_purchase_order_item_id");--> statement-breakpoint
+CREATE INDEX "mpr_code_idx" ON "material_purchase_receipts" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "mpr_mpo_id_idx" ON "material_purchase_receipts" USING btree ("material_purchase_order_id");--> statement-breakpoint
+CREATE INDEX "mpr_received_at_idx" ON "material_purchase_receipts" USING btree ("received_at");--> statement-breakpoint
+CREATE INDEX "mpr_received_by_idx" ON "material_purchase_receipts" USING btree ("received_by");--> statement-breakpoint
+CREATE INDEX "mpr_created_by_idx" ON "material_purchase_receipts" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX "mpr_created_at_idx" ON "material_purchase_receipts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "ppoi_ppo_id_idx" ON "product_purchase_order_items" USING btree ("product_purchase_order_id");--> statement-breakpoint
+CREATE INDEX "ppoi_order_item_id_idx" ON "product_purchase_order_items" USING btree ("order_item_id");--> statement-breakpoint
+CREATE INDEX "ppo_code_idx" ON "product_purchase_orders" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "ppo_vendor_id_idx" ON "product_purchase_orders" USING btree ("vendor_id");--> statement-breakpoint
+CREATE INDEX "ppo_created_at_idx" ON "product_purchase_orders" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "ppo_created_by_idx" ON "product_purchase_orders" USING btree ("created_by");--> statement-breakpoint
+CREATE INDEX "ppo_completed_at_idx" ON "product_purchase_orders" USING btree ("completed_at");--> statement-breakpoint
+CREATE INDEX "ppo_cancelled_at_idx" ON "product_purchase_orders" USING btree ("cancelled_at");--> statement-breakpoint
+CREATE INDEX "ppri_receipt_id_idx" ON "product_purchase_receipt_items" USING btree ("product_purchase_receipt_id");--> statement-breakpoint
+CREATE INDEX "ppri_ppoi_id_idx" ON "product_purchase_receipt_items" USING btree ("product_purchase_order_item_id");--> statement-breakpoint
+CREATE INDEX "ppri_product_unit_id_idx" ON "product_purchase_receipt_items" USING btree ("product_unit_id");--> statement-breakpoint
+CREATE INDEX "ppr_code_idx" ON "product_purchase_receipts" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "ppr_ppo_id_idx" ON "product_purchase_receipts" USING btree ("product_purchase_order_id");--> statement-breakpoint
+CREATE INDEX "ppr_received_at_idx" ON "product_purchase_receipts" USING btree ("received_at");--> statement-breakpoint
+CREATE INDEX "ppr_received_by_idx" ON "product_purchase_receipts" USING btree ("received_by");--> statement-breakpoint
+CREATE INDEX "ppr_created_at_idx" ON "product_purchase_receipts" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "ppr_created_by_idx" ON "product_purchase_receipts" USING btree ("created_by");--> statement-breakpoint
 CREATE INDEX "installation_items_installation_id_idx" ON "installation_items" USING btree ("installation_id");--> statement-breakpoint
-CREATE INDEX "installation_items_order_item_id_idx" ON "installation_items" USING btree ("order_item_id");--> statement-breakpoint
+CREATE INDEX "installation_items_product_unit_id_unique" ON "installation_items" USING btree ("product_unit_id");--> statement-breakpoint
 CREATE INDEX "installations_code_idx" ON "installations" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "installations_order_id_idx" ON "installations" USING btree ("order_id");--> statement-breakpoint
 CREATE INDEX "installations_assigned_to_idx" ON "installations" USING btree ("assigned_to");--> statement-breakpoint
@@ -796,9 +825,6 @@ CREATE INDEX "material_transfer_items_to_pp_item_id_idx" ON "material_transfer_i
 CREATE INDEX "material_transfers_code_idx" ON "material_transfers" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "material_transfers_created_at_idx" ON "material_transfers" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "material_transfers_created_by_idx" ON "material_transfers" USING btree ("created_by");--> statement-breakpoint
-CREATE INDEX "product_transfer_items_transfer_id_idx" ON "product_transfer_items" USING btree ("transfer_id");--> statement-breakpoint
-CREATE INDEX "product_transfer_items_pp_item_id_idx" ON "product_transfer_items" USING btree ("production_plan_item_id");--> statement-breakpoint
-CREATE INDEX "product_transfer_items_to_order_item_id_idx" ON "product_transfer_items" USING btree ("to_order_item_id");--> statement-breakpoint
-CREATE INDEX "product_transfers_code_idx" ON "product_transfers" USING btree ("code");--> statement-breakpoint
-CREATE INDEX "product_transfers_created_at_idx" ON "product_transfers" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "product_transfers_created_by_idx" ON "product_transfers" USING btree ("created_by");
+CREATE UNIQUE INDEX "product_units_serial_number_unique" ON "product_units" USING btree ("serial_number");--> statement-breakpoint
+CREATE INDEX "product_units_order_item_id_idx" ON "product_units" USING btree ("order_item_id");--> statement-breakpoint
+CREATE INDEX "product_units_created_at_idx" ON "product_units" USING btree ("created_at");
