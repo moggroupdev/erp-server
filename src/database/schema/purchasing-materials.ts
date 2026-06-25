@@ -9,7 +9,7 @@ export const materialPurchaseOrders = pgTable(
   'material_purchase_orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MPO-000001
+    code: text('code').unique().notNull(), // Format: MPO-0000001
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
@@ -57,7 +57,7 @@ export const materialPurchaseReceipts = pgTable(
   'material_purchase_receipts',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MPR-000001
+    code: text('code').unique().notNull(), // Format: MPR-0000001
     materialPurchaseOrderId: uuid('material_purchase_order_id')
       .notNull()
       .references(() => materialPurchaseOrders.id),

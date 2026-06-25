@@ -9,7 +9,7 @@ export const deliveries = pgTable(
   'deliveries',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: DE-000001
+    code: text('code').unique().notNull(), // Format: DEL-0000001
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),

@@ -9,7 +9,7 @@ export const installations = pgTable(
   'installations',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: IN-000001
+    code: text('code').unique().notNull(), // Format: INS-0000001
     orderId: uuid('order_id')
       .notNull()
       .references(() => orders.id),

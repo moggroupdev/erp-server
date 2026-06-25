@@ -9,7 +9,7 @@ export const customers = pgTable(
   'customers',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: CU-000001
+    code: text('code').unique().notNull(), // Format: CUS-0000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),

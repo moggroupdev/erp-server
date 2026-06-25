@@ -45,11 +45,12 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 | File                                      | Purpose                                                                                                                                                    |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/database/docs/entity-codes.md`       | Human-readable `code` prefixes and format (`ORD-0000001`, …).                                                                                              |
 | `src/database/docs/app-logic-reminder.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
 | `src/database/docs/db-duplications.md`    | Intentional redundant columns for performance.                                                                                                             |
 | `src/database/sql/triggers.sql`           | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
 
-**Triggers example:** `OR-000001` via sequence + `BEFORE INSERT` on `orders`. Add new coded entities here; omit `code` from create DTOs.
+**Triggers example:** `ORD-0000001` via sequence + `BEFORE INSERT` on `orders`. Add new coded entities here; omit `code` from create DTOs.
 
 ---
 

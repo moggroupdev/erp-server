@@ -6,7 +6,7 @@ export const users = pgTable(
   'users',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: US-000001
+    code: text('code').unique().notNull(), // Format: USR-0000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),

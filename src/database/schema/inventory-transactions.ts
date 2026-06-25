@@ -10,7 +10,7 @@ export const inventoryTransactions = pgTable(
   'inventory_transactions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: IT-000001
+    code: text('code').unique().notNull(), // Format: IVT-0000001
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
     notes: text('notes'),
     createdAt,

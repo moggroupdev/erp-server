@@ -14,7 +14,7 @@ export const orders = pgTable(
   'orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: OR-000001
+    code: text('code').unique().notNull(), // Format: ORD-0000001
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
