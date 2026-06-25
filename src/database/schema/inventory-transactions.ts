@@ -60,6 +60,7 @@ export const inventoryTransactionItems = pgTable(
     index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
     index('inv_tx_items_pp_item_id_idx').on(table.productionPlanItemId),
     positiveQuantityCheck('inv_tx_items_quantity_positive', table.quantity),
+    positiveQuantityCheck('inv_tx_items_unit_cost_positive', table.unitCost),
     check(
       'inv_tx_items_source_non_conflicting',
       sql`(

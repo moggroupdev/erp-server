@@ -8,9 +8,15 @@ import {
   materialTypeEnum,
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
+  positiveQuantityCheck,
 } from './common';
 import { materialCategorySubs } from './categories';
 import { users } from './users';
+import { materialPurchaseOrderItems } from './purchasing-materials';
+import { inventoryTransactionItems } from './inventory-transactions';
+import { materialTransferItems } from './material-transfers';
+import { productBoms } from './products';
+import { boms } from './boms';
 
 export const materials = pgTable(
   'materials',
@@ -39,12 +45,13 @@ export const materials = pgTable(
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),
     nonNegativeNullableQuantityCheck('materials_initial_quantity_non_negative', table.initialQuantity),
     nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
+    positiveQuantityCheck('materials_unit_cost_positive', table.unitCost),
   ],
 );
 
 // ============================== RELATIONS ==============================
 
-export const materialsRelations = relations(materials, ({ one }) => ({
+export const materialsRelations = relations(materials, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [materials.createdBy],
     references: [users.id],
@@ -53,4 +60,9 @@ export const materialsRelations = relations(materials, ({ one }) => ({
     fields: [materials.subCategoryId],
     references: [materialCategorySubs.id],
   }),
+  purchaseOrderItems: many(materialPurchaseOrderItems),
+  inventoryTransactionItems: many(inventoryTransactionItems),
+  transferItems: many(materialTransferItems),
+  boms: many(boms),
+  productBoms: many(productBoms),
 }));

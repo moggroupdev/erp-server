@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core';
 import { createdAt } from './common';
 import { contracts } from './contracts';
 import { users } from './users';
@@ -31,6 +31,15 @@ export const installations = pgTable(
     index('installations_scheduled_at_idx').on(table.scheduledAt),
     index('installations_installed_at_idx').on(table.installedAt),
     index('installations_cancelled_at_idx').on(table.cancelledAt),
+    check('installations_installed_cancelled_exclusive', sql`${table.installedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    check(
+      'installations_installed_at_gte_scheduled_at',
+      sql`${table.installedAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.installedAt} >= ${table.scheduledAt}`,
+    ),
+    check(
+      'installations_cancelled_at_gte_scheduled_at',
+      sql`${table.cancelledAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.cancelledAt} >= ${table.scheduledAt}`,
+    ),
   ],
 );
 

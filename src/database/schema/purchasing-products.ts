@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, foreignKey, check } from 'drizzle-orm/pg-core';
-import { createdAt, numeric } from './common';
+import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { contractItems } from './contracts';
@@ -30,6 +30,8 @@ export const productPurchaseOrders = pgTable(
     index('ppo_created_by_idx').on(table.createdBy),
     index('ppo_completed_at_idx').on(table.completedAt),
     index('ppo_cancelled_at_idx').on(table.cancelledAt),
+    check('ppo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    nonNegativeQuantityCheck('ppo_total_amount_non_negative', table.totalAmount),
   ],
 );
 
@@ -51,6 +53,7 @@ export const productPurchaseOrderItems = pgTable(
     index('ppoi_ppo_id_idx').on(table.productPurchaseOrderId),
     index('ppoi_contract_item_id_idx').on(table.contractItemId),
     check('ppoi_quantity_ordered_positive', sql`${table.quantityOrdered} > 0`),
+    positiveQuantityCheck('ppoi_unit_cost_positive', table.unitCost),
   ],
 );
 

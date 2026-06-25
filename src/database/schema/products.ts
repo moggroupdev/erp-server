@@ -6,12 +6,15 @@ import {
   deletedAt,
   dimensionUnitEnum,
   nonNegativeNullableQuantityCheck,
-  nonNegativeQuantityCheck,
+  positiveQuantityCheck,
   productSourceTypeEnum,
 } from './common';
 import { productCategorySubs } from './categories';
 import { materials } from './materials';
 import { users } from './users';
+import { inquiryItems } from './inquiries';
+import { offerItems } from './offers';
+import { contractItems } from './contracts';
 
 export const products = pgTable(
   'products',
@@ -48,6 +51,10 @@ export const products = pgTable(
     nonNegativeNullableQuantityCheck('products_length_non_negative', table.length),
     nonNegativeNullableQuantityCheck('products_width_non_negative', table.width),
     nonNegativeNullableQuantityCheck('products_height_non_negative', table.height),
+    check(
+      'products_estimated_production_time_positive',
+      sql`${table.estimatedProductionTime} IS NULL OR ${table.estimatedProductionTime} > 0`,
+    ),
   ],
 );
 
@@ -73,7 +80,7 @@ export const productBoms = pgTable(
     unique('product_boms_product_material_unique').on(table.productCode, table.materialCode),
     index('product_boms_product_code_idx').on(table.productCode),
     index('product_boms_material_code_idx').on(table.materialCode),
-    nonNegativeQuantityCheck('product_boms_quantity_required_non_negative', table.quantityRequired),
+    positiveQuantityCheck('product_boms_quantity_required_positive', table.quantityRequired),
   ],
 );
 
@@ -89,6 +96,9 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     references: [productCategorySubs.id],
   }),
   standardBoms: many(productBoms),
+  inquiryItems: many(inquiryItems),
+  offerItems: many(offerItems),
+  contractItems: many(contractItems),
 }));
 
 export const productBomsRelations = relations(productBoms, ({ one }) => ({

@@ -28,6 +28,10 @@ export const productUnits = pgTable(
   (table) => [
     index('product_units_contract_item_id_idx').on(table.contractItemId),
     index('product_units_created_at_idx').on(table.createdAt),
+    index('product_units_produced_at_idx').on(table.producedAt),
+    index('product_units_received_at_idx').on(table.receivedAt),
+    index('product_units_delivered_at_idx').on(table.deliveredAt),
+    index('product_units_installed_at_idx').on(table.installedAt),
   ],
 );
 
