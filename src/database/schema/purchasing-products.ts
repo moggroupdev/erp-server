@@ -3,7 +3,7 @@ import { pgTable, uuid, text, timestamp, integer, index, foreignKey, check } fro
 import { createdAt, numeric } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
-import { orderItems } from './orders';
+import { contractItems } from './contracts';
 import { productUnits } from './product-units';
 
 export const productPurchaseOrders = pgTable(
@@ -40,16 +40,16 @@ export const productPurchaseOrderItems = pgTable(
     productPurchaseOrderId: uuid('product_purchase_order_id')
       .notNull()
       .references(() => productPurchaseOrders.id),
-    orderItemId: uuid('order_item_id')
+    contractItemId: uuid('contract_item_id')
       .notNull()
-      .references(() => orderItems.id),
+      .references(() => contractItems.id),
     quantityOrdered: integer('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     notes: text('notes'),
   },
   (table) => [
     index('ppoi_ppo_id_idx').on(table.productPurchaseOrderId),
-    index('ppoi_order_item_id_idx').on(table.orderItemId),
+    index('ppoi_contract_item_id_idx').on(table.contractItemId),
     check('ppoi_quantity_ordered_positive', sql`${table.quantityOrdered} > 0`),
   ],
 );
@@ -130,9 +130,9 @@ export const productPurchaseOrderItemsRelations = relations(productPurchaseOrder
     fields: [productPurchaseOrderItems.productPurchaseOrderId],
     references: [productPurchaseOrders.id],
   }),
-  orderItem: one(orderItems, {
-    fields: [productPurchaseOrderItems.orderItemId],
-    references: [orderItems.id],
+  contractItem: one(contractItems, {
+    fields: [productPurchaseOrderItems.contractItemId],
+    references: [contractItems.id],
   }),
   receiptItems: many(productPurchaseReceiptItems),
 }));

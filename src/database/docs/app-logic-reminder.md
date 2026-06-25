@@ -13,7 +13,7 @@ Recalculate parent totals inside a transaction whenever line items are created, 
 | Target column | Source table | Formula |
 |---------------|--------------|---------|
 | `offers.total_amount` | `offer_items` | `SUM(quantity * unit_price)` |
-| `orders.total_amount` | `order_items` | `SUM(quantity * unit_price)` |
+| `contracts.total_amount` | `contract_items` | `SUM(quantity * unit_price)` |
 | `material_purchase_orders.total_amount` | `material_purchase_order_items` | `SUM(quantity_ordered * unit_cost)` |
 | `product_purchase_orders.total_amount` | `product_purchase_order_items` | `SUM(quantity_ordered * unit_cost)` |
 
@@ -46,7 +46,7 @@ Clear `completed_at` if receipts are reversed and the order is no longer fully f
 ## 4. Product unit lifecycle
 
 ### Serial number (`product_units.serial_number`)
-- Auto-generate when units are created for an order (before physical receipt/production).
+- Auto-generate when units are created for a contract (before physical receipt/production).
 - Must remain unique; omit from update DTOs.
 
 ### Timestamp sync (`product_units` — all `// app-synced`)
@@ -64,9 +64,9 @@ Update or clear timestamps if the source event is undone (e.g. delivery cancelle
 
 ## 5. RFP field sync
 
-See [`db-duplications.md`](./db-duplications.md). On order creation:
+See [`db-duplications.md`](./db-duplications.md). On contract creation:
 
-- Set `orders.customer_id` from `inquiries.customer_id`.
+- Set `contracts.customer_id` from `inquiries.customer_id`.
 - Throw `BadRequestException` if they would diverge.
 
 ---
@@ -85,11 +85,11 @@ See [`db-duplications.md`](./db-duplications.md). On order creation:
 
 ### Product purchase receipts (`product_purchase_receipt_items`)
 - Each `product_unit_id` is unique (one receipt line per unit)
-- Unit's `order_item_id` must match `product_purchase_order_items.order_item_id` for the linked PO line
+- Unit's `contract_item_id` must match `product_purchase_order_items.contract_item_id` for the linked PO line
 - **Exception:** `BadRequestException` with a clear message
 
-### Order delivery address (`orders.delivery_address_id`)
-- Address must belong to `orders.customer_id` (via `customer_addresses.customer_id`)
+### Contract delivery address (`contracts.delivery_address_id`)
+- Address must belong to `contracts.customer_id` (via `customer_addresses.customer_id`)
 - **Exception:** `BadRequestException('Delivery address does not belong to customer')`
 
 ### Default addresses (`customer_addresses`, `vendor_addresses`)
@@ -99,9 +99,9 @@ See [`db-duplications.md`](./db-duplications.md). On order creation:
 
 ## 7. Workflow guards
 
-### Inquiry → offer → order
-- Order linked to offer only if `offers.status = 'accepted'`
-- Cannot downgrade offer from `accepted` while an order references it
+### Inquiry → offer → contract
+- Contract linked to offer only if `offers.status = 'accepted'`
+- Cannot downgrade offer from `accepted` while a contract references it
 - **Exception:** `ConflictException` or `BadRequestException`
 
 ### Inquiry status (`inquiries.status`)
@@ -114,7 +114,7 @@ See [`db-duplications.md`](./db-duplications.md). On order creation:
 
 | Entity | Active | Completed | Cancelled |
 |--------|--------|-----------|-----------|
-| `orders` | no `completed_at` / `cancelled_at` | `completed_at` set | `cancelled_at` set |
+| `contracts` | no `completed_at` / `cancelled_at` | `completed_at` set | `cancelled_at` set |
 | `previews` | scheduled, not completed/cancelled | `completed_at` set | `cancelled_at` set |
 | `deliveries` | scheduled, not delivered/cancelled | `delivered_at` set | `cancelled_at` set |
 | `installations` | scheduled, not installed/cancelled | `installed_at` set | `cancelled_at` set |

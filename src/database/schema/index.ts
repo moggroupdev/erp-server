@@ -12,7 +12,7 @@ export * from './materials';
 export * from './inquiries';
 export * from './previews';
 export * from './offers';
-export * from './orders';
+export * from './contracts';
 export * from './boms';
 export * from './production-plans';
 export * from './inventory-transactions';
@@ -55,9 +55,9 @@ All Tables
 022. preview_item_dimensions         - uuid        - NO                  - NO        - NO
 023. offers                          - uuid        - cancelled status    - YES       - YES (NOT NULL)
 024. offer_items                     - uuid        - NO                  - NO        - NO
-025. orders                          - uuid        - cancelledAt field   - YES       - YES (NOT NULL)
-026. order_items                     - uuid        - NO                  - NO        - NO
-027. order_item_dimensions           - uuid        - NO                  - NO        - NO
+025. contracts                      - uuid        - cancelledAt field   - YES       - YES (NOT NULL)
+026. contract_items                  - uuid        - NO                  - NO        - NO
+027. contract_item_dimensions         - uuid        - NO                  - NO        - NO
 028. boms                            - uuid        - NO                  - YES       - YES (NOT NULL)
 029. material_purchase_orders        - uuid        - cancelledAt field   - YES       - YES (NOT NULL)
 030. material_purchase_order_items   - uuid        - NO                  - NO        - NO

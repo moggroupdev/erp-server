@@ -50,7 +50,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 | `src/database/docs/db-duplications.md`    | Intentional redundant columns for performance.                                                                                                             |
 | `src/database/sql/triggers.sql`           | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
 
-**Triggers example:** `ORD-0000001` via sequence + `BEFORE INSERT` on `orders`. Add new coded entities here; omit `code` from create DTOs.
+**Triggers example:** `CTR-0000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
 
 ---
 

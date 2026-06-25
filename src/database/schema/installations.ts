@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { createdAt } from './common';
-import { orders } from './orders';
+import { contracts } from './contracts';
 import { users } from './users';
 import { productUnits } from './product-units';
 
@@ -10,9 +10,9 @@ export const installations = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: INS-0000001
-    orderId: uuid('order_id')
+    contractId: uuid('contract_id')
       .notNull()
-      .references(() => orders.id),
+      .references(() => contracts.id),
     // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     installedAt: timestamp('installed_at', { withTimezone: true }),
@@ -26,7 +26,7 @@ export const installations = pgTable(
   },
   (table) => [
     index('installations_code_idx').on(table.code),
-    index('installations_order_id_idx').on(table.orderId),
+    index('installations_contract_id_idx').on(table.contractId),
     index('installations_assigned_to_idx').on(table.assignedTo),
     index('installations_scheduled_at_idx').on(table.scheduledAt),
     index('installations_installed_at_idx').on(table.installedAt),
@@ -53,9 +53,9 @@ export const installationItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const installationsRelations = relations(installations, ({ one, many }) => ({
-  order: one(orders, {
-    fields: [installations.orderId],
-    references: [orders.id],
+  contract: one(contracts, {
+    fields: [installations.contractId],
+    references: [contracts.id],
   }),
   createdBy: one(users, {
     fields: [installations.createdBy],

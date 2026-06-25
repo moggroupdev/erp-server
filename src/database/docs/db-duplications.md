@@ -28,8 +28,8 @@ Schema marker: `// RFP` on the column (see `AGENTS.md`).
 
 ## Current duplications
 
-### `orders.customer_id`
-- **Canonical source:** `inquiries.customer_id` via `orders.inquiry_id`
-- **Why:** List and filter orders by customer without joining `inquiries` on every order query.
-- **Sync:** Copy `inquiries.customer_id` on order creation. Must match the inquiry's customer; treat as immutable unless `inquiry_id` changes (validate in service if ever allowed).
-- **Index:** `orders_customer_id_idx`
+### `contracts.customer_id`
+- **Canonical source:** `inquiries.customer_id` via `contracts.inquiry_id`
+- **Why:** List and filter contracts by customer without joining `inquiries` on every contract query.
+- **Sync:** Copy `inquiries.customer_id` on contract creation. Must match the inquiry's customer; treat as immutable unless `inquiry_id` changes (validate in service if ever allowed).
+- **Index:** `contracts_customer_id_idx`

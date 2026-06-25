@@ -10,18 +10,19 @@ import { offers } from './offers';
 import { productUnits } from './product-units';
 import { productPurchaseOrderItems } from './purchasing-products';
 
-export const orders = pgTable(
-  'orders',
+// This represents the contract between the customer and the company (An Order)
+export const contracts = pgTable(
+  'contracts',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: ORD-0000001
+    code: text('code').unique().notNull(), // Format: CTR-0000001
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
-    previewId: uuid('preview_id') // Perview ID is nullable as some orders are not from previews
+    previewId: uuid('preview_id') // Nullable — some contracts are not from previews
       .unique()
       .references(() => previews.id),
-    offerId: uuid('offer_id') // Offer ID is nullable as some orders are not from offers
+    offerId: uuid('offer_id') // Nullable — some contracts are not from offers
       .unique()
       .references(() => offers.id),
     customerId: uuid('customer_id') // RFP
@@ -32,7 +33,7 @@ export const orders = pgTable(
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(), // app-synced
-    // Order status can be deduced from these dates:
+    // Contract status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
@@ -42,24 +43,24 @@ export const orders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('orders_code_idx').on(table.code),
-    index('orders_inquiry_id_idx').on(table.inquiryId),
-    index('orders_customer_id_idx').on(table.customerId),
-    index('orders_delivery_time_idx').on(table.deliveryTime),
-    index('orders_completed_at_idx').on(table.completedAt),
-    index('orders_cancelled_at_idx').on(table.cancelledAt),
-    index('orders_created_at_idx').on(table.createdAt),
-    index('orders_created_by_idx').on(table.createdBy),
+    index('contracts_code_idx').on(table.code),
+    index('contracts_inquiry_id_idx').on(table.inquiryId),
+    index('contracts_customer_id_idx').on(table.customerId),
+    index('contracts_delivery_time_idx').on(table.deliveryTime),
+    index('contracts_completed_at_idx').on(table.completedAt),
+    index('contracts_cancelled_at_idx').on(table.cancelledAt),
+    index('contracts_created_at_idx').on(table.createdAt),
+    index('contracts_created_by_idx').on(table.createdBy),
   ],
 );
 
-export const orderItems = pgTable(
-  'order_items',
+export const contractItems = pgTable(
+  'contract_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    orderId: uuid('order_id')
+    contractId: uuid('contract_id')
       .notNull()
-      .references(() => orders.id),
+      .references(() => contracts.id),
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
@@ -69,83 +70,83 @@ export const orderItems = pgTable(
     quantity: integer('quantity').notNull().default(1),
   },
   (table) => [
-    index('order_items_order_id_idx').on(table.orderId),
-    index('order_items_product_code_idx').on(table.productCode),
-    positiveQuantityCheck('order_items_quantity_positive', table.quantity),
+    index('contract_items_contract_id_idx').on(table.contractId),
+    index('contract_items_product_code_idx').on(table.productCode),
+    positiveQuantityCheck('contract_items_quantity_positive', table.quantity),
   ],
 );
 
 // In case of custom dimensions (not standard)
-export const orderItemDimensions = pgTable(
-  'order_item_dimensions',
+export const contractItemDimensions = pgTable(
+  'contract_item_dimensions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    orderItemId: uuid('order_item_id')
+    contractItemId: uuid('contract_item_id')
       .notNull()
       .unique()
-      .references(() => orderItems.id),
+      .references(() => contractItems.id),
     length: numeric('length').notNull(),
     width: numeric('width').notNull(),
     height: numeric('height').notNull(),
     unit: dimensionUnitEnum('unit').notNull(),
   },
   (table) => [
-    nonNegativeQuantityCheck('order_item_dimensions_length_non_negative', table.length),
-    nonNegativeQuantityCheck('order_item_dimensions_width_non_negative', table.width),
-    nonNegativeQuantityCheck('order_item_dimensions_height_non_negative', table.height),
+    nonNegativeQuantityCheck('contract_item_dimensions_length_non_negative', table.length),
+    nonNegativeQuantityCheck('contract_item_dimensions_width_non_negative', table.width),
+    nonNegativeQuantityCheck('contract_item_dimensions_height_non_negative', table.height),
   ],
 );
 
 // ============================== RELATIONS ==============================
 
-export const ordersRelations = relations(orders, ({ one, many }) => ({
+export const contractsRelations = relations(contracts, ({ one, many }) => ({
   inquiry: one(inquiries, {
-    fields: [orders.inquiryId],
+    fields: [contracts.inquiryId],
     references: [inquiries.id],
   }),
   preview: one(previews, {
-    fields: [orders.previewId],
+    fields: [contracts.previewId],
     references: [previews.id],
   }),
   offer: one(offers, {
-    fields: [orders.offerId],
+    fields: [contracts.offerId],
     references: [offers.id],
   }),
   customer: one(customers, {
-    fields: [orders.customerId],
+    fields: [contracts.customerId],
     references: [customers.id],
   }),
   deliveryAddress: one(customerAddresses, {
-    fields: [orders.deliveryAddressId],
+    fields: [contracts.deliveryAddressId],
     references: [customerAddresses.id],
   }),
   createdBy: one(users, {
-    fields: [orders.createdBy],
+    fields: [contracts.createdBy],
     references: [users.id],
   }),
-  items: many(orderItems),
+  items: many(contractItems),
 }));
 
-export const orderItemsRelations = relations(orderItems, ({ one, many }) => ({
-  order: one(orders, {
-    fields: [orderItems.orderId],
-    references: [orders.id],
+export const contractItemsRelations = relations(contractItems, ({ one, many }) => ({
+  contract: one(contracts, {
+    fields: [contractItems.contractId],
+    references: [contracts.id],
   }),
   product: one(products, {
-    fields: [orderItems.productCode],
+    fields: [contractItems.productCode],
     references: [products.code],
   }),
-  dimensions: one(orderItemDimensions, {
-    fields: [orderItems.id],
-    references: [orderItemDimensions.orderItemId],
+  dimensions: one(contractItemDimensions, {
+    fields: [contractItems.id],
+    references: [contractItemDimensions.contractItemId],
   }),
   productUnits: many(productUnits),
   productPurchaseOrderItems: many(productPurchaseOrderItems),
 }));
 
-export const orderItemDimensionsRelations = relations(orderItemDimensions, ({ one }) => ({
-  orderItem: one(orderItems, {
-    fields: [orderItemDimensions.orderItemId],
-    references: [orderItems.id],
+export const contractItemDimensionsRelations = relations(contractItemDimensions, ({ one }) => ({
+  contractItem: one(contractItems, {
+    fields: [contractItemDimensions.contractItemId],
+    references: [contractItems.id],
   }),
 }));

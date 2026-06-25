@@ -2,7 +2,7 @@
 
 Human-readable identifiers for key business records. Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/triggers.sql)).
 
-**Format:** `{PREFIX}-{7-digit sequence}` — e.g. `ORD-0000042`, `USR-0000001`
+**Format:** `{PREFIX}-{7-digit sequence}` — e.g. `CTR-0000042`, `USR-0000001`
 
 - Prefix is **3 characters** (uppercase).
 - Sequence is zero-padded to 7 digits per table.
@@ -17,7 +17,7 @@ Human-readable identifiers for key business records. Auto-generated on `INSERT` 
 | `USR`  | `users`                      | `USR-0000001` |
 | `CUS`  | `customers`                  | `CUS-0000001` |
 | `VEN`  | `vendors`                    | `VEN-0000001` |
-| `ORD`  | `orders`                     | `ORD-0000001` |
+| `CTR`  | `contracts`                  | `CTR-0000001` |
 | `MPO`  | `material_purchase_orders`   | `MPO-0000001` |
 | `MPR`  | `material_purchase_receipts` | `MPR-0000001` |
 | `PPO`  | `product_purchase_orders`    | `PPO-0000001` |

@@ -68,23 +68,23 @@ CREATE TRIGGER vendors_generate_code
 BEFORE INSERT ON vendors
 FOR EACH ROW EXECUTE PROCEDURE generate_vendors_code();
 
--- ORDERS: ORD
-CREATE SEQUENCE IF NOT EXISTS orders_code_seq START 1 INCREMENT 1;
+-- CONTRACTS: CTR
+CREATE SEQUENCE IF NOT EXISTS contracts_code_seq START 1 INCREMENT 1;
 
-CREATE OR REPLACE FUNCTION generate_orders_code()
+CREATE OR REPLACE FUNCTION generate_contracts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'ORD-' || LPAD(nextval('orders_code_seq')::text, 7, '0');
+    NEW.code := 'CTR-' || LPAD(nextval('contracts_code_seq')::text, 7, '0');
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS orders_generate_code ON orders;
-CREATE TRIGGER orders_generate_code
-BEFORE INSERT ON orders
-FOR EACH ROW EXECUTE PROCEDURE generate_orders_code();
+DROP TRIGGER IF EXISTS contracts_generate_code ON contracts;
+CREATE TRIGGER contracts_generate_code
+BEFORE INSERT ON contracts
+FOR EACH ROW EXECUTE PROCEDURE generate_contracts_code();
 
 -- MATERIAL PURCHASE ORDERS: MPO
 CREATE SEQUENCE IF NOT EXISTS material_purchase_orders_code_seq START 1 INCREMENT 1;
