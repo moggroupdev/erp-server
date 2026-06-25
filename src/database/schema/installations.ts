@@ -47,10 +47,7 @@ export const installationItems = pgTable(
       .references(() => productUnits.id),
     notes: text('notes'),
   },
-  (table) => [
-    index('installation_items_installation_id_idx').on(table.installationId),
-    index('installation_items_product_unit_id_unique').on(table.productUnitId),
-  ],
+  (table) => [index('installation_items_installation_id_idx').on(table.installationId)],
 );
 
 // ============================== RELATIONS ==============================

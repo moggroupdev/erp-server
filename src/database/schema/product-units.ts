@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
 import { createdAt } from './common';
 import { users } from './users';
 import { orderItems } from './orders';
@@ -26,7 +26,6 @@ export const productUnits = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    uniqueIndex('product_units_serial_number_unique').on(table.serialNumber),
     index('product_units_order_item_id_idx').on(table.orderItemId),
     index('product_units_created_at_idx').on(table.createdAt),
   ],

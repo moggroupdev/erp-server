@@ -47,10 +47,7 @@ export const deliveryItems = pgTable(
       .references(() => productUnits.id),
     notes: text('notes'),
   },
-  (table) => [
-    index('delivery_items_delivery_id_idx').on(table.deliveryId),
-    index('delivery_items_product_unit_id_unique').on(table.productUnitId),
-  ],
+  (table) => [index('delivery_items_delivery_id_idx').on(table.deliveryId)],
 );
 
 // ============================== RELATIONS ==============================
