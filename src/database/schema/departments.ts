@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { productionPlanItems } from './production-plans';
 import { users } from './users';
 
 export const departments = pgTable(
@@ -8,7 +9,7 @@ export const departments = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     nameEn: text('name_en').notNull(),
     nameAr: text('name_ar').notNull(),
-    parentId: uuid('parent_id').references((): AnyPgColumn => departments.id),
+    parentId: uuid('parent_id').references((): AnyPgColumn => departments.id), // Self-referencing foreign key
     managerId: uuid('manager_id').references((): AnyPgColumn => users.id),
   },
   (table) => [
@@ -38,4 +39,5 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   users: many(users, {
     relationName: 'userDepartment',
   }),
+  productionPlanItems: many(productionPlanItems),
 }));

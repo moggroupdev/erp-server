@@ -4,7 +4,7 @@ export const ALLOWED_PERMISSION_KEY = 'allowedPermission';
 export const TOKEN_TYPE_VALUES = ['access', 'refresh'] as const;
 export const REFRESH_TOKEN_COOKIE = 'refresh_token';
 
-/** Seeded Production root department — see locations/departments.csv */
+/** Seeded Production root department — see data/departments.csv */
 export const PRODUCTION_DEPARTMENT_ID = '3f2a91bc-4d8e-4a1f-b563-7c94e21a0b01';
 
 // ==================== PERMISSIONS ====================

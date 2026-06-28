@@ -40,7 +40,7 @@ export const productionPlanItems = pgTable(
     productUnitId: uuid('product_unit_id')
       .notNull()
       .references(() => productUnits.id),
-    productionDepartmentId: uuid('production_department_id')
+    productionDepartmentId: uuid('production_department_id') // app-synced (Should be a PRODUCTION department)
       .notNull()
       .references(() => departments.id),
     startDate: timestamp('start_date', { withTimezone: true }),
@@ -53,7 +53,11 @@ export const productionPlanItems = pgTable(
     index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
     index('production_plan_items_production_department_id_idx').on(table.productionDepartmentId),
     index('production_plan_items_completed_at_idx').on(table.completedAt),
-    unique('production_plan_items_plan_unit_dept_unique').on(table.planId, table.productUnitId, table.productionDepartmentId),
+    unique('production_plan_items_plan_unit_dept_unique').on(
+      table.planId,
+      table.productUnitId,
+      table.productionDepartmentId,
+    ),
     check(
       'production_plan_items_estimated_end_date_gte_start_date',
       sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,
