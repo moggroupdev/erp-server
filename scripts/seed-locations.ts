@@ -10,6 +10,7 @@ import * as path from 'path';
 dotenv.config();
 
 type CountryCsvRow = {
+  id: string;
   code: string;
   name_en: string;
   name_ar: string;
@@ -30,6 +31,7 @@ async function main() {
     const countriesRows = parse<CountryCsvRow>(countriesData, { columns: true, skip_empty_lines: true });
 
     const countriesToInsert: (typeof schema.countries.$inferInsert)[] = countriesRows.map((country) => ({
+      id: country.id,
       code: country.code,
       nameEn: country.name_en,
       nameAr: country.name_ar,
@@ -40,8 +42,12 @@ async function main() {
         .insert(schema.countries)
         .values(countriesToInsert)
         .onConflictDoUpdate({
-          target: schema.countries.code,
-          set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar` },
+          target: schema.countries.id,
+          set: {
+            code: sql`excluded.code`,
+            nameEn: sql`excluded.name_en`,
+            nameAr: sql`excluded.name_ar`,
+          },
         });
     }
 
