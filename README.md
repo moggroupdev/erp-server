@@ -14,132 +14,95 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ## What the System Manages
 
-### Customers & Projects
+### Customers & Sales Pipeline
 
-- Customer records and delivery locations
-- Product inquiries listing requested equipment and quantities
-- Site previews (site visits) to capture measurements, installation constraints, and technical requirements
-- Sales quotations with pricing and validity
-- Confirmed orders, including standard and custom-sized products
+- Customer records with structured delivery addresses (country, governorate, and city)
+- Product inquiries listing requested equipment and quantities, progressing through preview scheduling, site visit, quotation, and acceptance or rejection
+- Site previews: scheduled visits with assigned staff, per-item measurements, and technical notes
+- Sales offers (quotations) with line pricing, validity period, and status
+- Contracts — the confirmed order — preserving the trail from inquiry through preview and offer, along with delivery address and expected delivery time
 
 ### Products & Engineering
 
-- Product catalog organized by category (manufactured or imported items)
-- Standard product dimensions stored on catalog items, with a standard BOM template defining required materials and quantities for those dimensions
-- Custom dimensions captured during preview and carried through to the order
-- Order-level Bill of Materials (BOM) prepared by the Technical Office for each order line (starting from the standard BOM when the item uses catalog dimensions)
+- Product catalog organized by category; each product is either manufactured in-house or imported from a supplier
+- Standard catalog dimensions and a standard material recipe for manufactured items at catalog size
+- Custom dimensions captured during the site preview and carried into the contract
+- Individual product units created for each contract line, each with its own serial number
+- Per-unit Bill of Materials prepared by the Technical Office, starting from the standard recipe when the item uses catalog dimensions
 
 ### Manufacturing
 
-- Production plans scheduling work across manufacturing departments
-- Department hierarchy (Production parent with sub-departments such as cutting, bending, sheet metal, refrigeration, electrical, gas, and injection molding)
-- Tracking progress per production department per order item
+- Production plans scheduling work over a date range
+- Work broken down per product unit and manufacturing department (cutting, bending, sheet metal, refrigeration, electrical, gas, injection molding, and others)
+- Progress notes and completion tracking per department step
+- Material transfers when issued materials move from one production stage to another
 
 ### Inventory & Warehouse
 
 - Raw materials and spare parts with stock levels and minimum thresholds
-- Material receipts into inventory after purchase inspection
-- Material issues from the warehouse to production
+- Inventory movements: receipts from purchase inspection, issues to production, and returns
+- Material issues linked to the production work consuming them
 
 ### Procurement
 
-- Approved suppliers (vendors) and their contact details
-- Purchase orders raised when stock is insufficient
-- Goods receipt with quality inspection (accepted and rejected quantities)
-- Quotation requests sent to vendors when sourcing materials
+- Approved suppliers with contact details and addresses
+- Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake
+- Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with vendor serial numbers where applicable
+- Quotation request emails sent to vendors when sourcing materials
 
-### Delivery
+### Delivery & Installation
 
-- Scheduling and tracking shipment of finished products to the customer site
-- Linking delivered items back to the originating order
+- Delivery scheduling and assignment, linking specific product units to each shipment
+- Installation scheduling and assignment, commissioning individual units at the customer site
+- Contract completion when the project is finished or cancelled
 
-### Access & Administration
+### Organization & Access
 
-- User accounts with role-based permissions for different departments
-- Organizational departments with optional parent-child hierarchy and department managers
+- User accounts with role-based permissions
+- Department hierarchy with optional parent-child structure and department managers
 
 ---
 
 ## End-to-End Business Process
 
-The following describes the standard project lifecycle the system is built to support.
+The following describes how a typical project moves through the company, from first contact to completion.
 
-### 1. Customer Inquiry
+### Sales and Discovery
 
-The customer contacts the company requesting one or more products along with pricing information. An inquiry is opened and the requested items are recorded.
+A project begins when a customer reaches out requesting equipment and pricing. The company opens an inquiry and records the products and quantities the customer is interested in.
 
-### 2. Site Preview
+When a site visit is needed, the Preview Team schedules a preview, assigns staff, and visits the customer's location. They take measurements, assess installation constraints, and capture technical requirements for each item on the inquiry.
 
-The Preview Team schedules and conducts a site visit. They inspect the customer's location, take measurements, assess installation requirements, and collect any additional technical information needed for the project.
+With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability.
 
-### 3. Quotation
+### Order Breakdown
 
-Based on the preview findings, the Sales Team prepares and submits a quotation to the customer.
+Once a contract is in place, the company breaks each line item into individual product units — one serial-numbered physical item per unit ordered. From this point, manufactured and imported products follow different paths through the company.
 
-### 4. Order Confirmation
+### Engineering and Manufacturing
 
-If the customer approves the quotation, the project moves forward and manufacturing is initiated.
+For items built in-house, the Technical Office prepares a Bill of Materials for each product unit, defining the materials and quantities required. When the product uses standard catalog dimensions, work starts from the standard material recipe and is adjusted as needed.
 
-### 5. Bill of Materials
+Production then builds a plan that schedules each unit across the relevant manufacturing departments — cutting, bending, sheet metal, refrigeration, electrical, and so on. Progress is tracked per unit and per department, with notes recorded as work moves through each stage.
 
-The Technical Office reviews the approved order and prepares the BOM, defining all materials and quantities required to produce each product in the order.
+### Materials and Warehouse
 
-### 6. Production Planning
+Before and during production, the Warehouse checks whether the required raw materials are in stock. When stock is short, Purchasing raises material purchase orders with approved suppliers. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
 
-The BOM is forwarded to the Production Team, who plan and schedule manufacturing activities.
+Materials are then issued from the warehouse to the production floor, linked to the specific production work consuming them. As manufacturing moves between departments, materials can be transferred from one production stage to the next.
 
-### 7. Material Request
+### Sourcing Imported Products
 
-Production requests the required raw materials from the Warehouse.
+For catalog items sourced from outside suppliers rather than built in-house, Purchasing places product purchase orders tied to the relevant contract lines. When goods arrive, each unit is received and registered — including the supplier's serial number where applicable — and linked back to the contract.
 
-### 8. Stock Check
+### Delivery, Installation, and Completion
 
-The Warehouse verifies whether the requested materials are available in stock.
+Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Deliveries are scheduled and assigned to staff; each shipment lists the specific product units being transported to the site.
 
-### 9. Purchase Request
-
-If any materials are unavailable or insufficient, the Warehouse raises a purchase request to the Purchasing Team.
-
-### 10. Procurement
-
-The Purchasing Team sources the required materials from approved suppliers.
-
-### 11. Goods Inspection
-
-Upon arrival, purchased materials are inspected to verify quality, specifications, and compliance with requirements.
-
-### 12. Stock Receipt
-
-Approved materials are received into inventory and stored in the Warehouse.
-
-### 13. Material Issue
-
-The required materials are issued from the Warehouse to the Production Team.
-
-### 14. Manufacturing
-
-Production carries out all required manufacturing stages according to the plan until finished products are completed.
-
-### 15. Final Inspection
-
-After production, finished products are inspected and prepared for delivery.
-
-### 16. Delivery
-
-Products are transported to the customer's site.
-
-### 17. Installation & Commissioning
-
-The Installation Team installs the equipment, performs testing and commissioning, and verifies correct operation.
-
-### 18. Project Completion
-
-The project is closed after successful installation, testing, and customer acceptance.
+After delivery, the Installation Team schedules on-site work, installs the equipment, and performs testing and commissioning for each unit. When every item is installed and the project is accepted, the contract is marked complete.
 
 ---
 
 ## Current Scope
 
-The data model currently covers the core entities that support this workflow: customers, inquiries, previews, quotations, orders, BOMs, production plans, departments, materials, inventory movements, purchasing, and deliveries.
-
-Areas still being expanded include installation tracking, additional reporting, and deeper workflow automation across departments. The schema and application features will continue to evolve as each business area is fully implemented.
+The data model covers the full project lifecycle described above — from customer inquiry through contract, manufacturing or import, delivery, installation, and completion. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
