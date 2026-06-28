@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, index, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { numeric, createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
 import { users } from './users';
@@ -72,10 +72,21 @@ export const contractItems = pgTable(
     notes: text('notes'),
     unitPrice: numeric('unit_price').notNull(),
     quantity: integer('quantity').notNull().default(1),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id), // May differ from contract creator when lines are appended later
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    cancelledBy: uuid('cancelled_by').references(() => users.id), // Null when cancelled via parent contract cascade
+    cancellationReason: text('cancellation_reason'), // Set on the old row when cancelled or replaced
+    previousVersionId: uuid('previous_version_id').references((): AnyPgColumn => contractItems.id), // Set on replacement rows only — cancel-and-replace history link
   },
   (table) => [
     index('contract_items_contract_id_idx').on(table.contractId),
     index('contract_items_product_code_idx').on(table.productCode),
+    index('contract_items_created_by_idx').on(table.createdBy),
+    index('contract_items_cancelled_at_idx').on(table.cancelledAt),
+    index('contract_items_cancelled_by_idx').on(table.cancelledBy),
+    index('contract_items_previous_version_id_idx').on(table.previousVersionId),
     positiveQuantityCheck('contract_items_quantity_positive', table.quantity),
     positiveQuantityCheck('contract_items_unit_price_positive', table.unitPrice),
   ],
@@ -142,6 +153,24 @@ export const contractItemsRelations = relations(contractItems, ({ one, many }) =
   product: one(products, {
     fields: [contractItems.productCode],
     references: [products.code],
+  }),
+  createdByUser: one(users, {
+    fields: [contractItems.createdBy],
+    references: [users.id],
+    relationName: 'contractItemCreatedBy',
+  }),
+  cancelledByUser: one(users, {
+    fields: [contractItems.cancelledBy],
+    references: [users.id],
+    relationName: 'contractItemCancelledBy',
+  }),
+  previousVersion: one(contractItems, {
+    fields: [contractItems.previousVersionId],
+    references: [contractItems.id],
+    relationName: 'contractItemVersionChain',
+  }),
+  nextVersions: many(contractItems, {
+    relationName: 'contractItemVersionChain',
   }),
   dimensions: one(contractItemDimensions, {
     fields: [contractItems.id],

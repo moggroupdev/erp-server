@@ -46,6 +46,7 @@ export const productionPlanItems = pgTable(
     startDate: timestamp('start_date', { withTimezone: true }),
     estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // Set when parent product unit is cancelled
     notes: text('notes'),
   },
   (table) => [
@@ -53,6 +54,7 @@ export const productionPlanItems = pgTable(
     index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
     index('production_plan_items_production_department_id_idx').on(table.productionDepartmentId),
     index('production_plan_items_completed_at_idx').on(table.completedAt),
+    index('production_plan_items_cancelled_at_idx').on(table.cancelledAt),
     unique('production_plan_items_plan_unit_dept_unique').on(
       table.planId,
       table.productUnitId,
@@ -65,6 +67,10 @@ export const productionPlanItems = pgTable(
     check(
       'production_plan_items_completed_at_gte_start_date',
       sql`${table.completedAt} IS NULL OR ${table.startDate} IS NULL OR ${table.completedAt} >= ${table.startDate}`,
+    ),
+    check(
+      'production_plan_items_completed_cancelled_exclusive',
+      sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`,
     ),
   ],
 );

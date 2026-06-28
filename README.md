@@ -77,7 +77,7 @@ With preview findings in hand, the Sales Team prepares a quotation — an offer 
 
 ### Order Breakdown
 
-Once a contract is in place, the company breaks each line item into individual product units — one serial-numbered physical item per unit ordered. From this point, manufactured and imported products follow different paths through the company.
+Once a contract is in place, the company breaks each active line item into individual product units — one serial-numbered physical item per unit ordered. Contract lines are immutable once written: adding a line, removing one, or changing quantity, dimensions, price, or product cancels the existing line (preserving who cancelled it and why) and, when the change is an amendment rather than a removal, creates a replacement line linked back via `previous_version_id`. From this point, manufactured and imported products follow different paths through the company.
 
 ### Engineering and Manufacturing
 

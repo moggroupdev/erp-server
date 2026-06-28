@@ -23,6 +23,7 @@ export const productUnits = pgTable(
     receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced
     deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced
     installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // Set when parent contract item is cancelled/replaced, or unit is dropped on quantity decrease
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -36,6 +37,7 @@ export const productUnits = pgTable(
     index('product_units_received_at_idx').on(table.receivedAt),
     index('product_units_delivered_at_idx').on(table.deliveredAt),
     index('product_units_installed_at_idx').on(table.installedAt),
+    index('product_units_cancelled_at_idx').on(table.cancelledAt),
   ],
 );
 
