@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { createdAt, deletedAt, permissionEnum } from './common';
 import { loginHistory } from './login-history';
+import { departments } from './departments';
 
 export const users = pgTable(
   'users',
@@ -16,6 +17,7 @@ export const users = pgTable(
     password: text('password').notNull(), // Store hashed password
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
+    departmentId: uuid('department_id').references(() => departments.id),
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
     createdAt,
     deletedAt,
@@ -23,6 +25,7 @@ export const users = pgTable(
   (table) => [
     index('users_code_idx').on(table.code),
     index('users_role_id_idx').on(table.roleId),
+    index('users_department_id_idx').on(table.departmentId),
     index('users_name_idx').on(table.name),
     index('users_phone_idx').on(table.phone),
     index('users_email_idx').on(table.email),
@@ -76,6 +79,11 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.roleId],
     references: [roles.id],
     relationName: 'userRole',
+  }),
+  department: one(departments, {
+    fields: [users.departmentId],
+    references: [departments.id],
+    relationName: 'userDepartment',
   }),
   loginHistory: many(loginHistory),
   createdRoles: many(roles, { relationName: 'roleCreatedBy' }),

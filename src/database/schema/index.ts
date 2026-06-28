@@ -1,6 +1,7 @@
 export * from './common';
 
 export * from './users';
+export * from './departments';
 export * from './countries';
 export * from './governorates';
 export * from './cities';
@@ -81,5 +82,6 @@ All Tables
 048. product_purchase_order_items    - uuid        - NO                  - NO        - NO
 049. product_purchase_receipts       - uuid        - cancelledAt field   - YES       - YES (NOT NULL)
 050. product_purchase_receipt_items  - uuid        - NO                  - NO        - NO
+051. departments                    - uuid        - NO                  - NO        - NO
 
 */

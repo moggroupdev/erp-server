@@ -53,7 +53,7 @@ Clear `completed_at` if receipts are reversed and the order is no longer fully f
 
 | Column | Source event |
 |--------|--------------|
-| `produced_at` | Manufactured: when the unit's final `production_plan_items` stage is completed |
+| `produced_at` | Manufactured: when the last `production_plan_items` row for the unit has `completed_at` set |
 | `received_at` | Imported: when linked via `product_purchase_receipt_items` and parent receipt `received_at` is set |
 | `delivered_at` | When parent `deliveries.delivered_at` is set for a `delivery_items` row referencing the unit |
 | `installed_at` | When parent `installations.installed_at` is set for an `installation_items` row referencing the unit |
@@ -87,6 +87,10 @@ See [`db-duplications.md`](./db-duplications.md). On contract creation:
 - Each `product_unit_id` is unique (one receipt line per unit)
 - Unit's `contract_item_id` must match `product_purchase_order_items.contract_item_id` for the linked PO line
 - **Exception:** `BadRequestException` with a clear message
+
+### Production plan items (`production_plan_items`)
+- `production_department_id` must reference a department whose `parent_id` equals `PRODUCTION_DEPARTMENT_ID` (seeded Production root)
+- **Exception:** `BadRequestException('Production department must be a child of Production')`
 
 ### Contract delivery address (`contracts.delivery_address_id`)
 - Address must belong to `contracts.customer_id` (via `customer_addresses.customer_id`)

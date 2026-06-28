@@ -6,7 +6,6 @@ import {
   MATERIAL_UNIT_VALUES,
   OFFER_STATUS_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
-  PRODUCTION_STAGE_VALUES,
   TOKEN_TYPE_VALUES,
   VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
   INQUIRY_STATUS_VALUES,
@@ -49,8 +48,6 @@ export type OfferStatus = (typeof OFFER_STATUS_VALUES)[number];
 export type VendorQuotationEmailStatus = (typeof VENDOR_QUOTATION_EMAIL_STATUS_VALUES)[number];
 
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number];
-
-export type ProductionStage = (typeof PRODUCTION_STAGE_VALUES)[number];
 
 // ==================== ENTITIES ====================
 

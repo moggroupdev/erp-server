@@ -32,8 +32,8 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Manufacturing
 
 - Production plans scheduling work across manufacturing departments
-- Tracking progress through production stages such as cutting, bending, sheet metal, refrigeration, electrical, gas, injection molding, blacksmithing, and maintenance
-- Monitoring planned versus completed quantities per order item
+- Department hierarchy (Production parent with sub-departments such as cutting, bending, sheet metal, refrigeration, electrical, gas, and injection molding)
+- Tracking progress per production department per order item
 
 ### Inventory & Warehouse
 
@@ -56,6 +56,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Access & Administration
 
 - User accounts with role-based permissions for different departments
+- Organizational departments with optional parent-child hierarchy and department managers
 
 ---
 
@@ -139,6 +140,6 @@ The project is closed after successful installation, testing, and customer accep
 
 ## Current Scope
 
-The data model currently covers the core entities that support this workflow: customers, inquiries, previews, quotations, orders, BOMs, production plans, materials, inventory movements, purchasing, and deliveries.
+The data model currently covers the core entities that support this workflow: customers, inquiries, previews, quotations, orders, BOMs, production plans, departments, materials, inventory movements, purchasing, and deliveries.
 
 Areas still being expanded include installation tracking, additional reporting, and deeper workflow automation across departments. The schema and application features will continue to evolve as each business area is fully implemented.

@@ -1,10 +1,11 @@
 export const REQUEST_USER_KEY = 'user';
 export const ALLOWED_PERMISSION_KEY = 'allowedPermission';
 
-// ==================== AUTH TOKENS ====================
-
 export const TOKEN_TYPE_VALUES = ['access', 'refresh'] as const;
 export const REFRESH_TOKEN_COOKIE = 'refresh_token';
+
+/** Seeded Production root department — see locations/departments.csv */
+export const PRODUCTION_DEPARTMENT_ID = '3f2a91bc-4d8e-4a1f-b563-7c94e21a0b01';
 
 // ==================== PERMISSIONS ====================
 
@@ -115,26 +116,4 @@ export const INVENTORY_TRANSACTION_TYPES = Object.fromEntries(
   INVENTORY_TRANSACTION_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
 ) as {
   [K in Uppercase<(typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number]>]: Lowercase<K>;
-};
-
-// ==================== PRODUCTION_STAGES ====================
-
-export const PRODUCTION_STAGE_VALUES = [
-  'cutting', // قسم المقص
-  'bending', // قسم الثني
-  'refrigeration', // قسم التبريد
-  'electricity', // قسم الكهرباء
-  'gas', // قسم الغاز
-  'injection', // قسم الحقن
-  'neutral_sheet_metal', // قسم سمكرة متعادل
-  'cold_sheet_metal', // قسم سمكرة بارد
-  'hot_sheet_metal', // قسم سمكرة ساخن
-  'blacksmithing', // قسم الحدادة
-  'maintenance', // قسم الصيانة
-] as const;
-
-export const PRODUCTION_STAGES = Object.fromEntries(
-  PRODUCTION_STAGE_VALUES.map((stage) => [stage.toUpperCase(), stage]),
-) as {
-  [K in Uppercase<(typeof PRODUCTION_STAGE_VALUES)[number]>]: Lowercase<K>;
 };
