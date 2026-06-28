@@ -16,10 +16,7 @@ type DepartmentCsvRow = {
   parent_id: string;
 };
 
-async function seedDepartments(
-  db: ReturnType<typeof drizzle<typeof schema>>,
-  rows: DepartmentCsvRow[],
-) {
+async function seedDepartments(db: ReturnType<typeof drizzle<typeof schema>>, rows: DepartmentCsvRow[]) {
   const roots = rows.filter((row) => !row.parent_id?.trim());
   const children = rows.filter((row) => row.parent_id?.trim());
 
@@ -58,7 +55,7 @@ async function main() {
   try {
     console.log('Seeding Departments...');
 
-    const departmentsCsvPath = path.join(__dirname, '../locations/departments.csv');
+    const departmentsCsvPath = path.join(__dirname, '../data/departments.csv');
     const departmentsData = fs.readFileSync(departmentsCsvPath, 'utf-8');
     const rows = parse<DepartmentCsvRow>(departmentsData, { columns: true, skip_empty_lines: true });
 

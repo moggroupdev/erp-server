@@ -74,7 +74,7 @@ async function main() {
   const db = drizzle(pool, { schema });
 
   try {
-    const materialsPath = path.join(__dirname, '../categories/materials.json');
+    const materialsPath = path.join(__dirname, '../data/categories/materials.json');
     const productsPath = path.join(__dirname, '../categories/products.json');
 
     const materialsData = JSON.parse(fs.readFileSync(materialsPath, 'utf-8')) as CategoryJson[];
