@@ -1,8 +1,9 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core';
 import { createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric } from './common';
-import { inquiries, inquiryItems } from './inquiries';
+import { inquiries } from './inquiries';
 import { contracts } from './contracts';
+import { products } from './products';
 import { users } from './users';
 
 export const previews = pgTable(
@@ -52,14 +53,14 @@ export const previewItems = pgTable(
     previewId: uuid('preview_id')
       .notNull()
       .references(() => previews.id),
-    inquiryItemId: uuid('inquiry_item_id')
+    productCode: text('product_code')
       .notNull()
-      .references(() => inquiryItems.id),
+      .references(() => products.code),
     notes: text('notes'),
   },
   (table) => [
     index('preview_items_preview_id_idx').on(table.previewId),
-    index('preview_items_inquiry_item_id_idx').on(table.inquiryItemId),
+    index('preview_items_product_code_idx').on(table.productCode),
   ],
 );
 
@@ -109,9 +110,9 @@ export const previewItemsRelations = relations(previewItems, ({ one }) => ({
     fields: [previewItems.previewId],
     references: [previews.id],
   }),
-  inquiryItem: one(inquiryItems, {
-    fields: [previewItems.inquiryItemId],
-    references: [inquiryItems.id],
+  product: one(products, {
+    fields: [previewItems.productCode],
+    references: [products.code],
   }),
   dimensions: one(previewItemDimensions, {
     fields: [previewItems.id],

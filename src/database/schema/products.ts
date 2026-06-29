@@ -14,6 +14,7 @@ import { materials } from './materials';
 import { users } from './users';
 import { inquiryItems } from './inquiries';
 import { offerItems } from './offers';
+import { previewItems } from './previews';
 import { contractItems } from './contracts';
 
 export const products = pgTable(
@@ -97,6 +98,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   standardBoms: many(productBoms),
   inquiryItems: many(inquiryItems),
+  previewItems: many(previewItems),
   offerItems: many(offerItems),
   contractItems: many(contractItems),
 }));

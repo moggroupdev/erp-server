@@ -117,7 +117,11 @@ See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For
 
 ## 7. Workflow guards
 
-### Inquiry → offer → contract
+### Inquiry → preview → offer → contract
+
+**Header-level traceability.** `previews`, `offers`, and `contracts` each store `inquiry_id`. Downstream documents are not FK-linked to upstream line rows (`inquiry_items`, `preview_items`, `offer_items`).
+
+**Line snapshots.** `preview_items`, `offer_items`, and `contract_items` are standalone lines on their parent document, identified by `product_code` (plus line-specific fields). When creating a preview, offer, or contract from an inquiry, copy line data from inquiry items in the service — do not persist `inquiry_item_id` on downstream lines.
 
 - Contract linked to offer only if `offers.status = 'accepted'`
 - Cannot downgrade offer from `accepted` while a contract references it
