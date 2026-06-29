@@ -1,8 +1,8 @@
 # Database duplications
 
-Intentional redundant columns kept for **read performance** (avoid joins on hot queries). Default is DRY — add entries here only when the trade-off is justified.
+**RFP** = **Redundant For Performance** — the `// RFP` schema comment marks a column that duplicates data already reachable via FKs, kept to avoid hot-path joins on frequent reads (list/filter APIs).
 
-Schema marker: `// RFP` on the column (see `AGENTS.md`).
+Default is DRY — add entries here only when the join cost outweighs storage + sync complexity.
 
 **Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps). Those live in [`app-logic-reminder.md`](./app-logic-reminder.md) and use the `// app-synced` schema marker.
 
@@ -18,6 +18,7 @@ Schema marker: `// RFP` on the column (see `AGENTS.md`).
 
 ```markdown
 ### `table.column`
+
 - **Canonical source:** `other_table.column` via `fk_column`
 - **Why:** e.g. list/filter API without joining `other_table`
 - **Sync:** set on INSERT from source; immutable / or updated when …
@@ -29,6 +30,7 @@ Schema marker: `// RFP` on the column (see `AGENTS.md`).
 ## Current duplications
 
 ### `contracts.customer_id`
+
 - **Canonical source:** `inquiries.customer_id` via `contracts.inquiry_id`
 - **Why:** List and filter contracts by customer without joining `inquiries` on every contract query.
 - **Sync:** Copy `inquiries.customer_id` on contract creation. Must match the inquiry's customer; treat as immutable unless `inquiry_id` changes (validate in service if ever allowed).

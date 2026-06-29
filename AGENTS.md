@@ -6,10 +6,10 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 ## Enums & constants
 
-| Layer | File                                  | Role                                                                                                              |
-| ----- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| App   | `src/utils/constants.ts`              | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere. |
-| DB    | `src/database/schema/common/`         | Shared schema primitives: `enums.ts` (`pgEnum`), `properties.ts` (shared columns), `types.ts` (`numeric`), `constraints.ts` (check helpers). Imports enum values from constants. |
+| Layer | File                          | Role                                                                                                                                                                             |
+| ----- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                                                                |
+| DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts` (`pgEnum`), `properties.ts` (shared columns), `types.ts` (`numeric`), `constraints.ts` (check helpers). Imports enum values from constants. |
 
 **New enum:** constants → `common/enums.ts` → schema. Migration is done manually by a developer (see Migrations).
 
@@ -29,7 +29,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 - **Default:** no redundancy. Prefer FKs + joins over duplicated codes, names, or IDs.
 - **Exception:** a denormalized column is allowed when it avoids a hot join on frequent reads (list/filter APIs). Keep these rare.
-- Mark performance duplications with `// RFP` (redundancy for performance) on the column; list them in `src/database/docs/db-duplications.md` with sync rules.
+- Mark such columns with `// RFP` and document them in `src/database/docs/db-duplications.md` (definition, sync rules, and when to add).
 - Mark application-maintained derived columns with `// app-synced`; document behavior in `src/database/docs/app-logic-reminder.md`.
 
 ### Performance
@@ -45,10 +45,10 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 | File                                      | Purpose                                                                                                                                                    |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`                               | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                            |
+| `README.md`                               | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                          |
 | `src/database/docs/entity-codes.md`       | Human-readable `code` prefixes and format (`ORD-0000001`, …).                                                                                              |
 | `src/database/docs/app-logic-reminder.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
-| `src/database/docs/db-duplications.md`    | Intentional redundant columns for performance.                                                                                                             |
+| `src/database/docs/db-duplications.md`    | `// RFP` columns (Redundant For Performance) — definition, sync rules, and inventory.      |
 | `src/database/sql/triggers.sql`           | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
 
 **Triggers example:** `CTR-0000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
@@ -57,13 +57,13 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 After **every** change, update all affected docs in the **same** change — never leave them stale.
 
-| Change type | Update |
-| ----------- | ------ |
-| New/changed `code` prefix or coded table | `entity-codes.md`, `triggers.sql` |
-| `// app-synced` column or derived behavior | `app-logic-reminder.md` |
-| `// RFP` column | `db-duplications.md` |
+| Change type                                  | Update                                                                           |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| New/changed `code` prefix or coded table     | `entity-codes.md`, `triggers.sql`                                                |
+| `// app-synced` column or derived behavior   | `app-logic-reminder.md`                                                          |
+| `// RFP` column                              | `db-duplications.md`                                                             |
 | New/changed domain, entity, or workflow step | `README.md` (What the System Manages, business process, Current Scope as needed) |
-| Schema or feature scope shift | `README.md` Current Scope |
+| Schema or feature scope shift                | `README.md` Current Scope                                                        |
 
 Updating existing docs is required; do not create new markdown files unless the user asks (see Agent rules).
 
