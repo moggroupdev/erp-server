@@ -43,13 +43,13 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 ## Docs & triggers
 
-| File                                      | Purpose                                                                                                                                                    |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`                               | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                          |
-| `src/database/docs/entity-codes.md`       | Human-readable `code` prefixes and format (`ORD-0000001`, …).                                                                                              |
+| File                                     | Purpose                                                                                                                                                    |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                              | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                          |
+| `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes.                                                       |
 | `src/database/docs/application-logic.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
-| `src/database/docs/db-duplications.md`    | `// RFP` columns (Redundant For Performance) — definition, sync rules, and inventory.      |
-| `src/database/sql/triggers.sql`           | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
+| `src/database/docs/db-duplications.md`   | `// RFP` columns (Redundant For Performance) — definition, sync rules, and inventory.                                                                      |
+| `src/database/sql/triggers.sql`          | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
 
 **Triggers example:** `CTR-0000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
 
@@ -59,8 +59,9 @@ After **every** change, update all affected docs in the **same** change — neve
 
 | Change type                                  | Update                                                                           |
 | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| New/changed `code` prefix or coded table     | `entity-codes.md`, `triggers.sql`                                                |
-| `// app-synced` column or derived behavior   | `application-logic.md`                                                          |
+| New/changed table                            | `tables.md`                                                                      |
+| New/changed `code` prefix or coded table     | `tables.md`, `triggers.sql`                                                      |
+| `// app-synced` column or derived behavior   | `application-logic.md`                                                           |
 | `// RFP` column                              | `db-duplications.md`                                                             |
 | New/changed domain, entity, or workflow step | `README.md` (What the System Manages, business process, Current Scope as needed) |
 | Schema or feature scope shift                | `README.md` Current Scope                                                        |
@@ -77,7 +78,7 @@ Updating existing docs is required; do not create new markdown files unless the 
 npm run db:generate → db:migrate → db:triggers
 ```
 
-Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, then full workflow. Keep `schema/index.ts` table list current.
+Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, then full workflow. Keep `src/database/docs/tables.md` current when adding or changing tables.
 
 ---
 
