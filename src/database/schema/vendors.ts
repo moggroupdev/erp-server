@@ -12,7 +12,7 @@ export const vendors = pgTable(
   'vendors',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: VEN-0000001
+    code: text('code').unique().notNull(), // Format: VEN-00000001
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),

@@ -9,7 +9,7 @@ export const materialTransfers = pgTable(
   'material_transfers',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MTR-0000001
+    code: text('code').unique().notNull(), // Format: MTR-00000001
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

@@ -9,7 +9,7 @@
 
 -- ---------------------------------------------------------------------------
 -- AUTO-GENERATED CODE SEQUENCES AND TRIGGERS
--- Format: {PREFIX}-{7-digit sequential number} (e.g., USR-0000001, CUS-0000002)
+-- Format: {PREFIX}-{8-digit sequential number} (e.g., USR-00000001, CUS-00000002)
 -- - Code is auto-generated on INSERT if null
 -- - Unique constraint enforced at database level
 -- ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ CREATE OR REPLACE FUNCTION generate_users_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'USR-' || LPAD(nextval('users_code_seq')::text, 7, '0');
+    NEW.code := 'USR-' || LPAD(nextval('users_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION generate_customers_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'CUS-' || LPAD(nextval('customers_code_seq')::text, 7, '0');
+    NEW.code := 'CUS-' || LPAD(nextval('customers_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -61,7 +61,7 @@ CREATE OR REPLACE FUNCTION generate_vendors_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'VEN-' || LPAD(nextval('vendors_code_seq')::text, 7, '0');
+    NEW.code := 'VEN-' || LPAD(nextval('vendors_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -81,7 +81,7 @@ CREATE OR REPLACE FUNCTION generate_contracts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'CTR-' || LPAD(nextval('contracts_code_seq')::text, 7, '0');
+    NEW.code := 'CTR-' || LPAD(nextval('contracts_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -101,7 +101,7 @@ CREATE OR REPLACE FUNCTION generate_material_purchase_orders_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'MPO-' || LPAD(nextval('material_purchase_orders_code_seq')::text, 7, '0');
+    NEW.code := 'MPO-' || LPAD(nextval('material_purchase_orders_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -121,7 +121,7 @@ CREATE OR REPLACE FUNCTION generate_material_purchase_receipts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'MPR-' || LPAD(nextval('material_purchase_receipts_code_seq')::text, 7, '0');
+    NEW.code := 'MPR-' || LPAD(nextval('material_purchase_receipts_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -141,7 +141,7 @@ CREATE OR REPLACE FUNCTION generate_deliveries_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'DEL-' || LPAD(nextval('deliveries_code_seq')::text, 7, '0');
+    NEW.code := 'DEL-' || LPAD(nextval('deliveries_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -161,7 +161,7 @@ CREATE OR REPLACE FUNCTION generate_installations_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'INS-' || LPAD(nextval('installations_code_seq')::text, 7, '0');
+    NEW.code := 'INS-' || LPAD(nextval('installations_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -181,7 +181,7 @@ CREATE OR REPLACE FUNCTION generate_production_plans_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PPL-' || LPAD(nextval('production_plans_code_seq')::text, 7, '0');
+    NEW.code := 'PPL-' || LPAD(nextval('production_plans_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -201,7 +201,7 @@ CREATE OR REPLACE FUNCTION generate_inventory_transactions_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'IVT-' || LPAD(nextval('inventory_transactions_code_seq')::text, 7, '0');
+    NEW.code := 'IVT-' || LPAD(nextval('inventory_transactions_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -221,7 +221,7 @@ CREATE OR REPLACE FUNCTION generate_material_transfers_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'MTR-' || LPAD(nextval('material_transfers_code_seq')::text, 7, '0');
+    NEW.code := 'MTR-' || LPAD(nextval('material_transfers_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -241,7 +241,7 @@ CREATE OR REPLACE FUNCTION generate_product_purchase_orders_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PPO-' || LPAD(nextval('product_purchase_orders_code_seq')::text, 7, '0');
+    NEW.code := 'PPO-' || LPAD(nextval('product_purchase_orders_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
@@ -261,7 +261,7 @@ CREATE OR REPLACE FUNCTION generate_product_purchase_receipts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'PPR-' || LPAD(nextval('product_purchase_receipts_code_seq')::text, 7, '0');
+    NEW.code := 'PPR-' || LPAD(nextval('product_purchase_receipts_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;

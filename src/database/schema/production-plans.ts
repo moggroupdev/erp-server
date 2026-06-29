@@ -11,7 +11,7 @@ export const productionPlans = pgTable(
   'production_plans',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: PPL-0000001
+    code: text('code').unique().notNull(), // Format: PPL-00000001
     name: text('name').notNull(),
     startDate: timestamp('start_date', { withTimezone: true }).notNull(),
     endDate: timestamp('end_date', { withTimezone: true }).notNull(),

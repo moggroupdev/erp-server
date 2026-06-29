@@ -6,15 +6,15 @@ Overview of all schema tables: primary key type, soft-delete / cancellation beha
 
 Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/triggers.sql)).
 
-**Format:** `{PREFIX}-{7-digit sequence}` — e.g. `CTR-0000042`, `USR-0000001`
+**Format:** `{PREFIX}-{8-digit sequence}` — e.g. `CTR-00000042`, `USR-00000001`
 
 - Prefix is **3 characters** (uppercase).
-- Sequence is zero-padded to 7 digits per table.
+- Sequence is zero-padded to 8 digits per table.
 - `code` is unique and immutable after creation — omit from create DTOs; never include in update DTOs.
 
 ### Adding a new coded entity
 
-1. Add `code: text('code').unique().notNull()` with a `// Format: XXX-0000001` comment in the schema.
+1. Add `code: text('code').unique().notNull()` with a `// Format: XXX-00000001` comment in the schema.
 2. Add sequence + `BEFORE INSERT` trigger in `triggers.sql`.
 3. Add the prefix to the **Code** column for that table below.
 
