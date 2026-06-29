@@ -8,6 +8,13 @@
       "when": 1782636793526,
       "tag": "0000_friendly_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782714184049,
+      "tag": "0001_lowly_bulldozer",
+      "breakpoints": true
     }
   ]
 }
