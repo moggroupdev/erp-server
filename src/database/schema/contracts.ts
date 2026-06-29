@@ -38,6 +38,8 @@ export const contracts = pgTable(
     // Contract status can be deduced from these dates:
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    cancelledBy: uuid('cancelled_by').references(() => users.id),
+    cancellationReason: text('cancellation_reason'),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -48,11 +50,11 @@ export const contracts = pgTable(
     index('contracts_code_idx').on(table.code),
     index('contracts_inquiry_id_idx').on(table.inquiryId),
     index('contracts_customer_id_idx').on(table.customerId),
+    index('contracts_created_at_idx').on(table.createdAt),
+    index('contracts_created_by_idx').on(table.createdBy),
     index('contracts_delivery_time_idx').on(table.deliveryTime),
     index('contracts_completed_at_idx').on(table.completedAt),
     index('contracts_cancelled_at_idx').on(table.cancelledAt),
-    index('contracts_created_at_idx').on(table.createdAt),
-    index('contracts_created_by_idx').on(table.createdBy),
     check('contracts_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('contracts_total_amount_non_negative', table.totalAmount),
   ],
@@ -85,7 +87,6 @@ export const contractItems = pgTable(
     index('contract_items_product_code_idx').on(table.productCode),
     index('contract_items_created_by_idx').on(table.createdBy),
     index('contract_items_cancelled_at_idx').on(table.cancelledAt),
-    index('contract_items_cancelled_by_idx').on(table.cancelledBy),
     index('contract_items_previous_version_id_idx').on(table.previousVersionId),
     positiveQuantityCheck('contract_items_quantity_positive', table.quantity),
     positiveQuantityCheck('contract_items_unit_price_positive', table.unitPrice),
@@ -139,6 +140,12 @@ export const contractsRelations = relations(contracts, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [contracts.createdBy],
     references: [users.id],
+    relationName: 'contractCreatedBy',
+  }),
+  cancelledByUser: one(users, {
+    fields: [contracts.cancelledBy],
+    references: [users.id],
+    relationName: 'contractCancelledBy',
   }),
   items: many(contractItems),
   deliveries: many(deliveries),
