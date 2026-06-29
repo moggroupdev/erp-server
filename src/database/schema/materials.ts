@@ -15,7 +15,7 @@ import { users } from './users';
 import { materialPurchaseOrderItems } from './purchasing-materials';
 import { inventoryTransactionItems } from './inventory-transactions';
 import { materialTransferItems } from './material-transfers';
-import { productBoms } from './products';
+import { productStandardBoms } from './products';
 import { boms } from './boms';
 
 export const materials = pgTable(
@@ -64,5 +64,5 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
   inventoryTransactionItems: many(inventoryTransactionItems),
   transferItems: many(materialTransferItems),
   boms: many(boms),
-  productBoms: many(productBoms),
+  productStandardBoms: many(productStandardBoms),
 }));

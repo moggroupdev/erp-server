@@ -47,7 +47,7 @@ All Tables
 013. product_category_mains          - uuid        - NO                  - NO        - NO
 014. product_category_subs           - uuid        - NO                  - NO        - NO
 015. products                        - text        - deletedAt field     - YES       - YES (NOT NULL)
-016. product_boms                    - uuid        - NO                  - YES       - YES (NOT NULL)
+016. product_standard_boms          - uuid        - NO                  - YES       - YES (NOT NULL)
 017. materials                       - text        - deletedAt field     - YES       - YES (NOT NULL)
 018. inquiries                       - uuid        - cancelled status    - YES       - YES (NOT NULL)
 019. inquiry_items                   - uuid        - NO                  - NO        - NO

@@ -60,8 +60,8 @@ export const products = pgTable(
 );
 
 // Standard BOM template for a catalog product at its default dimensions.
-export const productBoms = pgTable(
-  'product_boms',
+export const productStandardBoms = pgTable(
+  'product_standard_boms',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     productCode: text('product_code')
@@ -78,10 +78,10 @@ export const productBoms = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    unique('product_boms_product_material_unique').on(table.productCode, table.materialCode),
-    index('product_boms_product_code_idx').on(table.productCode),
-    index('product_boms_material_code_idx').on(table.materialCode),
-    positiveQuantityCheck('product_boms_quantity_required_positive', table.quantityRequired),
+    unique('product_standard_boms_product_material_unique').on(table.productCode, table.materialCode),
+    index('product_standard_boms_product_code_idx').on(table.productCode),
+    index('product_standard_boms_material_code_idx').on(table.materialCode),
+    positiveQuantityCheck('product_standard_boms_quantity_required_positive', table.quantityRequired),
   ],
 );
 
@@ -96,24 +96,24 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.subCategoryId],
     references: [productCategorySubs.id],
   }),
-  standardBoms: many(productBoms),
+  standardBoms: many(productStandardBoms),
   inquiryItems: many(inquiryItems),
   previewItems: many(previewItems),
   offerItems: many(offerItems),
   contractItems: many(contractItems),
 }));
 
-export const productBomsRelations = relations(productBoms, ({ one }) => ({
+export const productStandardBomsRelations = relations(productStandardBoms, ({ one }) => ({
   product: one(products, {
-    fields: [productBoms.productCode],
+    fields: [productStandardBoms.productCode],
     references: [products.code],
   }),
   material: one(materials, {
-    fields: [productBoms.materialCode],
+    fields: [productStandardBoms.materialCode],
     references: [materials.code],
   }),
   createdBy: one(users, {
-    fields: [productBoms.createdBy],
+    fields: [productStandardBoms.createdBy],
     references: [users.id],
   }),
 }));
