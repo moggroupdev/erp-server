@@ -1,4 +1,4 @@
-# App logic reminder
+# Application Logic
 
 Business logic **not** enforced by database triggers must be implemented in NestJS services. Schema columns marked `// app-synced` are maintained by the application.
 
@@ -155,9 +155,11 @@ Auto-generated `code` columns (DB trigger) must not appear in update DTOs or `UP
 
 ---
 
-## 9. Soft delete
+## 9. Soft delete / archival
 
-`deleted_at` on `users`, `customers`, `vendors`, `products`, `materials`: filter out deleted rows in list/detail queries unless explicitly including archived records.
+Rows are rarely hard-deleted. Default list/detail queries should exclude inactive records unless the API explicitly includes archived or cancelled data.
+
+Not every table uses `deleted_at` — some use `cancelled_at` or a `cancelled` status instead.
 
 ---
 
