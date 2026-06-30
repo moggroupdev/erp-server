@@ -23,5 +23,4 @@ export * from './purchasing-products';
 export * from './deliveries';
 export * from './installations';
 export * from './login-history';
-export * from './material-transfers';
 export * from './product-units';

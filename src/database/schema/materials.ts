@@ -14,7 +14,6 @@ import { materialCategorySubs } from './categories';
 import { users } from './users';
 import { materialPurchaseOrderItems } from './purchasing-materials';
 import { inventoryTransactionItems } from './inventory-transactions';
-import { materialTransferItems } from './material-transfers';
 import { productStandardBoms } from './products';
 import { boms } from './boms';
 
@@ -62,7 +61,6 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
   }),
   purchaseOrderItems: many(materialPurchaseOrderItems),
   inventoryTransactionItems: many(inventoryTransactionItems),
-  transferItems: many(materialTransferItems),
   boms: many(boms),
   productStandardBoms: many(productStandardBoms),
 }));

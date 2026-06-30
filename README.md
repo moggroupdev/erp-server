@@ -35,7 +35,6 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Production plans scheduling work over a date range
 - Work broken down per product unit and manufacturing department (cutting, bending, sheet metal, refrigeration, electrical, gas, injection molding, and others)
 - Progress notes and completion tracking per department step
-- Material transfers when issued materials move from one production stage to another
 
 ### Inventory & Warehouse
 
@@ -89,7 +88,7 @@ Production then builds a plan that schedules each unit across the relevant manuf
 
 Before and during production, the Warehouse checks whether the required raw materials are in stock. When stock is short, Purchasing raises material purchase orders with approved suppliers. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
 
-Materials are then issued from the warehouse to the production floor, linked to the specific production work consuming them. As manufacturing moves between departments, materials can be transferred from one production stage to the next.
+Materials are then issued from the warehouse to the production floor, linked to the specific production work consuming them.
 
 ### Sourcing Imported Products
 

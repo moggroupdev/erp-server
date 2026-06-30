@@ -66,8 +66,6 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | inventory_transactions          | uuid        | IVT  | NO                | YES       | YES (NOT NULL) |
 | inventory_transaction_items     | uuid        | —    | NO                | NO        | NO             |
 | login_history                   | uuid        | —    | NO                | YES       | NO             |
-| material_transfers              | uuid        | MTR  | NO                | YES       | YES (NOT NULL) |
-| material_transfer_items         | uuid        | —    | NO                | NO        | NO             |
 | product_units                   | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_purchase_orders         | uuid        | PPO  | cancelledAt field | YES       | YES (NOT NULL) |
 | product_purchase_order_items    | uuid        | —    | NO                | NO        | NO             |

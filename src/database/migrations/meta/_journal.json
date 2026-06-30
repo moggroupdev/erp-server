@@ -36,6 +36,13 @@
       "when": 1782812182026,
       "tag": "0004_concerned_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782816588547,
+      "tag": "0005_spooky_hellfire_club",
+      "breakpoints": true
     }
   ]
 }
