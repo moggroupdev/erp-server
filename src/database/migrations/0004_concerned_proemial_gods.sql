@@ -1,0 +1,4 @@
+ALTER TABLE "contracts" ADD COLUMN "started_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "contracts_started_at_idx" ON "contracts" USING btree ("started_at");--> statement-breakpoint
+ALTER TABLE "contracts" ADD CONSTRAINT "contracts_completed_after_started" CHECK ("contracts"."completed_at" IS NULL OR "contracts"."started_at" IS NULL OR "contracts"."completed_at" >= "contracts"."started_at");--> statement-breakpoint
+ALTER TABLE "contracts" ADD CONSTRAINT "contracts_cancelled_after_started" CHECK ("contracts"."cancelled_at" IS NULL OR "contracts"."started_at" IS NULL OR "contracts"."cancelled_at" >= "contracts"."started_at");

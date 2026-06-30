@@ -36,6 +36,7 @@ export const contracts = pgTable(
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(), // app-synced
     // Contract status can be deduced from these dates:
+    startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     cancelledBy: uuid('cancelled_by').references(() => users.id),
@@ -53,9 +54,18 @@ export const contracts = pgTable(
     index('contracts_created_at_idx').on(table.createdAt),
     index('contracts_created_by_idx').on(table.createdBy),
     index('contracts_delivery_time_idx').on(table.deliveryTime),
+    index('contracts_started_at_idx').on(table.startedAt),
     index('contracts_completed_at_idx').on(table.completedAt),
     index('contracts_cancelled_at_idx').on(table.cancelledAt),
     check('contracts_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    check(
+      'contracts_completed_after_started',
+      sql`${table.completedAt} IS NULL OR ${table.startedAt} IS NULL OR ${table.completedAt} >= ${table.startedAt}`,
+    ),
+    check(
+      'contracts_cancelled_after_started',
+      sql`${table.cancelledAt} IS NULL OR ${table.startedAt} IS NULL OR ${table.cancelledAt} >= ${table.startedAt}`,
+    ),
     nonNegativeQuantityCheck('contracts_total_amount_non_negative', table.totalAmount),
   ],
 );

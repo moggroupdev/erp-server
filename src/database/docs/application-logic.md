@@ -137,17 +137,17 @@ See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For
 
 ### Entity status from dates (no status enum — derive in API layer)
 
-| Entity                     | Active                                      | Completed          | Cancelled          |
-| -------------------------- | ------------------------------------------- | ------------------ | ------------------ |
-| `contracts`                | no `completed_at` / `cancelled_at`          | `completed_at` set | `cancelled_at` set |
-| `contract_items`           | no `cancelled_at`                           | —                  | `cancelled_at` set |
-| `product_units`            | no `cancelled_at` (and not fully installed) | `installed_at` set | `cancelled_at` set |
-| `production_plan_items`    | no `completed_at` / `cancelled_at`          | `completed_at` set | `cancelled_at` set |
-| `previews`                 | scheduled, not completed/cancelled          | `completed_at` set | `cancelled_at` set |
-| `deliveries`               | scheduled, not delivered/cancelled          | `delivered_at` set | `cancelled_at` set |
-| `installations`            | scheduled, not installed/cancelled          | `installed_at` set | `cancelled_at` set |
-| `material_purchase_orders` | open                                        | `completed_at` set | `cancelled_at` set |
-| `product_purchase_orders`  | open                                        | `completed_at` set | `cancelled_at` set |
+| Entity                     | Active                                                                                                  | Completed          | Cancelled          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------ | ------------------ |
+| `contracts`                | no `completed_at` / `cancelled_at`; pending start (`started_at` null) or in progress (`started_at` set) | `completed_at` set | `cancelled_at` set |
+| `contract_items`           | no `cancelled_at`                                                                                       | —                  | `cancelled_at` set |
+| `product_units`            | no `cancelled_at` (and not fully installed)                                                             | `installed_at` set | `cancelled_at` set |
+| `production_plan_items`    | no `completed_at` / `cancelled_at`                                                                      | `completed_at` set | `cancelled_at` set |
+| `previews`                 | scheduled, not completed/cancelled                                                                      | `completed_at` set | `cancelled_at` set |
+| `deliveries`               | scheduled, not delivered/cancelled                                                                      | `delivered_at` set | `cancelled_at` set |
+| `installations`            | scheduled, not installed/cancelled                                                                      | `installed_at` set | `cancelled_at` set |
+| `material_purchase_orders` | open                                                                                                    | `completed_at` set | `cancelled_at` set |
+| `product_purchase_orders`  | open                                                                                                    | `completed_at` set | `cancelled_at` set |
 
 Mutually exclusive completion and cancellation timestamps where both exist.
 
@@ -193,13 +193,15 @@ flowchart TD
 
 ### Schema reference
 
-**`contracts` (cancellation audit)**
+**`contracts` (lifecycle timestamps)**
 
-| Column                | Role                               |
-| --------------------- | ---------------------------------- |
-| `cancelled_at`        | When the whole order was cancelled |
-| `cancelled_by`        | Who cancelled the contract         |
-| `cancellation_reason` | Why the contract was cancelled     |
+| Column                | Role                                             |
+| --------------------- | ------------------------------------------------ |
+| `started_at`          | When work on the order began; null until started |
+| `completed_at`        | When the whole order was completed               |
+| `cancelled_at`        | When the whole order was cancelled               |
+| `cancelled_by`        | Who cancelled the contract                       |
+| `cancellation_reason` | Why the contract was cancelled                   |
 
 **`contract_items`**
 
