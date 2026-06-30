@@ -1,0 +1,1 @@
+DROP TABLE "bom_cost_snapshots" CASCADE;
