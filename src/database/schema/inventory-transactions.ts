@@ -35,7 +35,7 @@ export const inventoryTransactionItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
-    unitCost: numeric('unit_cost').notNull(),
+    unitCost: numeric('unit_cost').notNull(), // Historical cost record (snapshot)
     materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'),
     productionPlanItemId: uuid('production_plan_item_id'),
   },

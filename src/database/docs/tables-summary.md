@@ -49,7 +49,6 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | offer_items                     | uuid        | —    | NO                | NO        | NO             |
 | contracts                       | uuid        | CTR  | cancelledAt field | YES       | YES (NOT NULL) |
 | contract_items                  | uuid        | —    | NO                | NO        | NO             |
-| bom_cost_snapshots              | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | material_purchase_orders        | uuid        | MPO  | cancelledAt field | YES       | YES (NOT NULL) |
 | material_purchase_order_items   | uuid        | —    | NO                | NO        | NO             |
 | material_purchase_receipts      | uuid        | MPR  | cancelledAt field | YES       | YES (NOT NULL) |

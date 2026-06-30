@@ -2,7 +2,7 @@
 
 Business logic **not** enforced by database triggers must be implemented in NestJS services. Schema columns marked `// app-synced` are maintained by the application.
 
-`bom_cost_snapshots.unit_cost` and `inventory_transaction_items.unit_cost` are **not** app-synced — they are user-provided at creation (historical cost record) and should be omitted from update DTOs.
+`inventory_transaction_items.unit_cost` is **not** app-synced — it is user-provided at creation (actual cost at time of transaction) and should be omitted from update DTOs.
 
 ---
 

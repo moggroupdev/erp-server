@@ -28,8 +28,6 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Multiple dimension variants per product (length, width, height, unit), with one marked as default; estimated production time is set at the product level
 - Customer-specific sizes are added as new rows in `product_dimensions` and get their own standard material recipe prepared when needed by the Technical Office
 - Individual product units created for each contract line, each with its own serial number
-- Per-unit BOM cost snapshots are linked to standard BOM lines and recording historical unit cost at creation time
-
 ### Manufacturing
 
 - Production plans scheduling work over a date range
@@ -80,7 +78,7 @@ Once a contract is in place, the company breaks each active line item into indiv
 
 ### Engineering and Manufacturing
 
-For items built in-house, the Technical Office prepares the standard BOMs for each dimension variant. When a product unit enters production, BOM cost snapshots are derived from those standard BOM lines, recording the historical unit cost per material at that point in time.
+For items built in-house, the Technical Office prepares the standard BOMs for each dimension variant. Actual material costs are tracked through inventory transactions when materials are issued from the warehouse to the production floor.
 
 Production then builds a plan that schedules each unit across the relevant manufacturing departments — cutting, bending, sheet metal, refrigeration, electrical, and so on. Progress is tracked per unit and per department, with notes recorded as work moves through each stage.
 
