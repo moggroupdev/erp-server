@@ -43,6 +43,13 @@
       "when": 1782816588547,
       "tag": "0005_spooky_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782819957199,
+      "tag": "0006_free_professor_monster",
+      "breakpoints": true
     }
   ]
 }
