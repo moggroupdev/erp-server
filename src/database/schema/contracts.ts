@@ -1,12 +1,12 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { numeric, createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import { numeric, createdAt, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
-import { users } from './users';
-import { products } from './products';
+import { productDimensions } from './products';
 import { inquiries } from './inquiries';
 import { previews } from './previews';
 import { offers } from './offers';
+import { users } from './users';
 import { productUnits } from './product-units';
 import { productPurchaseOrderItems } from './purchasing-products';
 import { deliveries } from './deliveries';
@@ -77,9 +77,10 @@ export const contractItems = pgTable(
     contractId: uuid('contract_id')
       .notNull()
       .references(() => contracts.id),
-    productCode: text('product_code')
+    productDimensionId: uuid('product_dimension_id')
       .notNull()
-      .references(() => products.code),
+      .references(() => productDimensions.id),
+    productCode: text('product_code').notNull(), // RFP
     title: text('title'),
     notes: text('notes'),
     unitPrice: numeric('unit_price').notNull(),
@@ -94,33 +95,13 @@ export const contractItems = pgTable(
   },
   (table) => [
     index('contract_items_contract_id_idx').on(table.contractId),
+    index('contract_items_product_dimension_id_idx').on(table.productDimensionId),
     index('contract_items_product_code_idx').on(table.productCode),
     index('contract_items_created_by_idx').on(table.createdBy),
     index('contract_items_cancelled_at_idx').on(table.cancelledAt),
     index('contract_items_previous_version_id_idx').on(table.previousVersionId),
     positiveQuantityCheck('contract_items_quantity_positive', table.quantity),
     positiveQuantityCheck('contract_items_unit_price_positive', table.unitPrice),
-  ],
-);
-
-// In case of custom dimensions (not standard)
-export const contractItemDimensions = pgTable(
-  'contract_item_dimensions',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    contractItemId: uuid('contract_item_id')
-      .notNull()
-      .unique()
-      .references(() => contractItems.id),
-    length: numeric('length').notNull(),
-    width: numeric('width').notNull(),
-    height: numeric('height').notNull(),
-    unit: dimensionUnitEnum('unit').notNull(),
-  },
-  (table) => [
-    nonNegativeQuantityCheck('contract_item_dimensions_length_non_negative', table.length),
-    nonNegativeQuantityCheck('contract_item_dimensions_width_non_negative', table.width),
-    nonNegativeQuantityCheck('contract_item_dimensions_height_non_negative', table.height),
   ],
 );
 
@@ -167,9 +148,9 @@ export const contractItemsRelations = relations(contractItems, ({ one, many }) =
     fields: [contractItems.contractId],
     references: [contracts.id],
   }),
-  product: one(products, {
-    fields: [contractItems.productCode],
-    references: [products.code],
+  productDimension: one(productDimensions, {
+    fields: [contractItems.productDimensionId],
+    references: [productDimensions.id],
   }),
   createdByUser: one(users, {
     fields: [contractItems.createdBy],
@@ -189,17 +170,6 @@ export const contractItemsRelations = relations(contractItems, ({ one, many }) =
   nextVersions: many(contractItems, {
     relationName: 'contractItemVersionChain',
   }),
-  dimensions: one(contractItemDimensions, {
-    fields: [contractItems.id],
-    references: [contractItemDimensions.contractItemId],
-  }),
   productUnits: many(productUnits),
   productPurchaseOrderItems: many(productPurchaseOrderItems),
-}));
-
-export const contractItemDimensionsRelations = relations(contractItemDimensions, ({ one }) => ({
-  contractItem: one(contractItems, {
-    fields: [contractItemDimensions.contractItemId],
-    references: [contractItems.id],
-  }),
 }));

@@ -35,3 +35,31 @@ Default is DRY — add entries here only when the join cost outweighs storage + 
 - **Why:** List and filter contracts by customer without joining `inquiries` on every contract query.
 - **Sync:** Copy `inquiries.customer_id` on contract creation. Must match the inquiry's customer; treat as immutable unless `inquiry_id` changes (validate in service if ever allowed).
 - **Index:** `contracts_customer_id_idx`
+
+### `inquiry_items.product_code`
+
+- **Canonical source:** `product_dimensions.product_code` via `inquiry_items.product_dimension_id`
+- **Why:** List and filter inquiry lines by product without joining `product_dimensions` on every item query.
+- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
+- **Index:** `inquiry_items_product_code_idx`
+
+### `offer_items.product_code`
+
+- **Canonical source:** `product_dimensions.product_code` via `offer_items.product_dimension_id`
+- **Why:** List and filter offer lines by product without joining `product_dimensions` on every item query.
+- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
+- **Index:** `offer_items_product_code_idx`
+
+### `preview_items.product_code`
+
+- **Canonical source:** `product_dimensions.product_code` via `preview_items.product_dimension_id`
+- **Why:** List and filter preview lines by product without joining `product_dimensions` on every item query.
+- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
+- **Index:** `preview_items_product_code_idx`
+
+### `contract_items.product_code`
+
+- **Canonical source:** `product_dimensions.product_code` via `contract_items.product_dimension_id`
+- **Why:** List and filter contract lines by product without joining `product_dimensions` on every item query.
+- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
+- **Index:** `contract_items_product_code_idx`

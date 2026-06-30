@@ -4,7 +4,7 @@ import { createdAt } from './common';
 import { users } from './users';
 import { contractItems } from './contracts';
 import { productionPlanItems } from './production-plans';
-import { boms } from './boms';
+import { bomCostSnapshots } from './bom-cost-snapshots';
 import { deliveryItems } from './deliveries';
 import { installationItems } from './installations';
 import { productPurchaseReceiptItems } from './purchasing-products';
@@ -49,7 +49,7 @@ export const productUnitsRelations = relations(productUnits, ({ one, many }) => 
     references: [contractItems.id],
   }),
   productionPlanItems: many(productionPlanItems),
-  boms: many(boms),
+  bomCostSnapshots: many(bomCostSnapshots),
   deliveryItem: one(deliveryItems, {
     fields: [productUnits.id],
     references: [deliveryItems.productUnitId],

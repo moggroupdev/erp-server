@@ -3,7 +3,7 @@ import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-c
 import { createdAt, numeric, offerStatusEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
-import { products } from './products';
+import { productDimensions } from './products';
 import { users } from './users';
 
 export const offers = pgTable(
@@ -38,9 +38,10 @@ export const offerItems = pgTable(
     offerId: uuid('offer_id')
       .notNull()
       .references(() => offers.id),
-    productCode: text('product_code')
+    productDimensionId: uuid('product_dimension_id')
       .notNull()
-      .references(() => products.code),
+      .references(() => productDimensions.id),
+    productCode: text('product_code').notNull(), // RFP
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),
@@ -48,6 +49,7 @@ export const offerItems = pgTable(
   },
   (table) => [
     index('offer_items_offer_id_idx').on(table.offerId),
+    index('offer_items_product_dimension_id_idx').on(table.productDimensionId),
     index('offer_items_product_code_idx').on(table.productCode),
     positiveQuantityCheck('offer_items_quantity_positive', table.quantity),
     positiveQuantityCheck('offer_items_unit_price_positive', table.unitPrice),
@@ -74,8 +76,8 @@ export const offerItemsRelations = relations(offerItems, ({ one }) => ({
     fields: [offerItems.offerId],
     references: [offers.id],
   }),
-  product: one(products, {
-    fields: [offerItems.productCode],
-    references: [products.code],
+  productDimension: one(productDimensions, {
+    fields: [offerItems.productDimensionId],
+    references: [productDimensions.id],
   }),
 }));

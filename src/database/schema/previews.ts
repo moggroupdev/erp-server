@@ -1,9 +1,9 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core';
-import { createdAt, dimensionUnitEnum, nonNegativeQuantityCheck, numeric } from './common';
+import { createdAt } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
-import { products } from './products';
+import { productDimensions } from './products';
 import { users } from './users';
 
 export const previews = pgTable(
@@ -53,34 +53,16 @@ export const previewItems = pgTable(
     previewId: uuid('preview_id')
       .notNull()
       .references(() => previews.id),
-    productCode: text('product_code')
+    productDimensionId: uuid('product_dimension_id')
       .notNull()
-      .references(() => products.code),
+      .references(() => productDimensions.id),
+    productCode: text('product_code').notNull(), // RFP
     notes: text('notes'),
   },
   (table) => [
     index('preview_items_preview_id_idx').on(table.previewId),
+    index('preview_items_product_dimension_id_idx').on(table.productDimensionId),
     index('preview_items_product_code_idx').on(table.productCode),
-  ],
-);
-
-export const previewItemDimensions = pgTable(
-  'preview_item_dimensions',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    previewItemId: uuid('preview_item_id')
-      .notNull()
-      .unique()
-      .references(() => previewItems.id),
-    length: numeric('length').notNull(),
-    width: numeric('width').notNull(),
-    height: numeric('height').notNull(),
-    unit: dimensionUnitEnum('unit').notNull(),
-  },
-  (table) => [
-    nonNegativeQuantityCheck('preview_item_dimensions_length_non_negative', table.length),
-    nonNegativeQuantityCheck('preview_item_dimensions_width_non_negative', table.width),
-    nonNegativeQuantityCheck('preview_item_dimensions_height_non_negative', table.height),
   ],
 );
 
@@ -110,19 +92,8 @@ export const previewItemsRelations = relations(previewItems, ({ one }) => ({
     fields: [previewItems.previewId],
     references: [previews.id],
   }),
-  product: one(products, {
-    fields: [previewItems.productCode],
-    references: [products.code],
-  }),
-  dimensions: one(previewItemDimensions, {
-    fields: [previewItems.id],
-    references: [previewItemDimensions.previewItemId],
-  }),
-}));
-
-export const previewItemDimensionsRelations = relations(previewItemDimensions, ({ one }) => ({
-  previewItem: one(previewItems, {
-    fields: [previewItemDimensions.previewItemId],
-    references: [previewItems.id],
+  productDimension: one(productDimensions, {
+    fields: [previewItems.productDimensionId],
+    references: [productDimensions.id],
   }),
 }));

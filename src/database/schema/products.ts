@@ -1,20 +1,20 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, check, unique, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, check, unique, integer, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
 import {
   numeric,
   createdAt,
   deletedAt,
   dimensionUnitEnum,
-  nonNegativeNullableQuantityCheck,
+  nonNegativeQuantityCheck,
   positiveQuantityCheck,
   productSourceTypeEnum,
 } from './common';
+import { users } from './users';
 import { productCategorySubs } from './categories';
 import { materials } from './materials';
-import { users } from './users';
 import { inquiryItems } from './inquiries';
-import { offerItems } from './offers';
 import { previewItems } from './previews';
+import { offerItems } from './offers';
 import { contractItems } from './contracts';
 
 export const products = pgTable(
@@ -27,10 +27,6 @@ export const products = pgTable(
       .notNull()
       .references(() => productCategorySubs.id),
     sourceType: productSourceTypeEnum('source_type').notNull(),
-    length: numeric('length'),
-    width: numeric('width'),
-    height: numeric('height'),
-    dimensionUnit: dimensionUnitEnum('dimension_unit'),
     estimatedProductionTime: integer('estimated_production_time'), // In Days
     deletedAt,
     createdAt,
@@ -42,31 +38,48 @@ export const products = pgTable(
     index('products_title_idx').on(table.title),
     index('products_sub_category_id_idx').on(table.subCategoryId),
     check(
-      'products_dimensions_all_or_none',
-      sql`(
-        (${table.length} IS NULL AND ${table.width} IS NULL AND ${table.height} IS NULL AND ${table.dimensionUnit} IS NULL)
-        OR
-        (${table.length} IS NOT NULL AND ${table.width} IS NOT NULL AND ${table.height} IS NOT NULL AND ${table.dimensionUnit} IS NOT NULL)
-      )`,
-    ),
-    nonNegativeNullableQuantityCheck('products_length_non_negative', table.length),
-    nonNegativeNullableQuantityCheck('products_width_non_negative', table.width),
-    nonNegativeNullableQuantityCheck('products_height_non_negative', table.height),
-    check(
       'products_estimated_production_time_positive',
       sql`${table.estimatedProductionTime} IS NULL OR ${table.estimatedProductionTime} > 0`,
     ),
   ],
 );
 
-// Standard BOM template for a catalog product at its default dimensions.
-export const productStandardBoms = pgTable(
-  'product_standard_boms',
+export const productDimensions = pgTable(
+  'product_dimensions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
+    length: numeric('length').notNull(),
+    width: numeric('width').notNull(),
+    height: numeric('height').notNull(),
+    dimensionUnit: dimensionUnitEnum('dimension_unit').notNull(),
+    isDefault: boolean('is_default').notNull().default(false),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('product_dimensions_product_code_idx').on(table.productCode),
+    uniqueIndex('product_dimensions_default_per_product_idx')
+      .on(table.productCode)
+      .where(sql`${table.isDefault} = true`),
+    nonNegativeQuantityCheck('product_dimensions_length_non_negative', table.length),
+    nonNegativeQuantityCheck('product_dimensions_width_non_negative', table.width),
+    nonNegativeQuantityCheck('product_dimensions_height_non_negative', table.height),
+  ],
+);
+
+// Standard BOM template for a catalog product at a specific dimension variant.
+export const productStandardBoms = pgTable(
+  'product_standard_boms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    productDimensionId: uuid('product_dimension_id')
+      .notNull()
+      .references(() => productDimensions.id),
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
@@ -78,8 +91,8 @@ export const productStandardBoms = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    unique('product_standard_boms_product_material_unique').on(table.productCode, table.materialCode),
-    index('product_standard_boms_product_code_idx').on(table.productCode),
+    unique('product_standard_boms_dimension_material_unique').on(table.productDimensionId, table.materialCode),
+    index('product_standard_boms_product_dimension_id_idx').on(table.productDimensionId),
     index('product_standard_boms_material_code_idx').on(table.materialCode),
     positiveQuantityCheck('product_standard_boms_quantity_required_positive', table.quantityRequired),
   ],
@@ -96,6 +109,18 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     fields: [products.subCategoryId],
     references: [productCategorySubs.id],
   }),
+  dimensions: many(productDimensions),
+}));
+
+export const productDimensionsRelations = relations(productDimensions, ({ one, many }) => ({
+  product: one(products, {
+    fields: [productDimensions.productCode],
+    references: [products.code],
+  }),
+  createdBy: one(users, {
+    fields: [productDimensions.createdBy],
+    references: [users.id],
+  }),
   standardBoms: many(productStandardBoms),
   inquiryItems: many(inquiryItems),
   previewItems: many(previewItems),
@@ -104,9 +129,9 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 }));
 
 export const productStandardBomsRelations = relations(productStandardBoms, ({ one }) => ({
-  product: one(products, {
-    fields: [productStandardBoms.productCode],
-    references: [products.code],
+  productDimension: one(productDimensions, {
+    fields: [productStandardBoms.productDimensionId],
+    references: [productDimensions.id],
   }),
   material: one(materials, {
     fields: [productStandardBoms.materialCode],

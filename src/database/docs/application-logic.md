@@ -2,7 +2,7 @@
 
 Business logic **not** enforced by database triggers must be implemented in NestJS services. Schema columns marked `// app-synced` are maintained by the application.
 
-`boms.unit_cost` and `inventory_transaction_items.unit_cost` are **not** app-synced — they are user-provided at creation (historical cost record) and should be omitted from update DTOs.
+`bom_cost_snapshots.unit_cost` and `inventory_transaction_items.unit_cost` are **not** app-synced — they are user-provided at creation (historical cost record) and should be omitted from update DTOs.
 
 ---
 
@@ -72,10 +72,17 @@ Update or clear timestamps if the source event is undone (e.g. delivery cancelle
 
 ## 5. RFP field sync
 
-See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For Performance) means and the full column list. On contract creation:
+See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For Performance) means and the full column list.
+
+On contract creation:
 
 - Set `contracts.customer_id` from `inquiries.customer_id`.
 - Throw `BadRequestException` if they would diverge.
+
+On inquiry, offer, preview, and contract item creation:
+
+- Set `product_code` from `product_dimensions.product_code` via `product_dimension_id`.
+- Treat as immutable after insert.
 
 ---
 
@@ -113,6 +120,10 @@ See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For
 
 - Only one `is_default = true` per customer/vendor (partial unique index). Unset the previous default when setting a new one in the same transaction.
 
+### Default dimension (`product_dimensions`)
+
+- Only one `is_default = true` per product (partial unique index). Unset the previous default when setting a new one in the same transaction.
+
 ---
 
 ## 7. Workflow guards
@@ -121,7 +132,7 @@ See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For
 
 **Header-level traceability.** `previews`, `offers`, and `contracts` each store `inquiry_id`. Downstream documents are not FK-linked to upstream line rows (`inquiry_items`, `preview_items`, `offer_items`).
 
-**Line snapshots.** `preview_items`, `offer_items`, and `contract_items` are standalone lines on their parent document, identified by `product_code` (plus line-specific fields). When creating a preview, offer, or contract from an inquiry, copy line data from inquiry items in the service — do not persist `inquiry_item_id` on downstream lines.
+**Line snapshots.** `preview_items`, `offer_items`, and `contract_items` are standalone lines on their parent document, identified by `product_dimension_id` (plus line-specific fields). When creating a preview, offer, or contract from an inquiry, copy line data from inquiry items in the service — do not persist `inquiry_item_id` on downstream lines. Set `product_code` (RFP) from the selected dimension on insert.
 
 - Contract linked to offer only if `offers.status = 'accepted'`
 - Cannot downgrade offer from `accepted` while a contract references it
@@ -183,13 +194,12 @@ Contracts (`contracts`) and their line items (`contract_items`) are amended thro
 ```mermaid
 flowchart TD
   contracts --> contractItems
-  contractItems --> contractItemDimensions
   contractItems --> productUnits
   productUnits --> productionPlanItems
   contractItems -->|"previous_version_id"| contractItems
 ```
 
-`contract_item_dimensions` is 1:1 with an item. It has no cancellation column — when dimensions change, the whole item is replaced and a new dimensions row is created on the replacement item.
+Dimensions are selected via `contract_items.product_dimension_id` (catalog `product_dimensions` row). When dimensions change, the whole item is replaced and the replacement row points at a different dimension variant.
 
 ### Schema reference
 
@@ -228,17 +238,17 @@ All steps run inside a **single transaction**. Recalculate `contracts.total_amou
 | Quantity changed              | Replace item              |
 | Dimensions updated (reprices) | Replace item              |
 | Unit price changed            | Replace item              |
-| Product code swapped          | Replace item              |
+| Product dimension swapped     | Replace item              |
 | Whole contract cancelled      | Cancel contract → cascade |
 
 #### Workflows
 
-| Operation           | When                                                                 | Steps                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Append**          | New line added to an existing contract                               | 1. INSERT `contract_items` (`previous_version_id = null`, `created_by` = acting user). 2. INSERT `contract_item_dimensions` if custom dimensions apply. 3. CREATE `product_units` (count = quantity, auto serial numbers). 4. Recalculate `contracts.total_amount`. No prior row is cancelled.                                                                                                    |
-| **Cancel item**     | Line removed from contract                                           | 1. UPDATE item: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 2. CASCADE: `cancelled_at` on active `product_units`. 3. CASCADE: `cancelled_at` on active `production_plan_items` for those units. 4. Recalculate `contracts.total_amount`.                                                                                                                                               |
-| **Replace item**    | Quantity, dimensions (reprices), unit price, or product code changes | 1. INSERT replacement `contract_items` with new values, `previous_version_id = old id`, `created_by`. 2. UPDATE old item: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 3. CASCADE old item's active units and plan items. 4. INSERT new `contract_item_dimensions` on replacement when dimensions change. 5. Apply quantity delta (see below). 6. Recalculate `contracts.total_amount`. |
-| **Cancel contract** | Whole order cancelled                                                | 1. UPDATE `contracts`: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 2. App-sync `cancelled_at` on all active `contract_items` (item-level `cancelled_by` / `cancellation_reason` null). 3. CASCADE each item → units → plan items. 4. Recalculate `contracts.total_amount` (will be `0`).                                                                                               |
+| Operation           | When                                                                      | Steps                                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Append**          | New line added to an existing contract                                    | 1. INSERT `contract_items` (`previous_version_id = null`, `created_by` = acting user, `product_dimension_id`, RFP `product_code`). 2. CREATE `product_units` (count = quantity, auto serial numbers). 3. Recalculate `contracts.total_amount`. No prior row is cancelled.                                         |
+| **Cancel item**     | Line removed from contract                                                | 1. UPDATE item: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 2. CASCADE: `cancelled_at` on active `product_units`. 3. CASCADE: `cancelled_at` on active `production_plan_items` for those units. 4. Recalculate `contracts.total_amount`.                                                               |
+| **Replace item**    | Quantity, dimensions (reprices), unit price, or product dimension changes | 1. INSERT replacement `contract_items` with new values, `previous_version_id = old id`, `created_by`. 2. UPDATE old item: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 3. CASCADE old item's active units and plan items. 4. Apply quantity delta (see below). 5. Recalculate `contracts.total_amount`. |
+| **Cancel contract** | Whole order cancelled                                                     | 1. UPDATE `contracts`: `cancelled_at`, `cancelled_by`, `cancellation_reason`. 2. App-sync `cancelled_at` on all active `contract_items` (item-level `cancelled_by` / `cancellation_reason` null). 3. CASCADE each item → units → plan items. 4. Recalculate `contracts.total_amount` (will be `0`).               |
 
 #### Quantity delta on replace
 

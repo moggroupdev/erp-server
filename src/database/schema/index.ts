@@ -14,7 +14,7 @@ export * from './inquiries';
 export * from './previews';
 export * from './offers';
 export * from './contracts';
-export * from './boms';
+export * from './bom-cost-snapshots';
 export * from './production-plans';
 export * from './inventory-transactions';
 export * from './vendor-quotation-emails';

@@ -25,10 +25,10 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Products & Engineering
 
 - Product catalog organized by category; each product is either manufactured in-house or imported from a supplier
-- Standard catalog dimensions and a standard material recipe for manufactured items at catalog size
-- Custom dimensions captured during the site preview and carried into the contract
+- Multiple dimension variants per product (length, width, height, unit), with one marked as default; estimated production time is set at the product level
+- Customer-specific sizes are added as new rows in `product_dimensions` and get their own standard material recipe prepared when needed by the Technical Office
 - Individual product units created for each contract line, each with its own serial number
-- Per-unit Bill of Materials prepared by the Technical Office, starting from the standard recipe when the item uses catalog dimensions
+- Per-unit BOM cost snapshots are linked to standard BOM lines and recording historical unit cost at creation time
 
 ### Manufacturing
 
@@ -76,11 +76,11 @@ With preview findings in hand, the Sales Team prepares a quotation — an offer 
 
 ### Order Breakdown
 
-Once a contract is in place, the company breaks each active line item into individual product units — one serial-numbered physical item per unit ordered. Contract lines are immutable once written: adding a line, removing one, or changing quantity, dimensions, price, or product cancels the existing line (preserving who cancelled it and why) and, when the change is an amendment rather than a removal, creates a replacement line linked back via `previous_version_id`. From this point, manufactured and imported products follow different paths through the company.
+Once a contract is in place, the company breaks each active line item into individual product units — one serial-numbered physical item per unit ordered. Contract lines are immutable once written: adding a line, removing one, or changing quantity, dimension variant, price, or product cancels the existing line (preserving who cancelled it and why) and, when the change is an amendment rather than a removal, creates a replacement line linked back via `previous_version_id`. From this point, manufactured and imported products follow different paths through the company.
 
 ### Engineering and Manufacturing
 
-For items built in-house, the Technical Office prepares a Bill of Materials for each product unit, defining the materials and quantities required. When the product uses standard catalog dimensions, work starts from the standard material recipe and is adjusted as needed.
+For items built in-house, the Technical Office prepares the standard BOMs for each dimension variant. When a product unit enters production, BOM cost snapshots are derived from those standard BOM lines, recording the historical unit cost per material at that point in time.
 
 Production then builds a plan that schedules each unit across the relevant manufacturing departments — cutting, bending, sheet metal, refrigeration, electrical, and so on. Progress is tracked per unit and per department, with notes recorded as work moves through each stage.
 

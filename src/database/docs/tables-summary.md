@@ -38,19 +38,18 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | product_category_mains          | uuid        | —    | NO                | NO        | NO             |
 | product_category_subs           | uuid        | —    | NO                | NO        | NO             |
 | products                        | text        | —    | deletedAt field   | YES       | YES (NOT NULL) |
+| product_dimensions              | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_standard_boms           | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | materials                       | text        | —    | deletedAt field   | YES       | YES (NOT NULL) |
 | inquiries                       | uuid        | —    | cancelled status  | YES       | YES (NOT NULL) |
 | inquiry_items                   | uuid        | —    | NO                | NO        | NO             |
 | previews                        | uuid        | —    | cancelledAt field | YES       | YES (NOT NULL) |
 | preview_items                   | uuid        | —    | NO                | NO        | NO             |
-| preview_item_dimensions         | uuid        | —    | NO                | NO        | NO             |
 | offers                          | uuid        | —    | cancelled status  | YES       | YES (NOT NULL) |
 | offer_items                     | uuid        | —    | NO                | NO        | NO             |
 | contracts                       | uuid        | CTR  | cancelledAt field | YES       | YES (NOT NULL) |
 | contract_items                  | uuid        | —    | NO                | NO        | NO             |
-| contract_item_dimensions        | uuid        | —    | NO                | NO        | NO             |
-| boms                            | uuid        | —    | NO                | YES       | YES (NOT NULL) |
+| bom_cost_snapshots              | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | material_purchase_orders        | uuid        | MPO  | cancelledAt field | YES       | YES (NOT NULL) |
 | material_purchase_order_items   | uuid        | —    | NO                | NO        | NO             |
 | material_purchase_receipts      | uuid        | MPR  | cancelledAt field | YES       | YES (NOT NULL) |
