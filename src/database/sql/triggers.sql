@@ -281,7 +281,7 @@ BEGIN
     WHERE product_code = code;
 
     IF route_count > 0 AND total <> 100 THEN
-      RAISE EXCEPTION 'Product production routes for % must sum to 100%%, got %%', code, total;
+      RAISE EXCEPTION 'Product production routes for % must sum to 100%%, got %', code, total;
     END IF;
   END LOOP;
 
