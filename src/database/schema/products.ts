@@ -8,6 +8,7 @@ import {
   nonNegativeQuantityCheck,
   positiveQuantityCheck,
   productSourceTypeEnum,
+  productionSubDepartmentEnum,
 } from './common';
 import { users } from './users';
 import { productCategorySubs } from './categories';
@@ -101,6 +102,29 @@ export const productStandardBoms = pgTable(
   ],
 );
 
+export const productProductionRoutes = pgTable(
+  'product_production_routes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    productCode: text('product_code')
+      .notNull()
+      .references(() => products.code),
+    subDepartment: productionSubDepartmentEnum('sub_department').notNull(),
+    sequenceOrder: integer('sequence_order').notNull(), // Sequential order within the product's production routes (app-checked)
+    completionPercentage: numeric('completion_percentage').notNull(),
+  },
+  (table) => [
+    unique('product_production_routes_product_sub_dept_unique').on(table.productCode, table.subDepartment),
+    unique('product_production_routes_product_sequence_unique').on(table.productCode, table.sequenceOrder),
+    index('product_production_routes_product_code_idx').on(table.productCode),
+    check('product_production_routes_sequence_order_positive', sql`${table.sequenceOrder} > 0`),
+    check(
+      'product_production_routes_completion_percentage_range',
+      sql`${table.completionPercentage} > 0 AND ${table.completionPercentage} <= 100`,
+    ),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
 export const productsRelations = relations(products, ({ one, many }) => ({
@@ -113,6 +137,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     references: [productCategorySubs.id],
   }),
   dimensions: many(productDimensions),
+  productionRoutes: many(productProductionRoutes),
   inquiryItems: many(inquiryItems),
   previewItems: many(previewItems),
   offerItems: many(offerItems),
@@ -147,5 +172,12 @@ export const productStandardBomsRelations = relations(productStandardBoms, ({ on
   createdBy: one(users, {
     fields: [productStandardBoms.createdBy],
     references: [users.id],
+  }),
+}));
+
+export const productProductionRoutesRelations = relations(productProductionRoutes, ({ one }) => ({
+  product: one(products, {
+    fields: [productProductionRoutes.productCode],
+    references: [products.code],
   }),
 }));

@@ -32,8 +32,10 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Manufacturing
 
 - Production plans scheduling work over a date range
-- Work broken down per product unit and manufacturing department (cutting, bending, sheet metal, refrigeration, electrical, gas, injection molding, and others)
-- Progress notes and completion tracking per department step
+- Per-product production routing: each manufactured product defines an ordered sequence of production sub-departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, and others) with completion-percentage weights that sum to 100%
+- Production sub-department managers and deputy managers assigned per work-center (enum-identified; labels are a frontend concern)
+- Work broken down per product unit and production sub-department step, with sequential completion gating
+- Progress notes and completion tracking per sub-department step
 
 ### Inventory & Warehouse
 
@@ -57,7 +59,8 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Organization & Access
 
 - User accounts with role-based permissions
-- Department hierarchy with optional parent-child structure and department managers
+- Department hierarchy for org-chart departments (Administration, HR, Finance, Production, and others) with optional parent-child structure and department managers
+- Production staff belong to the Production org-chart department and are additionally assigned to one of fixed production sub-departments (work-centers)
 
 ---
 
@@ -81,7 +84,7 @@ Once a contract is in place, the company breaks each active line item into indiv
 
 For items built in-house, the Technical Office prepares the standard BOMs for each dimension variant. Actual material costs are tracked through inventory transactions when materials are issued from the warehouse to the production floor.
 
-Production then builds a plan that schedules each unit across the relevant manufacturing departments — cutting, bending, sheet metal, refrigeration, electrical, and so on. Progress is tracked per unit and per department, with notes recorded as work moves through each stage.
+Production then builds a plan that schedules each unit across the product's configured production sub-departments — cutting, bending, sheet metal, refrigeration, electrical, and so on — in the order and completion weights defined on the product. Progress is tracked per unit and per sub-department step, with sequential gating so a step cannot be completed before the prior one. Manager and deputy manager are assigned per sub-department work-center.
 
 ### Materials and Warehouse
 

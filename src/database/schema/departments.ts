@@ -1,6 +1,5 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, uuid, text, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { productionPlanItems } from './production-plans';
 import { users } from './users';
 
 export const departments = pgTable(
@@ -39,5 +38,4 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   users: many(users, {
     relationName: 'userDepartment',
   }),
-  productionPlanItems: many(productionPlanItems),
 }));

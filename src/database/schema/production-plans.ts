@@ -1,10 +1,9 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, check, index, foreignKey, unique } from 'drizzle-orm/pg-core';
-import { createdAt } from './common';
+import { createdAt, productionSubDepartmentEnum } from './common';
 import { inventoryTransactionItems } from './inventory-transactions';
 import { productUnits } from './product-units';
 import { users } from './users';
-import { departments } from './departments';
 
 export const productionPlans = pgTable(
   'production_plans',
@@ -39,7 +38,7 @@ export const productionPlanItems = pgTable(
     productUnitId: uuid('product_unit_id')
       .notNull()
       .references(() => productUnits.id),
-    productionDepartmentId: uuid('production_department_id').notNull(), // app-synced (Should be a PRODUCTION department)
+    productionStage: productionSubDepartmentEnum('production_stage').notNull(),
     startDate: timestamp('start_date', { withTimezone: true }),
     estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -47,21 +46,12 @@ export const productionPlanItems = pgTable(
     notes: text('notes'),
   },
   (table) => [
-    foreignKey({
-      name: 'ppi_prod_dept_id_fk',
-      columns: [table.productionDepartmentId],
-      foreignColumns: [departments.id],
-    }),
     index('production_plan_items_plan_id_idx').on(table.planId),
     index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
-    index('production_plan_items_production_department_id_idx').on(table.productionDepartmentId),
+    index('production_plan_items_production_stage_idx').on(table.productionStage),
     index('production_plan_items_completed_at_idx').on(table.completedAt),
     index('production_plan_items_cancelled_at_idx').on(table.cancelledAt),
-    unique('production_plan_items_plan_unit_dept_unique').on(
-      table.planId,
-      table.productUnitId,
-      table.productionDepartmentId,
-    ),
+    unique('production_plan_items_plan_unit_stage_unique').on(table.planId, table.productUnitId, table.productionStage),
     check(
       'production_plan_items_estimated_end_date_gte_start_date',
       sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,
@@ -117,10 +107,6 @@ export const productionPlanItemsRelations = relations(productionPlanItems, ({ on
   productUnit: one(productUnits, {
     fields: [productionPlanItems.productUnitId],
     references: [productUnits.id],
-  }),
-  productionDepartment: one(departments, {
-    fields: [productionPlanItems.productionDepartmentId],
-    references: [departments.id],
   }),
   notes: many(productionPlanItemNotes),
   inventoryTransactionItems: many(inventoryTransactionItems),

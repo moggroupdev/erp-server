@@ -117,3 +117,24 @@ export const INVENTORY_TRANSACTION_TYPES = Object.fromEntries(
 ) as {
   [K in Uppercase<(typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number]>]: Lowercase<K>;
 };
+
+// ==================== PRODUCTION_SUB_DEPARTMENTS ====================
+
+export const PRODUCTION_SUB_DEPARTMENT_VALUES = [
+  'cutting',
+  'bending',
+  'refrigeration',
+  'electricity',
+  'gas',
+  'injection',
+  'sheet_metal_neutral',
+  'sheet_metal_cold',
+  'sheet_metal_hot',
+  'blacksmithing',
+] as const;
+
+export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
+  PRODUCTION_SUB_DEPARTMENT_VALUES.map((subDepartment) => [subDepartment.toUpperCase(), subDepartment]),
+) as {
+  [K in Uppercase<(typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number]>]: Lowercase<K>;
+};

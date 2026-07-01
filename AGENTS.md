@@ -50,7 +50,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 | `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes.                                                       |
 | `src/database/docs/application-logic.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
 | `src/database/docs/db-duplications.md`   | `// RFP` columns (Redundant For Performance) — definition, sync rules, and inventory.                                                                      |
-| `src/database/sql/triggers.sql`          | Low-level integrity only (auto-generated `code` on INSERT). Not business logic.                                                                            |
+| `src/database/sql/triggers.sql`          | Low-level integrity only (like auto-generated `code` on INSERT). Not business logic.                                                                       |
 
 **Triggers example:** `CTR-00000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
 

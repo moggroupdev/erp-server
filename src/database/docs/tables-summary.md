@@ -38,6 +38,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | product_category_mains                      | uuid        | —    | NO                | NO        | NO             |
 | product_category_subs                       | uuid        | —    | NO                | NO        | NO             |
 | products                                    | text        | —    | deletedAt field   | YES       | YES (NOT NULL) |
+| product_production_routes                   | uuid        | —    | NO                | NO        | NO             |
 | product_dimensions                          | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_standard_boms                       | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | materials                                   | text        | —    | deletedAt field   | YES       | YES (NOT NULL) |
@@ -60,6 +61,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | installations                               | uuid        | INS  | cancelledAt field | YES       | YES (NOT NULL) |
 | installation_items                          | uuid        | —    | NO                | NO        | NO             |
 | production_plans                            | uuid        | PPL  | NO                | YES       | YES (NOT NULL) |
+| production_sub_department_managers          | enum        | —    | NO                | NO        | NO             |
 | production_plan_items                       | uuid        | —    | NO                | NO        | NO             |
 | production_plan_item_notes                  | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | inventory_transactions                      | uuid        | IVT  | NO                | YES       | YES (NOT NULL) |

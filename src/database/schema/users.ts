@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt, permissionEnum } from './common';
+import { createdAt, deletedAt, permissionEnum, productionSubDepartmentEnum } from './common';
 import { loginHistory } from './login-history';
 import { departments } from './departments';
 
@@ -18,6 +18,7 @@ export const users = pgTable(
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
     departmentId: uuid('department_id').references(() => departments.id),
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // Required only if the main department is Production (app-checked)
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
     createdAt,
     deletedAt,
@@ -26,6 +27,7 @@ export const users = pgTable(
     index('users_code_idx').on(table.code),
     index('users_role_id_idx').on(table.roleId),
     index('users_department_id_idx').on(table.departmentId),
+    index('users_production_sub_department_idx').on(table.productionSubDepartment),
     index('users_name_idx').on(table.name),
     index('users_phone_idx').on(table.phone),
     index('users_email_idx').on(table.email),

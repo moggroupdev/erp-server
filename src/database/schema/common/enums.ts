@@ -2,7 +2,6 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 import {
   DIMENSION_UNIT_VALUES,
   INQUIRY_STATUS_VALUES,
-  INVENTORY_TRANSACTION_TYPE_VALUES,
   LOGIN_STATUS_VALUES,
   MATERIAL_TYPE_VALUES,
   MATERIAL_UNIT_VALUES,
@@ -10,6 +9,8 @@ import {
   PERMISSION_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
   VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
+  INVENTORY_TRANSACTION_TYPE_VALUES,
+  PRODUCTION_SUB_DEPARTMENT_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
@@ -31,3 +32,5 @@ export const offerStatusEnum = pgEnum('offer_status', OFFER_STATUS_VALUES);
 export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', VENDOR_QUOTATION_EMAIL_STATUS_VALUES);
 
 export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', INVENTORY_TRANSACTION_TYPE_VALUES);
+
+export const productionSubDepartmentEnum = pgEnum('production_sub_department', PRODUCTION_SUB_DEPARTMENT_VALUES);

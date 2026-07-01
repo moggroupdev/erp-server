@@ -2,6 +2,7 @@ export * from './common';
 
 export * from './users';
 export * from './departments';
+export * from './production-sub-departments';
 export * from './countries';
 export * from './governorates';
 export * from './cities';

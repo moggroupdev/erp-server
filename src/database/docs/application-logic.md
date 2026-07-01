@@ -108,8 +108,21 @@ On inquiry, offer, preview, and contract item creation:
 
 ### Production plan items (`production_plan_items`)
 
-- `production_department_id` must reference a department whose `parent_id` equals `PRODUCTION_DEPARTMENT_ID` (seeded Production root)
-- **Exception:** `BadRequestException('Production department must be a child of Production')`
+- `production_stage` must be one of the `product_production_routes` rows configured for the unit's product (join via `product_units` → `contract_items` → `products`)
+- **Exception:** `BadRequestException('Production stage is not in product production route')`
+- A plan item can only be marked completed when the plan item for the **prior `sequence_order`** in that product's routing (same `product_unit_id`) is already completed, or there is no prior step
+- **Exception:** `BadRequestException('Prior production step not completed')`
+
+### Users — production sub-department (`users.production_sub_department`)
+
+- Required (non-null) when `department_id` equals `PRODUCTION_DEPARTMENT_ID`
+- Must be null when `department_id` is any other department or null
+- **Exception:** `BadRequestException` with a clear message
+
+### Product production routes (`product_production_routes`)
+
+- `completion_percentage` values for a given `product_code` must sum to exactly `100` when at least one route row exists — enforced by deferred constraint trigger in [`triggers.sql`](../sql/triggers.sql) (not app logic)
+- Products with no route rows are allowed (routing not yet configured)
 
 ### Contract delivery address (`contracts.delivery_address_id`)
 

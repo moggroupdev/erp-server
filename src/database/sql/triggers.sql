@@ -251,3 +251,50 @@ DROP TRIGGER IF EXISTS product_purchase_receipts_generate_code ON product_purcha
 CREATE TRIGGER product_purchase_receipts_generate_code
 BEFORE INSERT ON product_purchase_receipts
 FOR EACH ROW EXECUTE PROCEDURE generate_product_purchase_receipts_code();
+
+-- ---------------------------------------------------------------------------
+-- PRODUCT PRODUCTION ROUTES: completion percentages must sum to 100 per product
+-- Deferred so routes can be inserted row-by-row within one transaction.
+-- When a product has no routes, the sum check is skipped.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION check_product_production_routes_sum_100()
+RETURNS TRIGGER AS $$
+DECLARE
+  codes text[];
+  code text;
+  route_count integer;
+  total numeric;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    codes := ARRAY[OLD.product_code];
+  ELSIF TG_OP = 'UPDATE' AND OLD.product_code IS DISTINCT FROM NEW.product_code THEN
+    codes := ARRAY[OLD.product_code, NEW.product_code];
+  ELSE
+    codes := ARRAY[NEW.product_code];
+  END IF;
+
+  FOREACH code IN ARRAY codes LOOP
+    SELECT COUNT(*)::integer, COALESCE(SUM(completion_percentage), 0)
+    INTO route_count, total
+    FROM product_production_routes
+    WHERE product_code = code;
+
+    IF route_count > 0 AND total <> 100 THEN
+      RAISE EXCEPTION 'Product production routes for % must sum to 100%%, got %%', code, total;
+    END IF;
+  END LOOP;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS product_production_routes_sum_100 ON product_production_routes;
+CREATE CONSTRAINT TRIGGER product_production_routes_sum_100
+AFTER INSERT OR UPDATE OR DELETE ON product_production_routes
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE PROCEDURE check_product_production_routes_sum_100();
