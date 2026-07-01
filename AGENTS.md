@@ -20,6 +20,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - One file per domain under `src/database/schema/`; export tables + `relations`; register in `index.ts`.
 - **Fully define** FKs, indexes, checks, and Drizzle relations in schema — not only in app code.
 - Index FKs and filter/sort columns. Use `check` for DB-level invariants.
+- **Foreign keys:** default to inline `.references()`. When Drizzle's auto-generated constraint name would exceed PostgreSQL's 63-character identifier limit (`{table}_{column}_{refTable}_{refColumn}_fk`), declare the column as a bare type and add `foreignKey({ name: '<short_abbrev>_fk', ... })` in the table callback — use the same abbrev prefix as indexes on that table (e.g. `mpoi_mpo_id_fk`, `inv_tx_items_tx_id_fk`).
 - **Uniqueness:** use `.unique()` on a column **or** `uniqueIndex()` — never both with the same name (breaks migrations).
 - Use `uniqueIndex()` only for partial uniqueness (e.g. one default address).
 - Status often comes from timestamps (`cancelledAt`, `deliveredAt`) — avoid redundant status enums.

@@ -39,9 +39,7 @@ export const productionPlanItems = pgTable(
     productUnitId: uuid('product_unit_id')
       .notNull()
       .references(() => productUnits.id),
-    productionDepartmentId: uuid('production_department_id') // app-synced (Should be a PRODUCTION department)
-      .notNull()
-      .references(() => departments.id),
+    productionDepartmentId: uuid('production_department_id').notNull(), // app-synced (Should be a PRODUCTION department)
     startDate: timestamp('start_date', { withTimezone: true }),
     estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -49,6 +47,11 @@ export const productionPlanItems = pgTable(
     notes: text('notes'),
   },
   (table) => [
+    foreignKey({
+      name: 'ppi_prod_dept_id_fk',
+      columns: [table.productionDepartmentId],
+      foreignColumns: [departments.id],
+    }),
     index('production_plan_items_plan_id_idx').on(table.planId),
     index('production_plan_items_product_unit_id_idx').on(table.productUnitId),
     index('production_plan_items_production_department_id_idx').on(table.productionDepartmentId),

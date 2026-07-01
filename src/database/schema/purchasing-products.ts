@@ -39,17 +39,23 @@ export const productPurchaseOrderItems = pgTable(
   'product_purchase_order_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    productPurchaseOrderId: uuid('product_purchase_order_id')
-      .notNull()
-      .references(() => productPurchaseOrders.id),
-    contractItemId: uuid('contract_item_id')
-      .notNull()
-      .references(() => contractItems.id),
+    productPurchaseOrderId: uuid('product_purchase_order_id').notNull(),
+    contractItemId: uuid('contract_item_id').notNull(),
     quantityOrdered: integer('quantity_ordered').notNull(),
     unitCost: numeric('unit_cost').notNull(),
     notes: text('notes'),
   },
   (table) => [
+    foreignKey({
+      name: 'ppoi_ppo_id_fk',
+      columns: [table.productPurchaseOrderId],
+      foreignColumns: [productPurchaseOrders.id],
+    }),
+    foreignKey({
+      name: 'ppoi_contract_item_id_fk',
+      columns: [table.contractItemId],
+      foreignColumns: [contractItems.id],
+    }),
     index('ppoi_ppo_id_idx').on(table.productPurchaseOrderId),
     index('ppoi_contract_item_id_idx').on(table.contractItemId),
     check('ppoi_quantity_ordered_positive', sql`${table.quantityOrdered} > 0`),
@@ -62,9 +68,7 @@ export const productPurchaseReceipts = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: PPR-00000001
-    productPurchaseOrderId: uuid('product_purchase_order_id')
-      .notNull()
-      .references(() => productPurchaseOrders.id),
+    productPurchaseOrderId: uuid('product_purchase_order_id').notNull(),
     receivedAt: timestamp('received_at', { withTimezone: true }),
     receivedBy: uuid('received_by').references(() => users.id),
     notes: text('notes'),
@@ -74,6 +78,11 @@ export const productPurchaseReceipts = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    foreignKey({
+      name: 'ppr_ppo_id_fk',
+      columns: [table.productPurchaseOrderId],
+      foreignColumns: [productPurchaseOrders.id],
+    }),
     index('ppr_code_idx').on(table.code),
     index('ppr_ppo_id_idx').on(table.productPurchaseOrderId),
     index('ppr_received_at_idx').on(table.receivedAt),
@@ -89,10 +98,7 @@ export const productPurchaseReceiptItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     productPurchaseReceiptId: uuid('product_purchase_receipt_id').notNull(),
     productPurchaseOrderItemId: uuid('product_purchase_order_item_id').notNull(),
-    productUnitId: uuid('product_unit_id')
-      .notNull()
-      .unique()
-      .references(() => productUnits.id),
+    productUnitId: uuid('product_unit_id').notNull().unique(),
     inspectionNotes: text('inspection_notes'),
   },
   (table) => [
@@ -105,6 +111,11 @@ export const productPurchaseReceiptItems = pgTable(
       name: 'ppri_ppoi_id_fk',
       columns: [table.productPurchaseOrderItemId],
       foreignColumns: [productPurchaseOrderItems.id],
+    }),
+    foreignKey({
+      name: 'ppri_product_unit_id_fk',
+      columns: [table.productUnitId],
+      foreignColumns: [productUnits.id],
     }),
     index('ppri_receipt_id_idx').on(table.productPurchaseReceiptId),
     index('ppri_ppoi_id_idx').on(table.productPurchaseOrderItemId),

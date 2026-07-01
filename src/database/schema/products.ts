@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, check, unique, integer, boolean, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, check, unique, integer, boolean, uniqueIndex, foreignKey } from 'drizzle-orm/pg-core';
 import {
   numeric,
   createdAt,
@@ -77,9 +77,7 @@ export const productStandardBoms = pgTable(
   'product_standard_boms',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    productDimensionId: uuid('product_dimension_id')
-      .notNull()
-      .references(() => productDimensions.id),
+    productDimensionId: uuid('product_dimension_id').notNull(),
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
@@ -91,6 +89,11 @@ export const productStandardBoms = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    foreignKey({
+      name: 'psb_product_dimension_id_fk',
+      columns: [table.productDimensionId],
+      foreignColumns: [productDimensions.id],
+    }),
     unique('product_standard_boms_dimension_material_unique').on(table.productDimensionId, table.materialCode),
     index('product_standard_boms_product_dimension_id_idx').on(table.productDimensionId),
     index('product_standard_boms_material_code_idx').on(table.materialCode),

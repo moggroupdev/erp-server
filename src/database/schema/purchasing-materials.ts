@@ -40,9 +40,7 @@ export const materialPurchaseOrderItems = pgTable(
   'material_purchase_order_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    materialPurchaseOrderId: uuid('material_purchase_order_id')
-      .notNull()
-      .references(() => materialPurchaseOrders.id),
+    materialPurchaseOrderId: uuid('material_purchase_order_id').notNull(),
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
@@ -51,6 +49,11 @@ export const materialPurchaseOrderItems = pgTable(
     notes: text('notes'),
   },
   (table) => [
+    foreignKey({
+      name: 'mpoi_mpo_id_fk',
+      columns: [table.materialPurchaseOrderId],
+      foreignColumns: [materialPurchaseOrders.id],
+    }),
     index('mpoi_mpo_id_idx').on(table.materialPurchaseOrderId),
     index('mpoi_material_code_idx').on(table.materialCode),
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
@@ -63,15 +66,21 @@ export const materialPurchaseOrderItemContractItems = pgTable(
   'material_purchase_order_item_contract_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id')
-      .notNull()
-      .references(() => materialPurchaseOrderItems.id),
-    contractItemId: uuid('contract_item_id')
-      .notNull()
-      .references(() => contractItems.id),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    contractItemId: uuid('contract_item_id').notNull(),
     quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
   },
   (table) => [
+    foreignKey({
+      name: 'mpoici_mpoi_id_fk',
+      columns: [table.materialPurchaseOrderItemId],
+      foreignColumns: [materialPurchaseOrderItems.id],
+    }),
+    foreignKey({
+      name: 'mpoici_contract_item_id_fk',
+      columns: [table.contractItemId],
+      foreignColumns: [contractItems.id],
+    }),
     index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
     index('mpoici_contract_item_id_idx').on(table.contractItemId),
     unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
@@ -84,9 +93,7 @@ export const materialPurchaseReceipts = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPR-00000001
-    materialPurchaseOrderId: uuid('material_purchase_order_id')
-      .notNull()
-      .references(() => materialPurchaseOrders.id),
+    materialPurchaseOrderId: uuid('material_purchase_order_id').notNull(),
     receivedAt: timestamp('received_at', { withTimezone: true }),
     receivedBy: uuid('received_by').references(() => users.id),
     notes: text('notes'),
@@ -96,6 +103,11 @@ export const materialPurchaseReceipts = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    foreignKey({
+      name: 'mpr_mpo_id_fk',
+      columns: [table.materialPurchaseOrderId],
+      foreignColumns: [materialPurchaseOrders.id],
+    }),
     index('mpr_code_idx').on(table.code),
     index('mpr_mpo_id_idx').on(table.materialPurchaseOrderId),
     index('mpr_received_at_idx').on(table.receivedAt),
