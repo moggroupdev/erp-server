@@ -110,6 +110,10 @@ export const productsRelations = relations(products, ({ one, many }) => ({
     references: [productCategorySubs.id],
   }),
   dimensions: many(productDimensions),
+  inquiryItems: many(inquiryItems),
+  previewItems: many(previewItems),
+  offerItems: many(offerItems),
+  contractItems: many(contractItems),
 }));
 
 export const productDimensionsRelations = relations(productDimensions, ({ one, many }) => ({

@@ -2,7 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { numeric, createdAt, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
-import { productDimensions } from './products';
+import { products, productDimensions } from './products';
 import { inquiries } from './inquiries';
 import { previews } from './previews';
 import { offers } from './offers';
@@ -80,7 +80,7 @@ export const contractItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull(), // RFP
+    productCode: text('product_code').notNull().references(() => products.code), // RFP
     title: text('title'),
     notes: text('notes'),
     unitPrice: numeric('unit_price').notNull(),
@@ -151,6 +151,10 @@ export const contractItemsRelations = relations(contractItems, ({ one, many }) =
   productDimension: one(productDimensions, {
     fields: [contractItems.productDimensionId],
     references: [productDimensions.id],
+  }),
+  product: one(products, {
+    fields: [contractItems.productCode],
+    references: [products.code],
   }),
   createdByUser: one(users, {
     fields: [contractItems.createdBy],

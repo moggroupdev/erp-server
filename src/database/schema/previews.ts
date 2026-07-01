@@ -3,7 +3,7 @@ import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-cor
 import { createdAt } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
-import { productDimensions } from './products';
+import { products, productDimensions } from './products';
 import { users } from './users';
 
 export const previews = pgTable(
@@ -56,7 +56,7 @@ export const previewItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull(), // RFP
+    productCode: text('product_code').notNull().references(() => products.code), // RFP
     notes: text('notes'),
   },
   (table) => [
@@ -95,5 +95,9 @@ export const previewItemsRelations = relations(previewItems, ({ one }) => ({
   productDimension: one(productDimensions, {
     fields: [previewItems.productDimensionId],
     references: [productDimensions.id],
+  }),
+  product: one(products, {
+    fields: [previewItems.productCode],
+    references: [products.code],
   }),
 }));

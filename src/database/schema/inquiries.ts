@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 import { createdAt, inquiryStatusEnum, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { customers } from './customers';
-import { productDimensions } from './products';
+import { products, productDimensions } from './products';
 import { offers } from './offers';
 import { previews } from './previews';
 import { contracts } from './contracts';
@@ -40,7 +40,7 @@ export const inquiryItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull(), // RFP
+    productCode: text('product_code').notNull().references(() => products.code), // RFP
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),
@@ -78,5 +78,9 @@ export const inquiryItemsRelations = relations(inquiryItems, ({ one }) => ({
   productDimension: one(productDimensions, {
     fields: [inquiryItems.productDimensionId],
     references: [productDimensions.id],
+  }),
+  product: one(products, {
+    fields: [inquiryItems.productCode],
+    references: [products.code],
   }),
 }));

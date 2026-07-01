@@ -3,7 +3,7 @@ import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-c
 import { createdAt, numeric, offerStatusEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
-import { productDimensions } from './products';
+import { products, productDimensions } from './products';
 import { users } from './users';
 
 export const offers = pgTable(
@@ -41,7 +41,7 @@ export const offerItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull(), // RFP
+    productCode: text('product_code').notNull().references(() => products.code), // RFP
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),
@@ -79,5 +79,9 @@ export const offerItemsRelations = relations(offerItems, ({ one }) => ({
   productDimension: one(productDimensions, {
     fields: [offerItems.productDimensionId],
     references: [productDimensions.id],
+  }),
+  product: one(products, {
+    fields: [offerItems.productCode],
+    references: [products.code],
   }),
 }));
