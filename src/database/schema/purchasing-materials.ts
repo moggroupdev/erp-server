@@ -1,9 +1,10 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck, positiveNullableQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
+import { contractItems } from './contracts';
 import { inventoryTransactionItems } from './inventory-transactions';
 
 export const materialPurchaseOrders = pgTable(
@@ -55,6 +56,26 @@ export const materialPurchaseOrderItems = pgTable(
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
     positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
     positiveQuantityCheck('mpoi_unit_cost_positive', table.unitCost),
+  ],
+);
+
+export const materialPurchaseOrderItemContractItems = pgTable(
+  'material_purchase_order_item_contract_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id')
+      .notNull()
+      .references(() => materialPurchaseOrderItems.id),
+    contractItemId: uuid('contract_item_id')
+      .notNull()
+      .references(() => contractItems.id),
+    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
+  },
+  (table) => [
+    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    index('mpoici_contract_item_id_idx').on(table.contractItemId),
+    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
+    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
   ],
 );
 
@@ -138,8 +159,23 @@ export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrd
     fields: [materialPurchaseOrderItems.materialCode],
     references: [materials.code],
   }),
+  contractItemAllocations: many(materialPurchaseOrderItemContractItems),
   receiptItems: many(materialPurchaseReceiptItems),
 }));
+
+export const materialPurchaseOrderItemContractItemsRelations = relations(
+  materialPurchaseOrderItemContractItems,
+  ({ one }) => ({
+    materialPurchaseOrderItem: one(materialPurchaseOrderItems, {
+      fields: [materialPurchaseOrderItemContractItems.materialPurchaseOrderItemId],
+      references: [materialPurchaseOrderItems.id],
+    }),
+    contractItem: one(contractItems, {
+      fields: [materialPurchaseOrderItemContractItems.contractItemId],
+      references: [contractItems.id],
+    }),
+  }),
+);
 
 export const materialPurchaseReceiptsRelations = relations(materialPurchaseReceipts, ({ one, many }) => ({
   materialPurchaseOrder: one(materialPurchaseOrders, {

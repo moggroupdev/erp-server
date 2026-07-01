@@ -28,6 +28,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Multiple dimension variants per product (length, width, height, unit), with one marked as default; estimated production time is set at the product level
 - Customer-specific sizes are added as new rows in `product_dimensions` and get their own standard material recipe prepared when needed by the Technical Office
 - Individual product units created for each contract line, each with its own serial number
+
 ### Manufacturing
 
 - Production plans scheduling work over a date range
@@ -43,7 +44,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Procurement
 
 - Approved suppliers with contact details and addresses
-- Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake
+- Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with vendor serial numbers where applicable
 - Quotation request emails sent to vendors when sourcing materials
 
