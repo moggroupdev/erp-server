@@ -82,7 +82,7 @@ See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For
 On contract creation:
 
 - Set `contracts.customer_id` from `inquiries.customer_id`.
-- Throw `BadRequestException` if they would diverge.
+- Reject when inquiry and contract customer would diverge.
 
 On inquiry, offer, preview, and contract item creation:
 
@@ -100,31 +100,25 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 - `material_purchase_receipt_item_id` only when parent `transaction_type = 'receipt'`
 - `production_plan_item_id` only when parent `transaction_type = 'issue'`
 - At most one source FK set (DB check enforces non-conflict; validate type match in service)
-- **Exception:** `BadRequestException('Invalid item source for transaction type')`
 
 ### Material purchase receipt quantities (`material_purchase_receipt_items`)
 
 - Sum of `quantity_received + quantity_rejected` per `material_purchase_order_item_id` (non-cancelled receipts) must not exceed `material_purchase_order_items.quantity_ordered`
-- **Exception:** `BadRequestException('Purchase receipt totals exceed ordered quantity')`
 
 ### Product purchase receipts (`product_purchase_receipt_items`)
 
 - Each `product_unit_id` is unique (one receipt line per unit)
 - Unit's `contract_item_id` must match `product_purchase_order_items.contract_item_id` for the linked PO line
-- **Exception:** `BadRequestException` with a clear message
 
 ### Production plan items (`production_plan_items.production_stage` — `// app-checked`)
 
 - `production_stage` must be one of the `product_production_routes` rows configured for the unit's product (join via `product_units` → `contract_items` → `products`)
-- **Exception:** `BadRequestException('Production stage is not in product production route')`
 - A plan item can only be marked completed when the plan item for the **prior `sequence_order`** in that product's routing (same `product_unit_id`) is already completed, or there is no prior step
-- **Exception:** `BadRequestException('Prior production step not completed')`
 
 ### Users — production sub-department (`users.production_sub_department` — `// app-checked`)
 
 - Required (non-null) when `department_id` equals `PRODUCTION_DEPARTMENT_ID`
 - Must be null when `department_id` is any other department or null
-- **Exception:** `BadRequestException` with a clear message
 
 ### Product production routes (`product_production_routes.sequence_order` — `// app-checked`)
 
@@ -135,7 +129,6 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 ### Contract delivery address (`contracts.delivery_address_id` — `// app-checked`)
 
 - Address must belong to `contracts.customer_id` (via `customer_addresses.customer_id`)
-- **Exception:** `BadRequestException('Delivery address does not belong to customer')`
 
 ### Default addresses (`customer_addresses`, `vendor_addresses`)
 
@@ -157,7 +150,6 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Contract linked to offer only if `offers.status = 'accepted'`
 - Cannot downgrade offer from `accepted` while a contract references it
-- **Exception:** `ConflictException` or `BadRequestException`
 
 ### Inquiry status (`inquiries.status`)
 
