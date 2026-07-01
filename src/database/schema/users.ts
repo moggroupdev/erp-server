@@ -18,7 +18,7 @@ export const users = pgTable(
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
     departmentId: uuid('department_id').references(() => departments.id),
-    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // Required only if the main department is Production (app-checked)
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // app-checked. Required only if the main department is Production.
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
     createdAt,
     deletedAt,

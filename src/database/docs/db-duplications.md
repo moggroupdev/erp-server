@@ -4,7 +4,7 @@
 
 Default is DRY — add entries here only when the join cost outweighs storage + sync complexity.
 
-**Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps). Those live in [`application-logic.md`](./application-logic.md) and use the `// app-synced` schema marker.
+**Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps) and service-validated columns. Those live in [`application-logic.md`](./application-logic.md) and use the `// app-synced` or `// app-checked` schema markers.
 
 ---
 

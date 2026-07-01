@@ -32,6 +32,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - **Exception:** a denormalized column is allowed when it avoids a hot join on frequent reads (list/filter APIs). Keep these rare.
 - Mark such columns with `// RFP` and document them in `src/database/docs/db-duplications.md` (definition, sync rules, and when to add).
 - Mark application-maintained derived columns with `// app-synced`; document behavior in `src/database/docs/application-logic.md`.
+- Mark columns whose values must be validated in NestJS (cross-table rules, conditional requiredness, workflow guards) with `// app-checked`; document rules in `src/database/docs/application-logic.md`.
 
 ### Performance
 
@@ -63,6 +64,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | New/changed table                            | `tables-summary.md`                                                              |
 | New/changed `code` prefix or coded table     | `tables-summary.md`, `triggers.sql`                                              |
 | `// app-synced` column or derived behavior   | `application-logic.md`                                                           |
+| `// app-checked` column or validation rule   | `application-logic.md`                                                           |
 | `// RFP` column                              | `db-duplications.md`                                                             |
 | New/changed domain, entity, or workflow step | `README.md` (What the System Manages, business process, Current Scope as needed) |
 | Schema or feature scope shift                | `README.md` Current Scope                                                        |
@@ -95,7 +97,7 @@ Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, th
 
 1. Constants first → common → schema.
 2. Schema is the contract (FKs, indexes, checks, relations).
-3. Minimize redundancy; `// RFP` + `db-duplications.md` for performance copies; `// app-synced` + `application-logic.md` for derived fields.
+3. Minimize redundancy; `// RFP` + `db-duplications.md` for performance copies; `// app-synced` + `application-logic.md` for derived fields; `// app-checked` + `application-logic.md` for service-layer validations.
 4. **Keep docs in sync** — after every change, update all affected files from the table above (`README.md`, `src/database/docs/*`, `triggers.sql` when relevant) in the same change. Use the checklist in Docs & triggers.
 5. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
 6. Do not commit unless asked.

@@ -1,6 +1,11 @@
 # Application Logic
 
-Business logic **not** enforced by database triggers must be implemented in NestJS services. Schema columns marked `// app-synced` are maintained by the application.
+Business logic **not** enforced by database triggers must be implemented in NestJS services.
+
+| Schema marker    | Meaning                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `// app-synced`  | The application **writes** this column from other tables or events (derived/cached values).               |
+| `// app-checked` | The application **validates** this column on create/update (cross-table rules, conditional requiredness). |
 
 `inventory_transaction_items.unit_cost` is **not** app-synced — it is user-provided at creation (actual cost at time of transaction) and should be omitted from update DTOs.
 
@@ -86,9 +91,11 @@ On inquiry, offer, preview, and contract item creation:
 
 ---
 
-## 6. Business validations
+## 6. Business validations (`// app-checked`)
 
-### Inventory transaction item sources (`inventory_transaction_items`)
+Rules below apply on create/update in NestJS. Mark the relevant schema column(s) with `// app-checked` and a brief inline reason.
+
+### Inventory transaction item sources (`inventory_transaction_items` — `// app-checked`)
 
 - `material_purchase_receipt_item_id` only when parent `transaction_type = 'receipt'`
 - `production_plan_item_id` only when parent `transaction_type = 'issue'`
@@ -106,36 +113,37 @@ On inquiry, offer, preview, and contract item creation:
 - Unit's `contract_item_id` must match `product_purchase_order_items.contract_item_id` for the linked PO line
 - **Exception:** `BadRequestException` with a clear message
 
-### Production plan items (`production_plan_items`)
+### Production plan items (`production_plan_items.production_stage` — `// app-checked`)
 
 - `production_stage` must be one of the `product_production_routes` rows configured for the unit's product (join via `product_units` → `contract_items` → `products`)
 - **Exception:** `BadRequestException('Production stage is not in product production route')`
 - A plan item can only be marked completed when the plan item for the **prior `sequence_order`** in that product's routing (same `product_unit_id`) is already completed, or there is no prior step
 - **Exception:** `BadRequestException('Prior production step not completed')`
 
-### Users — production sub-department (`users.production_sub_department`)
+### Users — production sub-department (`users.production_sub_department` — `// app-checked`)
 
 - Required (non-null) when `department_id` equals `PRODUCTION_DEPARTMENT_ID`
 - Must be null when `department_id` is any other department or null
 - **Exception:** `BadRequestException` with a clear message
 
-### Product production routes (`product_production_routes`)
+### Product production routes (`product_production_routes.sequence_order` — `// app-checked`)
 
-- `completion_percentage` values for a given `product_code` must sum to exactly `100` when at least one route row exists — enforced by deferred constraint trigger in [`triggers.sql`](../sql/triggers.sql) (not app logic)
+- Defines step order within a product's routing; used by production plan prior-step completion checks (see above)
+- `completion_percentage` values for a given `product_code` must sum to exactly `100` when at least one route row exists — enforced by deferred constraint trigger in [`triggers.sql`](../sql/triggers.sql) (not app-checked)
 - Products with no route rows are allowed (routing not yet configured)
 
-### Contract delivery address (`contracts.delivery_address_id`)
+### Contract delivery address (`contracts.delivery_address_id` — `// app-checked`)
 
 - Address must belong to `contracts.customer_id` (via `customer_addresses.customer_id`)
 - **Exception:** `BadRequestException('Delivery address does not belong to customer')`
 
 ### Default addresses (`customer_addresses`, `vendor_addresses`)
 
-- Only one `is_default = true` per customer/vendor (partial unique index). Unset the previous default when setting a new one in the same transaction.
+- Only one `is_default = true` per customer/vendor — enforced by partial unique index (not app-checked). Unset the previous default when setting a new one in the same transaction to avoid insert/update conflicts.
 
 ### Default dimension (`product_dimensions`)
 
-- Only one `is_default = true` per product (partial unique index). Unset the previous default when setting a new one in the same transaction.
+- Only one `is_default = true` per product — enforced by partial unique index (not app-checked). Unset the previous default when setting a new one in the same transaction to avoid insert/update conflicts.
 
 ---
 

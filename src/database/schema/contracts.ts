@@ -31,7 +31,7 @@ export const contracts = pgTable(
     customerId: uuid('customer_id') // RFP
       .notNull()
       .references(() => customers.id),
-    deliveryAddressId: uuid('delivery_address_id')
+    deliveryAddressId: uuid('delivery_address_id') // app-checked. Must belong to contracts.customer_id.
       .notNull()
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time

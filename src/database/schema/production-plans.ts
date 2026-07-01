@@ -38,11 +38,11 @@ export const productionPlanItems = pgTable(
     productUnitId: uuid('product_unit_id')
       .notNull()
       .references(() => productUnits.id),
-    productionStage: productionSubDepartmentEnum('production_stage').notNull(),
+    productionStage: productionSubDepartmentEnum('production_stage').notNull(), // app-checked. Production stage must be in sequence order.
     startDate: timestamp('start_date', { withTimezone: true }),
     estimatedEndDate: timestamp('estimated_end_date', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
-    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // Set when parent product unit is cancelled
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
   },
   (table) => [
