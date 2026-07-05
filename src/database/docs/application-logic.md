@@ -70,6 +70,7 @@ Clear `completed_at` if receipts are reversed and the order is no longer fully f
 | `received_at`  | Imported: when linked via `product_purchase_receipt_items` and parent receipt `received_at` is set   |
 | `delivered_at` | When parent `deliveries.delivered_at` is set for a `delivery_items` row referencing the unit         |
 | `installed_at` | When parent `installations.installed_at` is set for an `installation_items` row referencing the unit |
+| `cancelled_at` | When parent `contract_items` is cancelled/replaced (cascade), or unit is dropped on quantity decrease |
 
 Update or clear timestamps if the source event is undone (e.g. delivery cancelled).
 

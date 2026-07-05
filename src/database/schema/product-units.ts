@@ -18,11 +18,11 @@ export const productUnits = pgTable(
       .notNull()
       .references(() => contractItems.id),
     // Status can be deduced from the following timestamps. The following timestamps are app-synced (which means they are derived from other tables)
-    producedAt: timestamp('produced_at', { withTimezone: true }), // app-synced
-    receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced
-    deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced
-    installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced
-    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // Set when parent contract item is cancelled/replaced, or unit is dropped on quantity decrease
+    producedAt: timestamp('produced_at', { withTimezone: true }), // app-synced — derived when the last production_plan_items row for this unit has completed_at set
+    receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced — derived from product_purchase_receipt_items when parent receipt received_at is set
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced — derived from deliveries.delivered_at via delivery_items referencing this unit
+    installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced — derived from installations.installed_at via installation_items referencing this unit
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // app-synced — set when parent contract_item is cancelled/replaced, or unit is dropped on quantity decrease
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

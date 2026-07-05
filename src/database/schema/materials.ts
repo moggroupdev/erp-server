@@ -28,7 +28,7 @@ export const materials = pgTable(
     materialType: materialTypeEnum('material_type').notNull(),
     unit: materialUnitEnum('unit').notNull(),
     unitCost: numeric('unit_cost').notNull(),
-    quantity: numeric('quantity').notNull().default(0), // app-synced
+    quantity: numeric('quantity').notNull().default(0), // app-synced — cached net quantity from inventory_transaction_items (receipt/issue/return)
     initialQuantity: numeric('initial_quantity').default(0), // Quantity on hand at the start of the project
     minimumStock: numeric('minimum_stock'),
     deletedAt,

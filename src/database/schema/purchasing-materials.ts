@@ -15,8 +15,8 @@ export const materialPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // app-synced
-    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced
+    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity_ordered * unit_cost) from material_purchase_order_items
+    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced — set when all order lines are fully received (received + rejected = ordered) across non-cancelled receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,

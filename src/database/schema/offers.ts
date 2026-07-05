@@ -15,7 +15,7 @@ export const offers = pgTable(
       .references(() => inquiries.id),
     status: offerStatusEnum('status').notNull().default('draft'),
     validUntil: timestamp('valid_until', { withTimezone: true }),
-    totalAmount: numeric('total_amount').notNull(), // app-synced
+    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from offer_items
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

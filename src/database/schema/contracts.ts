@@ -35,7 +35,7 @@ export const contracts = pgTable(
       .notNull()
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
-    totalAmount: numeric('total_amount').notNull(), // app-synced
+    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
     // Contract status can be deduced from these dates:
     startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
     completedAt: timestamp('completed_at', { withTimezone: true }),
