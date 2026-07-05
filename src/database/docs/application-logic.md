@@ -133,10 +133,28 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Address must belong to `contracts.customer_id` (via `customer_addresses.customer_id`)
 
-### Delivery and installation addresses (`delivery_addresses`, `installation_addresses` — `// app-checked`)
+### Deliveries (`deliveries`)
 
-- Each `customer_address_id` must belong to a customer that has at least one unit on the parent delivery/installation (via `delivery_items` / `installation_items` → `product_units` → `contract_items` → `contracts.customer_id`)
-- A delivery or installation may list multiple addresses (multi-contract trips grouped by customer address)
+- `contract_id` is required; site address is `contracts.delivery_address_id` via the contract FK (not stored on the delivery)
+
+### Delivery items (`delivery_items` — `// app-checked`)
+
+- `product_unit_id` must belong to the parent delivery's `contract_id` (`product_units` → `contract_items` → `contracts.id`)
+
+### Installations (`installations`)
+
+- `contract_id` is required; site address is `contracts.delivery_address_id` via the contract FK (not stored on the installation)
+
+### Installation items (`installation_items` — `// app-checked`)
+
+- `product_unit_id` must belong to the parent installation's `contract_id` (`product_units` → `contract_items` → `contracts.id`)
+
+### Trips (`trips`)
+
+- Optional grouping for deliveries, installations, and maintenance orders traveling together on the same vehicle
+- A trip's address list is derived (not stored): for deliveries/installations use `contracts.delivery_address_id`; for maintenance orders use `customer_address_id` when set, otherwise `service_agreements.customer_address_id` via `service_agreement_id`
+- Completion is tracked per linked task, not on the trip header
+- Reject linking tasks to a cancelled trip
 
 ### Customer receptions (`customer_receptions` — `// app-checked`)
 
@@ -155,12 +173,6 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Customer is derived from `customer_address_id` (`customer_addresses.customer_id`); no separate `customer_id` column on the agreement
 
-### Maintenance orders (`maintenance_orders` — `// app-checked`)
-
-- `service_agreement_id` is required when `maintenance_type = 'service_contract'` (also enforced by DB check); must reference an agreement whose address belongs to the same `customer_id` as the order
-- `customer_address_id` is required when `service_location = 'on_site'`; must belong to `customer_id`
-- When `maintenance_type = 'service_contract'`, `customer_address_id` must match `service_agreements.customer_address_id`
-
 ### Maintenance order items (`maintenance_order_items` — `// app-checked`)
 
 - `product_unit_id` must belong to the maintenance order's `customer_id` (`product_units` → `contract_items` → `contracts.customer_id`)
@@ -170,7 +182,6 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 ### Maintenance order spare parts (`maintenance_order_spare_parts` — `// app-checked`)
 
-- `material_code` must reference a material with `type = 'spare_parts'`
 - `unit_price` and `is_billable` are user-provided at creation; omit from update DTOs
 - Customer pays spare parts when `is_billable = true` (only free case: in-warranty maintenance not caused by misuse — set `is_billable` accordingly when adding lines)
 
@@ -214,6 +225,7 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 | `previews`                 | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
 | `deliveries`               | scheduled, not delivered/cancelled                                                                      | `delivered_at` set        | `cancelled_at` set |
 | `installations`            | scheduled, not installed/cancelled                                                                      | `installed_at` set        | `cancelled_at` set |
+| `trips`                    | scheduled, not cancelled                                                                                | —                         | `cancelled_at` set |
 | `customer_receptions`      | —                                                                                                       | `received_at` set         | —                  |
 | `maintenance_orders`       | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
 | `material_purchase_orders` | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
