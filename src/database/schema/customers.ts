@@ -7,8 +7,6 @@ import { countries } from './countries';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
 import { customerReceptions } from './customer-receptions';
-import { deliveryAddresses } from './deliveries';
-import { installationAddresses } from './installations';
 import { serviceAgreements } from './service-agreements';
 import { maintenanceOrders } from './maintenance-orders';
 
@@ -86,7 +84,5 @@ export const customerAddressesRelations = relations(customerAddresses, ({ one, m
     fields: [customerAddresses.cityId],
     references: [cities.id],
   }),
-  deliveryAddresses: many(deliveryAddresses),
-  installationAddresses: many(installationAddresses),
   serviceAgreements: many(serviceAgreements),
 }));

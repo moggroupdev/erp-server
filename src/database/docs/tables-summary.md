@@ -24,7 +24,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | ------------------------------------------- | ----------- | ---- | ----------------- | --------- | -------------- |
 | users                                       | uuid        | USR  | deletedAt field   | YES       | YES (NULLABLE) |
 | roles                                       | uuid        | —    | NO                | YES       | YES (NOT NULL) |
-| role_permissions                            | composite   | —    | NO                | NO        | NO             |
+| permissions                                 | composite   | —    | NO                | NO        | NO             |
 | departments                                 | uuid        | —    | NO                | NO        | NO             |
 | countries                                   | uuid        | —    | NO                | NO        | NO             |
 | governorates                                | uuid        | —    | NO                | NO        | NO             |
@@ -57,10 +57,9 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | material_purchase_receipt_items             | uuid        | —    | NO                | NO        | NO             |
 | vendor_quotation_emails                     | uuid        | —    | cancelled status  | YES       | YES (NOT NULL) |
 | deliveries                                  | uuid        | DEL  | cancelledAt field | YES       | YES (NOT NULL) |
-| delivery_addresses                          | uuid        | —    | NO                | NO        | NO             |
 | delivery_items                              | uuid        | —    | NO                | NO        | NO             |
+| trips                                       | uuid        | TRP  | cancelledAt field | YES       | YES (NOT NULL) |
 | installations                               | uuid        | INS  | cancelledAt field | YES       | YES (NOT NULL) |
-| installation_addresses                      | uuid        | —    | NO                | NO        | NO             |
 | installation_items                          | uuid        | —    | NO                | NO        | NO             |
 | customer_receptions                         | uuid        | REC  | NO                | YES       | YES (NOT NULL) |
 | customer_reception_items                    | uuid        | —    | NO                | NO        | NO             |

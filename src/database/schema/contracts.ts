@@ -7,6 +7,8 @@ import { inquiries } from './inquiries';
 import { previews } from './previews';
 import { offers } from './offers';
 import { users } from './users';
+import { deliveries } from './deliveries';
+import { installations } from './installations';
 import { productUnits } from './product-units';
 import { productPurchaseOrderItems } from './purchasing-products';
 import { materialPurchaseOrderItemContractItems } from './purchasing-materials';
@@ -138,6 +140,8 @@ export const contractsRelations = relations(contracts, ({ one, many }) => ({
     relationName: 'contractCancelledBy',
   }),
   items: many(contractItems),
+  deliveries: many(deliveries),
+  installations: many(installations),
 }));
 
 export const contractItemsRelations = relations(contractItems, ({ one, many }) => ({

@@ -313,6 +313,26 @@ BEFORE INSERT ON maintenance_orders
 FOR EACH ROW EXECUTE PROCEDURE generate_maintenance_orders_code();
 
 -- ---------------------------------------------------------------------------
+
+-- TRIPS: TRP
+CREATE SEQUENCE IF NOT EXISTS trips_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_trips_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'TRP-' || LPAD(nextval('trips_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trips_generate_code ON trips;
+CREATE TRIGGER trips_generate_code
+BEFORE INSERT ON trips
+FOR EACH ROW EXECUTE PROCEDURE generate_trips_code();
+
+-- ---------------------------------------------------------------------------
 -- PRODUCT PRODUCTION ROUTES: completion percentages must sum to 100 per product
 -- Deferred so routes can be inserted row-by-row within one transaction.
 -- When a product has no routes, the sum check is skipped.

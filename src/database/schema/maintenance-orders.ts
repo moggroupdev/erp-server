@@ -7,20 +7,21 @@ import { productUnits } from './product-units';
 import { materials } from './materials';
 import { users } from './users';
 import { inventoryTransactionItems } from './inventory-transactions';
+import { trips } from './trips';
 
 export const maintenanceOrders = pgTable(
   'maintenance_orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MNT-00000001
-    customerId: uuid('customer_id')
+    maintenanceType: maintenanceTypeEnum('maintenance_type').notNull(),
+    serviceAgreementId: uuid('service_agreement_id'),
+    serviceLocation: maintenanceServiceLocationEnum('service_location').notNull(),
+    customerAddressId: uuid('customer_address_id').references(() => customerAddresses.id),
+    customerId: uuid('customer_id') // RFP
       .notNull()
       .references(() => customers.id),
-    maintenanceType: maintenanceTypeEnum('maintenance_type').notNull(),
-    serviceAgreementId: uuid('service_agreement_id'), // app-checked — must match customer and (when on_site) customer_address of serviced units
-    serviceLocation: maintenanceServiceLocationEnum('service_location').notNull(),
-    customerAddressId: uuid('customer_address_id') // app-checked — required when on_site; must belong to customer; when service_contract, must match service_agreement.customer_address_id
-      .references(() => customerAddresses.id),
+    tripId: uuid('trip_id').references(() => trips.id),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -40,9 +41,14 @@ export const maintenanceOrders = pgTable(
     index('maintenance_orders_code_idx').on(table.code),
     index('maintenance_orders_customer_id_idx').on(table.customerId),
     index('maintenance_orders_service_agreement_id_idx').on(table.serviceAgreementId),
+    index('maintenance_orders_trip_id_idx').on(table.tripId),
     check(
       'maintenance_orders_service_agreement_required',
       sql`${table.maintenanceType} <> 'service_contract' OR ${table.serviceAgreementId} IS NOT NULL`,
+    ),
+    check(
+      'maintenance_orders_customer_address_null_service_contract',
+      sql`${table.maintenanceType} <> 'service_contract' OR ${table.customerAddressId} IS NULL`,
     ),
     check(
       'maintenance_orders_completed_cancelled_exclusive',
@@ -52,10 +58,6 @@ export const maintenanceOrders = pgTable(
       'maintenance_orders_completed_at_gte_scheduled_at',
       sql`${table.completedAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.completedAt} >= ${table.scheduledAt}`,
     ),
-    check(
-      'maintenance_orders_cancelled_at_gte_scheduled_at',
-      sql`${table.cancelledAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.cancelledAt} >= ${table.scheduledAt}`,
-    ),
   ],
 );
 
@@ -64,7 +66,7 @@ export const maintenanceOrderItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     maintenanceOrderId: uuid('maintenance_order_id').notNull(),
-    productUnitId: uuid('product_unit_id')
+    productUnitId: uuid('product_unit_id') // app-checked — unit must be in-warranty (warranty_started_at set, not expired) when parent maintenance_type = 'in_warranty'
       .notNull()
       .references(() => productUnits.id),
     notes: text('notes'),
@@ -85,7 +87,7 @@ export const maintenanceOrderSpareParts = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     maintenanceOrderId: uuid('maintenance_order_id').notNull(),
-    materialCode: text('material_code') // app-checked — material type must be spare_parts
+    materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
@@ -120,6 +122,10 @@ export const maintenanceOrdersRelations = relations(maintenanceOrders, ({ one, m
   customerAddress: one(customerAddresses, {
     fields: [maintenanceOrders.customerAddressId],
     references: [customerAddresses.id],
+  }),
+  trip: one(trips, {
+    fields: [maintenanceOrders.tripId],
+    references: [trips.id],
   }),
   assignedTo: one(users, {
     fields: [maintenanceOrders.assignedTo],

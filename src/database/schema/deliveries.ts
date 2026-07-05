@@ -1,9 +1,10 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, check } from 'drizzle-orm/pg-core';
 import { createdAt } from './common';
-import { customerAddresses } from './customers';
+import { contracts } from './contracts';
 import { customerReceptions } from './customer-receptions';
 import { productUnits } from './product-units';
+import { trips } from './trips';
 import { users } from './users';
 
 export const deliveries = pgTable(
@@ -11,6 +12,10 @@ export const deliveries = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: DEL-00000001
+    contractId: uuid('contract_id') // Address is derived from contract.delivery_address_id
+      .notNull()
+      .references(() => contracts.id),
+    tripId: uuid('trip_id').references(() => trips.id),
     // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
     deliveredAt: timestamp('delivered_at', { withTimezone: true }),
@@ -24,6 +29,8 @@ export const deliveries = pgTable(
   },
   (table) => [
     index('deliveries_code_idx').on(table.code),
+    index('deliveries_contract_id_idx').on(table.contractId),
+    index('deliveries_trip_id_idx').on(table.tripId),
     index('deliveries_assigned_to_idx').on(table.assignedTo),
     index('deliveries_scheduled_at_idx').on(table.scheduledAt),
     index('deliveries_delivered_at_idx').on(table.deliveredAt),
@@ -40,23 +47,6 @@ export const deliveries = pgTable(
   ],
 );
 
-export const deliveryAddresses = pgTable(
-  'delivery_addresses',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    deliveryId: uuid('delivery_id')
-      .notNull()
-      .references(() => deliveries.id),
-    customerAddressId: uuid('customer_address_id') // app-checked — must belong to a customer whose units are on this delivery
-      .notNull()
-      .references(() => customerAddresses.id),
-  },
-  (table) => [
-    index('delivery_addresses_delivery_id_idx').on(table.deliveryId),
-    index('delivery_addresses_customer_address_id_idx').on(table.customerAddressId),
-  ],
-);
-
 export const deliveryItems = pgTable(
   'delivery_items',
   {
@@ -64,7 +54,7 @@ export const deliveryItems = pgTable(
     deliveryId: uuid('delivery_id')
       .notNull()
       .references(() => deliveries.id),
-    productUnitId: uuid('product_unit_id')
+    productUnitId: uuid('product_unit_id') // app-checked — must belong to parent delivery's contract_id
       .notNull()
       .unique()
       .references(() => productUnits.id),
@@ -76,6 +66,14 @@ export const deliveryItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const deliveriesRelations = relations(deliveries, ({ one, many }) => ({
+  contract: one(contracts, {
+    fields: [deliveries.contractId],
+    references: [contracts.id],
+  }),
+  trip: one(trips, {
+    fields: [deliveries.tripId],
+    references: [trips.id],
+  }),
   createdBy: one(users, {
     fields: [deliveries.createdBy],
     references: [users.id],
@@ -86,20 +84,8 @@ export const deliveriesRelations = relations(deliveries, ({ one, many }) => ({
     references: [users.id],
     relationName: 'deliveryAssignedTo',
   }),
-  addresses: many(deliveryAddresses),
   items: many(deliveryItems),
   customerReceptions: many(customerReceptions),
-}));
-
-export const deliveryAddressesRelations = relations(deliveryAddresses, ({ one }) => ({
-  delivery: one(deliveries, {
-    fields: [deliveryAddresses.deliveryId],
-    references: [deliveries.id],
-  }),
-  customerAddress: one(customerAddresses, {
-    fields: [deliveryAddresses.customerAddressId],
-    references: [customerAddresses.id],
-  }),
 }));
 
 export const deliveryItemsRelations = relations(deliveryItems, ({ one }) => ({

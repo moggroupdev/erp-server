@@ -63,3 +63,10 @@ Default is DRY — add entries here only when the join cost outweighs storage + 
 - **Why:** List and filter contract lines by product without joining `product_dimensions` on every item query.
 - **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
 - **Index:** `contract_items_product_code_idx`
+
+### `maintenance_orders.customer_id`
+
+- **Canonical source:** `customer_addresses.customer_id` via `maintenance_orders.customer_address_id`; when `maintenance_type = 'service_contract'`, via `service_agreements.customer_address_id` → `customer_addresses.customer_id`
+- **Why:** List and filter maintenance orders by customer without joining address, agreement, or item/unit chains.
+- **Sync:** Set on INSERT from `customer_address_id` or the linked service agreement's address. Must match the customer on every serviced unit; validate in service when adding items.
+- **Index:** `maintenance_orders_customer_id_idx`

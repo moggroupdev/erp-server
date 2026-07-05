@@ -52,8 +52,9 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Delivery & Installation
 
-- Delivery scheduling and assignment across one or more customer addresses per trip; units may span multiple contracts
-- Installation scheduling and assignment with the same multi-address model
+- Each delivery and installation belongs to one contract; the site address is the contract's `delivery_address_id` (not stored on the task)
+- Trips group deliveries, installations, and maintenance orders that travel together on the same vehicle across multiple addresses
+- Installation scheduling and assignment for on-site commissioning
 - Customer receptions: formal handover when the customer receives product units (factory pickup, after delivery, or after installation); starts the 1-year warranty period per unit
 - Contract completion when the project is finished or cancelled
 
@@ -105,7 +106,7 @@ For catalog items sourced from outside suppliers rather than built in-house, Pur
 
 ### Delivery, Installation, and Completion
 
-Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Deliveries are scheduled and assigned to staff; each trip may cover multiple customer addresses and units from more than one contract. Installations follow the same multi-address model for on-site commissioning.
+Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Each delivery and installation is tied to one contract; the visit address comes from that contract's delivery address. When multiple tasks travel on the same vehicle, they are grouped into a trip — a delivery, installation, and maintenance visit to different addresses can share one trip.
 
 Customer reception is recorded separately when the customer physically receives units — at the factory, after delivery, or after installation. That handover starts the 1-year warranty period for each unit. When every item is received and the project is accepted, the contract is marked complete.
 
