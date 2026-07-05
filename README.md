@@ -52,8 +52,9 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Delivery & Installation
 
-- Delivery scheduling and assignment, linking specific product units to each shipment
-- Installation scheduling and assignment, commissioning individual units at the customer site
+- Delivery scheduling and assignment across one or more customer addresses per trip; units may span multiple contracts
+- Installation scheduling and assignment with the same multi-address model
+- Customer receptions: formal handover when the customer receives product units (factory pickup, after delivery, or after installation); starts the 1-year warranty period per unit
 - Contract completion when the project is finished or cancelled
 
 ### Organization & Access
@@ -98,9 +99,9 @@ For catalog items sourced from outside suppliers rather than built in-house, Pur
 
 ### Delivery, Installation, and Completion
 
-Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Deliveries are scheduled and assigned to staff; each shipment lists the specific product units being transported to the site.
+Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Deliveries are scheduled and assigned to staff; each trip may cover multiple customer addresses and units from more than one contract. Installations follow the same multi-address model for on-site commissioning.
 
-After delivery, the Installation Team schedules on-site work, installs the equipment, and performs testing and commissioning for each unit. When every item is installed and the project is accepted, the contract is marked complete.
+Customer reception is recorded separately when the customer physically receives units — at the factory, after delivery, or after installation. That handover starts the 1-year warranty period for each unit. When every item is received and the project is accepted, the contract is marked complete.
 
 ---
 

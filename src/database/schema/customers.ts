@@ -6,6 +6,9 @@ import { cities } from './cities';
 import { countries } from './countries';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
+import { customerReceptions } from './customer-receptions';
+import { deliveryAddresses } from './deliveries';
+import { installationAddresses } from './installations';
 
 export const customers = pgTable(
   'customers',
@@ -64,9 +67,10 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   addresses: many(customerAddresses),
   inquiries: many(inquiries),
   contracts: many(contracts),
+  customerReceptions: many(customerReceptions),
 }));
 
-export const customerAddressesRelations = relations(customerAddresses, ({ one }) => ({
+export const customerAddressesRelations = relations(customerAddresses, ({ one, many }) => ({
   customer: one(customers, {
     fields: [customerAddresses.customerId],
     references: [customers.id],
@@ -79,4 +83,6 @@ export const customerAddressesRelations = relations(customerAddresses, ({ one })
     fields: [customerAddresses.cityId],
     references: [cities.id],
   }),
+  deliveryAddresses: many(deliveryAddresses),
+  installationAddresses: many(installationAddresses),
 }));

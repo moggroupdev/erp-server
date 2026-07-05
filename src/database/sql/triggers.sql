@@ -253,6 +253,26 @@ BEFORE INSERT ON product_purchase_receipts
 FOR EACH ROW EXECUTE PROCEDURE generate_product_purchase_receipts_code();
 
 -- ---------------------------------------------------------------------------
+
+-- CUSTOMER RECEPTIONS: REC
+CREATE SEQUENCE IF NOT EXISTS customer_receptions_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_customer_receptions_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'REC-' || LPAD(nextval('customer_receptions_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS customer_receptions_generate_code ON customer_receptions;
+CREATE TRIGGER customer_receptions_generate_code
+BEFORE INSERT ON customer_receptions
+FOR EACH ROW EXECUTE PROCEDURE generate_customer_receptions_code();
+
+-- ---------------------------------------------------------------------------
 -- PRODUCT PRODUCTION ROUTES: completion percentages must sum to 100 per product
 -- Deferred so routes can be inserted row-by-row within one transaction.
 -- When a product has no routes, the sum check is skipped.

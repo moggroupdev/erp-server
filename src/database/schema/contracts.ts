@@ -10,8 +10,6 @@ import { users } from './users';
 import { productUnits } from './product-units';
 import { productPurchaseOrderItems } from './purchasing-products';
 import { materialPurchaseOrderItemContractItems } from './purchasing-materials';
-import { deliveries } from './deliveries';
-import { installations } from './installations';
 
 // This represents the contract between the customer and the company (An Order)
 export const contracts = pgTable(
@@ -140,8 +138,6 @@ export const contractsRelations = relations(contracts, ({ one, many }) => ({
     relationName: 'contractCancelledBy',
   }),
   items: many(contractItems),
-  deliveries: many(deliveries),
-  installations: many(installations),
 }));
 
 export const contractItemsRelations = relations(contractItems, ({ one, many }) => ({

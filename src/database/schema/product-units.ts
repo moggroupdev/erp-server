@@ -6,6 +6,7 @@ import { contractItems } from './contracts';
 import { productionPlanItems } from './production-plans';
 import { deliveryItems } from './deliveries';
 import { installationItems } from './installations';
+import { customerReceptionItems } from './customer-receptions';
 import { productPurchaseReceiptItems } from './purchasing-products';
 
 export const productUnits = pgTable(
@@ -22,6 +23,7 @@ export const productUnits = pgTable(
     receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced — derived from product_purchase_receipt_items when parent receipt received_at is set
     deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced — derived from deliveries.delivered_at via delivery_items referencing this unit
     installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced — derived from installations.installed_at via installation_items referencing this unit
+    warrantyStartedAt: timestamp('warranty_started_at', { withTimezone: true }), // app-synced — derived from customer_receptions.received_at via customer_reception_items referencing this unit
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // app-synced — set when parent contract_item is cancelled/replaced, or unit is dropped on quantity decrease
     notes: text('notes'),
     createdAt,
@@ -36,6 +38,7 @@ export const productUnits = pgTable(
     index('product_units_received_at_idx').on(table.receivedAt),
     index('product_units_delivered_at_idx').on(table.deliveredAt),
     index('product_units_installed_at_idx').on(table.installedAt),
+    index('product_units_warranty_started_at_idx').on(table.warrantyStartedAt),
     index('product_units_cancelled_at_idx').on(table.cancelledAt),
   ],
 );
@@ -55,6 +58,10 @@ export const productUnitsRelations = relations(productUnits, ({ one, many }) => 
   installationItem: one(installationItems, {
     fields: [productUnits.id],
     references: [installationItems.productUnitId],
+  }),
+  customerReceptionItem: one(customerReceptionItems, {
+    fields: [productUnits.id],
+    references: [customerReceptionItems.productUnitId],
   }),
   purchaseReceiptItem: one(productPurchaseReceiptItems, {
     fields: [productUnits.id],
