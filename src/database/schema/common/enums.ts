@@ -3,11 +3,14 @@ import {
   DIMENSION_UNIT_VALUES,
   INQUIRY_STATUS_VALUES,
   LOGIN_STATUS_VALUES,
+  MAINTENANCE_SERVICE_LOCATION_VALUES,
+  MAINTENANCE_TYPE_VALUES,
   MATERIAL_TYPE_VALUES,
   MATERIAL_UNIT_VALUES,
   OFFER_STATUS_VALUES,
   PERMISSION_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
+  SERVICE_CONTRACT_INTERVAL_VALUES,
   VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
   INVENTORY_TRANSACTION_TYPE_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
@@ -34,3 +37,9 @@ export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_sta
 export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', INVENTORY_TRANSACTION_TYPE_VALUES);
 
 export const productionSubDepartmentEnum = pgEnum('production_sub_department', PRODUCTION_SUB_DEPARTMENT_VALUES);
+
+export const maintenanceTypeEnum = pgEnum('maintenance_type', MAINTENANCE_TYPE_VALUES);
+
+export const maintenanceServiceLocationEnum = pgEnum('maintenance_service_location', MAINTENANCE_SERVICE_LOCATION_VALUES);
+
+export const serviceContractIntervalEnum = pgEnum('service_contract_interval', SERVICE_CONTRACT_INTERVAL_VALUES);

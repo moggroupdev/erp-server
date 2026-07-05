@@ -273,6 +273,46 @@ BEFORE INSERT ON customer_receptions
 FOR EACH ROW EXECUTE PROCEDURE generate_customer_receptions_code();
 
 -- ---------------------------------------------------------------------------
+
+-- SERVICE AGREEMENTS: SVC
+CREATE SEQUENCE IF NOT EXISTS service_agreements_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_service_agreements_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'SVC-' || LPAD(nextval('service_agreements_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS service_agreements_generate_code ON service_agreements;
+CREATE TRIGGER service_agreements_generate_code
+BEFORE INSERT ON service_agreements
+FOR EACH ROW EXECUTE PROCEDURE generate_service_agreements_code();
+
+-- ---------------------------------------------------------------------------
+
+-- MAINTENANCE ORDERS: MNT
+CREATE SEQUENCE IF NOT EXISTS maintenance_orders_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_maintenance_orders_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'MNT-' || LPAD(nextval('maintenance_orders_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS maintenance_orders_generate_code ON maintenance_orders;
+CREATE TRIGGER maintenance_orders_generate_code
+BEFORE INSERT ON maintenance_orders
+FOR EACH ROW EXECUTE PROCEDURE generate_maintenance_orders_code();
+
+-- ---------------------------------------------------------------------------
 -- PRODUCT PRODUCTION ROUTES: completion percentages must sum to 100 per product
 -- Deferred so routes can be inserted row-by-row within one transaction.
 -- When a product has no routes, the sum check is skipped.

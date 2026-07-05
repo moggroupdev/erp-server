@@ -138,3 +138,33 @@ export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
 ) as {
   [K in Uppercase<(typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number]>]: Lowercase<K>;
 };
+
+// ==================== MAINTENANCE_TYPES ====================
+
+export const MAINTENANCE_TYPE_VALUES = ['in_warranty', 'out_of_warranty', 'service_contract'] as const;
+
+export const MAINTENANCE_TYPES = Object.fromEntries(
+  MAINTENANCE_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
+) as {
+  [K in Uppercase<(typeof MAINTENANCE_TYPE_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== MAINTENANCE_SERVICE_LOCATIONS ====================
+
+export const MAINTENANCE_SERVICE_LOCATION_VALUES = ['on_site', 'in_factory'] as const;
+
+export const MAINTENANCE_SERVICE_LOCATIONS = Object.fromEntries(
+  MAINTENANCE_SERVICE_LOCATION_VALUES.map((location) => [location.toUpperCase(), location]),
+) as {
+  [K in Uppercase<(typeof MAINTENANCE_SERVICE_LOCATION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== SERVICE_CONTRACT_INTERVALS ====================
+
+export const SERVICE_CONTRACT_INTERVAL_VALUES = ['monthly', 'quarterly', 'semi_annual', 'annual'] as const;
+
+export const SERVICE_CONTRACT_INTERVALS = Object.fromEntries(
+  SERVICE_CONTRACT_INTERVAL_VALUES.map((interval) => [interval.toUpperCase(), interval]),
+) as {
+  [K in Uppercase<(typeof SERVICE_CONTRACT_INTERVAL_VALUES)[number]>]: Lowercase<K>;
+};

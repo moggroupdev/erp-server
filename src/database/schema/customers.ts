@@ -9,6 +9,8 @@ import { contracts } from './contracts';
 import { customerReceptions } from './customer-receptions';
 import { deliveryAddresses } from './deliveries';
 import { installationAddresses } from './installations';
+import { serviceAgreements } from './service-agreements';
+import { maintenanceOrders } from './maintenance-orders';
 
 export const customers = pgTable(
   'customers',
@@ -68,6 +70,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   inquiries: many(inquiries),
   contracts: many(contracts),
   customerReceptions: many(customerReceptions),
+  maintenanceOrders: many(maintenanceOrders),
 }));
 
 export const customerAddressesRelations = relations(customerAddresses, ({ one, many }) => ({
@@ -85,4 +88,5 @@ export const customerAddressesRelations = relations(customerAddresses, ({ one, m
   }),
   deliveryAddresses: many(deliveryAddresses),
   installationAddresses: many(installationAddresses),
+  serviceAgreements: many(serviceAgreements),
 }));

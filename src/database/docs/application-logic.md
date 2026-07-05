@@ -101,6 +101,7 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - `material_purchase_receipt_item_id` only when parent `transaction_type = 'receipt'`
 - `production_plan_item_id` only when parent `transaction_type = 'issue'`
+- `maintenance_order_spare_part_id` only when parent `transaction_type = 'issue'`
 - At most one source FK set (DB check enforces non-conflict; validate type match in service)
 
 ### Material purchase receipt quantities (`material_purchase_receipt_items`)
@@ -150,6 +151,29 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 - Each `product_unit_id` is unique (one reception per unit)
 - Unit must not be cancelled (`product_units.cancelled_at IS NULL`)
 
+### Service agreements (`service_agreements`)
+
+- Customer is derived from `customer_address_id` (`customer_addresses.customer_id`); no separate `customer_id` column on the agreement
+
+### Maintenance orders (`maintenance_orders` — `// app-checked`)
+
+- `service_agreement_id` is required when `maintenance_type = 'service_contract'` (also enforced by DB check); must reference an agreement whose address belongs to the same `customer_id` as the order
+- `customer_address_id` is required when `service_location = 'on_site'`; must belong to `customer_id`
+- When `maintenance_type = 'service_contract'`, `customer_address_id` must match `service_agreements.customer_address_id`
+
+### Maintenance order items (`maintenance_order_items` — `// app-checked`)
+
+- `product_unit_id` must belong to the maintenance order's `customer_id` (`product_units` → `contract_items` → `contracts.customer_id`)
+- Unit must not be cancelled (`product_units.cancelled_at IS NULL`)
+- When `maintenance_type = 'in_warranty'`, unit's `warranty_started_at` must be set and warranty must not be expired (1 year from `warranty_started_at` — compute in API)
+- When `maintenance_type = 'service_contract'`, the unit's contract `delivery_address_id` must match `service_agreements.customer_address_id`
+
+### Maintenance order spare parts (`maintenance_order_spare_parts` — `// app-checked`)
+
+- `material_code` must reference a material with `type = 'spare_parts'`
+- `unit_price` and `is_billable` are user-provided at creation; omit from update DTOs
+- Customer pays spare parts when `is_billable = true` (only free case: in-warranty maintenance not caused by misuse — set `is_billable` accordingly when adding lines)
+
 ### Default addresses (`customer_addresses`, `vendor_addresses`)
 
 - Only one `is_default = true` per customer/vendor — enforced by partial unique index (not app-checked). Unset the previous default when setting a new one in the same transaction to avoid insert/update conflicts.
@@ -191,6 +215,7 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 | `deliveries`               | scheduled, not delivered/cancelled                                                                      | `delivered_at` set        | `cancelled_at` set |
 | `installations`            | scheduled, not installed/cancelled                                                                      | `installed_at` set        | `cancelled_at` set |
 | `customer_receptions`      | —                                                                                                       | `received_at` set         | —                  |
+| `maintenance_orders`       | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
 | `material_purchase_orders` | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
 | `product_purchase_orders`  | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
 

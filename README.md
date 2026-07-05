@@ -40,8 +40,8 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Inventory & Warehouse
 
 - Raw materials and spare parts with stock levels and minimum thresholds
-- Inventory movements: receipts from purchase inspection, issues to production, and returns
-- Material issues linked to the production work consuming them
+- Inventory movements: receipts from purchase inspection, issues to production or maintenance, and returns
+- Material issues linked to the production work or maintenance spare-part lines consuming them
 
 ### Procurement
 
@@ -56,6 +56,12 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Installation scheduling and assignment with the same multi-address model
 - Customer receptions: formal handover when the customer receives product units (factory pickup, after delivery, or after installation); starts the 1-year warranty period per unit
 - Contract completion when the project is finished or cancelled
+
+### Maintenance & Service Contracts
+
+- Service agreements: recurring maintenance contracts per customer address (monthly, quarterly, semi-annual, or annual intervals)
+- Maintenance orders: in-warranty, out-of-warranty, or service-contract work on one or more product units; performed on-site at the customer or in-factory
+- Spare parts consumed during maintenance with selling-price snapshots; customer is billed for parts except in-warranty work not caused by misuse
 
 ### Organization & Access
 
@@ -103,8 +109,12 @@ Whether a unit was manufactured internally or received from a supplier, it event
 
 Customer reception is recorded separately when the customer physically receives units — at the factory, after delivery, or after installation. That handover starts the 1-year warranty period for each unit. When every item is received and the project is accepted, the contract is marked complete.
 
+### After-Sales Maintenance
+
+Once equipment is in the field, the company services it under three arrangements: in-warranty repair, out-of-warranty paid service, or a recurring service contract tied to a customer address. Maintenance orders may cover multiple units in one visit, performed on-site or with the product brought into the factory. Spare parts issued from inventory are recorded with a price snapshot; whether the customer is charged is set per line when adding spare parts.
+
 ---
 
 ## Current Scope
 
-The data model covers the full project lifecycle described above — from customer inquiry through contract, manufacturing or import, delivery, installation, and completion. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
+The data model covers the full project lifecycle described above — from customer inquiry through contract, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.

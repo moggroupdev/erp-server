@@ -23,5 +23,7 @@ export * from './purchasing-products';
 export * from './deliveries';
 export * from './installations';
 export * from './customer-receptions';
+export * from './service-agreements';
+export * from './maintenance-orders';
 export * from './login-history';
 export * from './product-units';

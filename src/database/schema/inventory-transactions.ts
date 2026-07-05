@@ -5,6 +5,7 @@ import { users } from './users';
 import { materialPurchaseReceiptItems } from './purchasing-materials';
 import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
+import { maintenanceOrderSpareParts } from './maintenance-orders';
 
 export const inventoryTransactions = pgTable(
   'inventory_transactions',
@@ -38,6 +39,7 @@ export const inventoryTransactionItems = pgTable(
     unitCost: numeric('unit_cost').notNull(), // Historical cost record (snapshot)
     materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // app-checked. Source must match parent transaction_type.
     productionPlanItemId: uuid('production_plan_item_id'), // app-checked. Source must match parent transaction_type.
+    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // app-checked. Source must match parent transaction_type.
   },
   (table) => [
     foreignKey({
@@ -55,16 +57,24 @@ export const inventoryTransactionItems = pgTable(
       columns: [table.productionPlanItemId],
       foreignColumns: [productionPlanItems.id],
     }),
+    foreignKey({
+      name: 'inv_tx_items_mosp_id_fk',
+      columns: [table.maintenanceOrderSparePartId],
+      foreignColumns: [maintenanceOrderSpareParts.id],
+    }),
     index('inv_tx_items_transaction_id_idx').on(table.transactionId),
     index('inv_tx_items_material_code_idx').on(table.materialCode),
     index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
     index('inv_tx_items_pp_item_id_idx').on(table.productionPlanItemId),
+    index('inv_tx_items_mosp_id_idx').on(table.maintenanceOrderSparePartId),
     positiveQuantityCheck('inv_tx_items_quantity_positive', table.quantity),
     positiveQuantityCheck('inv_tx_items_unit_cost_positive', table.unitCost),
     check(
       'inv_tx_items_source_non_conflicting',
       sql`(
-        ${table.materialPurchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL
+        (${table.materialPurchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL)
+        AND (${table.materialPurchaseReceiptItemId} IS NULL OR ${table.maintenanceOrderSparePartId} IS NULL)
+        AND (${table.productionPlanItemId} IS NULL OR ${table.maintenanceOrderSparePartId} IS NULL)
       )`,
     ),
   ],
@@ -97,5 +107,9 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
   productionPlanItem: one(productionPlanItems, {
     fields: [inventoryTransactionItems.productionPlanItemId],
     references: [productionPlanItems.id],
+  }),
+  maintenanceOrderSparePart: one(maintenanceOrderSpareParts, {
+    fields: [inventoryTransactionItems.maintenanceOrderSparePartId],
+    references: [maintenanceOrderSpareParts.id],
   }),
 }));

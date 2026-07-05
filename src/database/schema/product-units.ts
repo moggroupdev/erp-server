@@ -8,6 +8,7 @@ import { deliveryItems } from './deliveries';
 import { installationItems } from './installations';
 import { customerReceptionItems } from './customer-receptions';
 import { productPurchaseReceiptItems } from './purchasing-products';
+import { maintenanceOrderItems } from './maintenance-orders';
 
 export const productUnits = pgTable(
   'product_units',
@@ -67,6 +68,7 @@ export const productUnitsRelations = relations(productUnits, ({ one, many }) => 
     fields: [productUnits.id],
     references: [productPurchaseReceiptItems.productUnitId],
   }),
+  maintenanceOrderItems: many(maintenanceOrderItems),
   createdBy: one(users, {
     fields: [productUnits.createdBy],
     references: [users.id],
