@@ -24,10 +24,7 @@ export const vendors = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('vendors_code_idx').on(table.code),
     index('vendors_name_idx').on(table.name),
-    index('vendors_phone_idx').on(table.phone),
-    index('vendors_email_idx').on(table.email),
   ],
 );
 

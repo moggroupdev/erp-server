@@ -24,9 +24,9 @@ export const inquiries = pgTable(
   },
   (table) => [
     index('inquiries_customer_id_idx').on(table.customerId),
-    index('inquiries_created_by_idx').on(table.createdBy),
     index('inquiries_status_idx').on(table.status),
     index('inquiries_created_at_idx').on(table.createdAt),
+    index('inquiries_created_by_idx').on(table.createdBy),
   ],
 );
 
@@ -40,7 +40,9 @@ export const inquiryItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull().references(() => products.code), // RFP
+    productCode: text('product_code') // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+      .notNull()
+      .references(() => products.code),
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),

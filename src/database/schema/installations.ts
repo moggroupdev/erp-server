@@ -18,7 +18,7 @@ export const installations = pgTable(
     tripId: uuid('trip_id').references(() => trips.id),
     // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
-    installedAt: timestamp('installed_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     assignedTo: uuid('assigned_to').references(() => users.id),
     notes: text('notes'),
@@ -28,17 +28,17 @@ export const installations = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('installations_code_idx').on(table.code),
     index('installations_contract_id_idx').on(table.contractId),
     index('installations_trip_id_idx').on(table.tripId),
-    index('installations_assigned_to_idx').on(table.assignedTo),
     index('installations_scheduled_at_idx').on(table.scheduledAt),
-    index('installations_installed_at_idx').on(table.installedAt),
+    index('installations_completed_at_idx').on(table.completedAt),
     index('installations_cancelled_at_idx').on(table.cancelledAt),
-    check('installations_installed_cancelled_exclusive', sql`${table.installedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    index('installations_assigned_to_idx').on(table.assignedTo),
+    index('installations_created_by_idx').on(table.createdBy),
+    check('installations_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     check(
-      'installations_installed_at_gte_scheduled_at',
-      sql`${table.installedAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.installedAt} >= ${table.scheduledAt}`,
+      'installations_completed_at_gte_scheduled_at',
+      sql`${table.completedAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.completedAt} >= ${table.scheduledAt}`,
     ),
     check(
       'installations_cancelled_at_gte_scheduled_at',

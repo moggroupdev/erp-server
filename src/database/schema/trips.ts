@@ -20,9 +20,10 @@ export const trips = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('trips_code_idx').on(table.code),
     index('trips_scheduled_at_idx').on(table.scheduledAt),
     index('trips_cancelled_at_idx').on(table.cancelledAt),
+    index('trips_created_at_idx').on(table.createdAt),
+    index('trips_created_by_idx').on(table.createdBy),
     check(
       'trips_cancelled_at_gte_scheduled_at',
       sql`${table.cancelledAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.cancelledAt} >= ${table.scheduledAt}`,

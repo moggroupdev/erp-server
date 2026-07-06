@@ -23,7 +23,6 @@ export const serviceAgreements = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('service_agreements_code_idx').on(table.code),
     index('service_agreements_customer_address_id_idx').on(table.customerAddressId),
     index('service_agreements_started_at_idx').on(table.startedAt),
     check('service_agreements_ended_at_gt_started_at', sql`${table.endedAt} IS NULL OR ${table.endedAt} > ${table.startedAt}`),

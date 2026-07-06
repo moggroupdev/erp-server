@@ -24,9 +24,9 @@ export const offers = pgTable(
   },
   (table) => [
     index('offers_inquiry_id_idx').on(table.inquiryId),
-    index('offers_created_by_idx').on(table.createdBy),
     index('offers_status_idx').on(table.status),
     index('offers_created_at_idx').on(table.createdAt),
+    index('offers_created_by_idx').on(table.createdBy),
     nonNegativeQuantityCheck('offers_total_amount_non_negative', table.totalAmount),
   ],
 );
@@ -41,7 +41,9 @@ export const offerItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull().references(() => products.code), // RFP
+    productCode: text('product_code') // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+      .notNull()
+      .references(() => products.code),
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),

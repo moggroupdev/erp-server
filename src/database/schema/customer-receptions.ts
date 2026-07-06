@@ -27,11 +27,11 @@ export const customerReceptions = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('customer_receptions_code_idx').on(table.code),
     index('customer_receptions_customer_id_idx').on(table.customerId),
     index('customer_receptions_delivery_id_idx').on(table.deliveryId),
     index('customer_receptions_installation_id_idx').on(table.installationId),
     index('customer_receptions_received_at_idx').on(table.receivedAt),
+    index('customer_receptions_created_by_idx').on(table.createdBy),
   ],
 );
 

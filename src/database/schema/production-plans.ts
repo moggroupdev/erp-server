@@ -20,7 +20,6 @@ export const productionPlans = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('production_plans_code_idx').on(table.code),
     index('production_plans_name_idx').on(table.name),
     index('production_plans_start_date_idx').on(table.startDate),
     index('production_plans_end_date_idx').on(table.endDate),

@@ -22,15 +22,15 @@ export const contracts = pgTable(
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
+    customerId: uuid('customer_id') // RFP — app-checked. Must match inquiries.customer_id for inquiry_id and customer_addresses.customer_id for delivery_address_id.
+      .notNull()
+      .references(() => customers.id),
     previewId: uuid('preview_id') // Nullable — some contracts are not from previews
       .unique()
       .references(() => previews.id),
     offerId: uuid('offer_id') // Nullable — some contracts are not from offers
       .unique()
       .references(() => offers.id),
-    customerId: uuid('customer_id') // RFP
-      .notNull()
-      .references(() => customers.id),
     deliveryAddressId: uuid('delivery_address_id') // app-checked. Must belong to contracts.customer_id.
       .notNull()
       .references(() => customerAddresses.id),
@@ -49,15 +49,15 @@ export const contracts = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('contracts_code_idx').on(table.code),
     index('contracts_inquiry_id_idx').on(table.inquiryId),
     index('contracts_customer_id_idx').on(table.customerId),
-    index('contracts_created_at_idx').on(table.createdAt),
-    index('contracts_created_by_idx').on(table.createdBy),
+    index('contracts_delivery_address_id_idx').on(table.deliveryAddressId),
     index('contracts_delivery_time_idx').on(table.deliveryTime),
     index('contracts_started_at_idx').on(table.startedAt),
     index('contracts_completed_at_idx').on(table.completedAt),
     index('contracts_cancelled_at_idx').on(table.cancelledAt),
+    index('contracts_created_at_idx').on(table.createdAt),
+    index('contracts_created_by_idx').on(table.createdBy),
     check('contracts_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     check(
       'contracts_completed_after_started',
@@ -81,7 +81,9 @@ export const contractItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull().references(() => products.code), // RFP
+    productCode: text('product_code')
+      .notNull()
+      .references(() => products.code), // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
     title: text('title'),
     notes: text('notes'),
     unitPrice: numeric('unit_price').notNull(),

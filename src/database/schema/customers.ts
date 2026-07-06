@@ -26,10 +26,7 @@ export const customers = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('customers_code_idx').on(table.code),
     index('customers_name_idx').on(table.name),
-    index('customers_phone_idx').on(table.phone),
-    index('customers_email_idx').on(table.email),
   ],
 );
 

@@ -4,7 +4,9 @@
 
 Default is DRY — add entries here only when the join cost outweighs storage + sync complexity.
 
-**Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps) and service-validated columns. Those live in [`application-logic.md`](./application-logic.md) and use the `// app-synced` or `// app-checked` schema markers.
+**Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps) and non-RFP service-validated columns. Those live in [`application-logic.md`](./application-logic.md) and use the `// app-synced` or `// app-checked` schema markers.
+
+**RFP columns are always `// app-checked` too** — every denormalized copy must be set from its canonical source and kept consistent in the service layer. Use `// RFP — app-checked` on the column with a brief inline sync rule.
 
 ---
 

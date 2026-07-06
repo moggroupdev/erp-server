@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, index, check, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, index, check, foreignKey, unique } from 'drizzle-orm/pg-core';
 import { createdAt, maintenanceTypeEnum, maintenanceServiceLocationEnum, numeric, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
 import { serviceAgreements } from './service-agreements';
@@ -18,7 +18,7 @@ export const maintenanceOrders = pgTable(
     serviceAgreementId: uuid('service_agreement_id'),
     serviceLocation: maintenanceServiceLocationEnum('service_location').notNull(),
     customerAddressId: uuid('customer_address_id').references(() => customerAddresses.id),
-    customerId: uuid('customer_id') // RFP
+    customerId: uuid('customer_id') // RFP — app-checked. Must match customer_addresses.customer_id for customer_address_id (or service agreement address when service_contract).
       .notNull()
       .references(() => customers.id),
     tripId: uuid('trip_id').references(() => trips.id),
@@ -38,10 +38,15 @@ export const maintenanceOrders = pgTable(
       columns: [table.serviceAgreementId],
       foreignColumns: [serviceAgreements.id],
     }),
-    index('maintenance_orders_code_idx').on(table.code),
     index('maintenance_orders_customer_id_idx').on(table.customerId),
     index('maintenance_orders_service_agreement_id_idx').on(table.serviceAgreementId),
+    index('maintenance_orders_customer_address_id_idx').on(table.customerAddressId),
     index('maintenance_orders_trip_id_idx').on(table.tripId),
+    index('maintenance_orders_scheduled_at_idx').on(table.scheduledAt),
+    index('maintenance_orders_completed_at_idx').on(table.completedAt),
+    index('maintenance_orders_cancelled_at_idx').on(table.cancelledAt),
+    index('maintenance_orders_assigned_to_idx').on(table.assignedTo),
+    index('maintenance_orders_created_by_idx').on(table.createdBy),
     check(
       'maintenance_orders_service_agreement_required',
       sql`${table.maintenanceType} <> 'service_contract' OR ${table.serviceAgreementId} IS NOT NULL`,
@@ -79,6 +84,7 @@ export const maintenanceOrderItems = pgTable(
     }),
     index('maintenance_order_items_maintenance_order_id_idx').on(table.maintenanceOrderId),
     index('maintenance_order_items_product_unit_id_idx').on(table.productUnitId),
+    unique('moi_mo_product_unit_unique').on(table.maintenanceOrderId, table.productUnitId),
   ],
 );
 

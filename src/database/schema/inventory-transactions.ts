@@ -20,7 +20,6 @@ export const inventoryTransactions = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('inventory_transactions_code_idx').on(table.code),
     index('inventory_transactions_transaction_type_idx').on(table.transactionType),
     index('inventory_transactions_created_at_idx').on(table.createdAt),
     index('inventory_transactions_created_by_idx').on(table.createdBy),

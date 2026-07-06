@@ -56,7 +56,9 @@ export const previewItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code').notNull().references(() => products.code), // RFP
+    productCode: text('product_code') // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+      .notNull()
+      .references(() => products.code),
     notes: text('notes'),
   },
   (table) => [

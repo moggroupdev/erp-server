@@ -1,6 +1,12 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck, positiveNullableQuantityCheck } from './common';
+import {
+  createdAt,
+  numeric,
+  nonNegativeQuantityCheck,
+  positiveQuantityCheck,
+  positiveNullableQuantityCheck,
+} from './common';
 import { users } from './users';
 import { vendors } from './vendors';
 import { materials } from './materials';
@@ -16,7 +22,7 @@ export const materialPurchaseOrders = pgTable(
       .notNull()
       .references(() => vendors.id),
     totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity_ordered * unit_cost) from material_purchase_order_items
-    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced — set when all order lines are fully received (received + rejected = ordered) across non-cancelled receipts
+    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced — set when all order lines are fully received (received + rejected = ordered) across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
@@ -25,12 +31,11 @@ export const materialPurchaseOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('mpo_code_idx').on(table.code),
     index('mpo_vendor_id_idx').on(table.vendorId),
     index('mpo_completed_at_idx').on(table.completedAt),
     index('mpo_cancelled_at_idx').on(table.cancelledAt),
-    index('mpo_created_by_idx').on(table.createdBy),
     index('mpo_created_at_idx').on(table.createdAt),
+    index('mpo_created_by_idx').on(table.createdBy),
     check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
   ],
@@ -108,7 +113,6 @@ export const materialPurchaseReceipts = pgTable(
       columns: [table.materialPurchaseOrderId],
       foreignColumns: [materialPurchaseOrders.id],
     }),
-    index('mpr_code_idx').on(table.code),
     index('mpr_mpo_id_idx').on(table.materialPurchaseOrderId),
     index('mpr_received_at_idx').on(table.receivedAt),
     index('mpr_received_by_idx').on(table.receivedBy),

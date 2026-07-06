@@ -18,7 +18,7 @@ export const deliveries = pgTable(
     tripId: uuid('trip_id').references(() => trips.id),
     // Status can be deduced from these dates
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
-    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     assignedTo: uuid('assigned_to').references(() => users.id),
     notes: text('notes'),
@@ -28,17 +28,17 @@ export const deliveries = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('deliveries_code_idx').on(table.code),
     index('deliveries_contract_id_idx').on(table.contractId),
     index('deliveries_trip_id_idx').on(table.tripId),
-    index('deliveries_assigned_to_idx').on(table.assignedTo),
     index('deliveries_scheduled_at_idx').on(table.scheduledAt),
-    index('deliveries_delivered_at_idx').on(table.deliveredAt),
+    index('deliveries_completed_at_idx').on(table.completedAt),
     index('deliveries_cancelled_at_idx').on(table.cancelledAt),
-    check('deliveries_delivered_cancelled_exclusive', sql`${table.deliveredAt} IS NULL OR ${table.cancelledAt} IS NULL`),
+    index('deliveries_assigned_to_idx').on(table.assignedTo),
+    index('deliveries_created_by_idx').on(table.createdBy),
+    check('deliveries_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     check(
-      'deliveries_delivered_at_gte_scheduled_at',
-      sql`${table.deliveredAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.deliveredAt} >= ${table.scheduledAt}`,
+      'deliveries_completed_at_gte_scheduled_at',
+      sql`${table.completedAt} IS NULL OR ${table.scheduledAt} IS NULL OR ${table.completedAt} >= ${table.scheduledAt}`,
     ),
     check(
       'deliveries_cancelled_at_gte_scheduled_at',

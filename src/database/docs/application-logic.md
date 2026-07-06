@@ -42,7 +42,7 @@ Default to `0` when no items remain.
 
 | Column                                  | When to set                                                                                      |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `material_purchase_orders.completed_at` | All order lines fully received (received + rejected = ordered) across non-cancelled receipts     |
+| `material_purchase_orders.completed_at` | All order lines fully received (received + rejected = ordered) across all receipts               |
 | `product_purchase_orders.completed_at`  | All ordered units have a linked `product_purchase_receipt_items` row (one unit per receipt line) |
 
 Clear `completed_at` if receipts are reversed and the order is no longer fully fulfilled.
@@ -68,8 +68,8 @@ Clear `completed_at` if receipts are reversed and the order is no longer fully f
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `produced_at`         | Manufactured: when the last `production_plan_items` row for the unit has `completed_at` set                                                                                  |
 | `received_at`         | Imported: when linked via `product_purchase_receipt_items` and parent receipt `received_at` is set                                                                           |
-| `delivered_at`        | When parent `deliveries.delivered_at` is set for a `delivery_items` row referencing the unit                                                                                 |
-| `installed_at`        | When parent `installations.installed_at` is set for an `installation_items` row referencing the unit                                                                         |
+| `delivered_at`        | When parent `deliveries.completed_at` is set for a `delivery_items` row referencing the unit                                                                                 |
+| `installed_at`        | When parent `installations.completed_at` is set for an `installation_items` row referencing the unit                                                                         |
 | `warranty_started_at` | When parent `customer_receptions.received_at` is set for a `customer_reception_items` row referencing the unit (warranty is 1 year from this date — compute end date in API) |
 | `cancelled_at`        | When parent `contract_items` is cancelled/replaced (cascade), or unit is dropped on quantity decrease                                                                        |
 
@@ -81,15 +81,21 @@ Update or clear timestamps if the source event is undone (e.g. delivery cancelle
 
 See [`db-duplications.md`](./db-duplications.md) for what **RFP** (Redundant For Performance) means and the full column list.
 
+Every RFP column is also `// app-checked` in the schema — set from the canonical source on insert and keep consistent; treat as immutable after insert unless the driving FK changes (re-validate and re-sync in service).
+
 On contract creation:
 
 - Set `contracts.customer_id` from `inquiries.customer_id`.
 - Reject when inquiry and contract customer would diverge.
+- `delivery_address_id` must belong to that customer (see §6).
+
+On maintenance order creation:
+
+- Set `maintenance_orders.customer_id` from `customer_addresses.customer_id` via `customer_address_id`, or from the linked service agreement's address when `maintenance_type = 'service_contract'`.
 
 On inquiry, offer, preview, and contract item creation:
 
 - Set `product_code` from `product_dimensions.product_code` via `product_dimension_id`.
-- Treat as immutable after insert.
 
 ---
 
@@ -106,7 +112,12 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 ### Material purchase receipt quantities (`material_purchase_receipt_items`)
 
-- Sum of `quantity_received + quantity_rejected` per `material_purchase_order_item_id` (non-cancelled receipts) must not exceed `material_purchase_order_items.quantity_ordered`
+- Sum of `quantity_received + quantity_rejected` per `material_purchase_order_item_id` across all receipts must not exceed `material_purchase_order_items.quantity_ordered`
+- Receipts have no `cancelled_at` — voiding a receipt (if supported) is an application workflow, not a schema column
+
+### Product purchase order items (`product_purchase_order_items`)
+
+- Each `(product_purchase_order_id, contract_item_id)` pair is unique (DB constraint) — one PO line per contract item
 
 ### Product purchase receipts (`product_purchase_receipt_items`)
 
@@ -128,6 +139,17 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 - Defines step order within a product's routing; used by production plan prior-step completion checks (see above)
 - `completion_percentage` values for a given `product_code` must sum to exactly `100` when at least one route row exists — enforced by deferred constraint trigger in [`triggers.sql`](../sql/triggers.sql) (not app-checked)
 - Products with no route rows are allowed (routing not yet configured)
+
+### Pipeline line items (`product_code` — `// RFP — app-checked` on inquiry/offer/preview/contract items)
+
+- `product_code` must equal `product_dimensions.product_code` for the row's `product_dimension_id`
+- Set from the dimension on insert (see §5); treat as immutable after insert
+
+### Contract customer (`contracts.customer_id` — `// RFP — app-checked`)
+
+- Must equal `inquiries.customer_id` for the row's `inquiry_id`
+- Must equal `customer_addresses.customer_id` for `delivery_address_id`
+- Set from inquiry on insert (see §5); treat as immutable unless `inquiry_id` changes (re-validate in service if ever allowed)
 
 ### Contract delivery address (`contracts.delivery_address_id` — `// app-checked`)
 
@@ -173,8 +195,15 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Customer is derived from `customer_address_id` (`customer_addresses.customer_id`); no separate `customer_id` column on the agreement
 
+### Maintenance order customer (`maintenance_orders.customer_id` — `// RFP — app-checked`)
+
+- Must equal `customer_addresses.customer_id` for `customer_address_id`
+- When `maintenance_type = 'service_contract'`, must equal the customer on `service_agreements.customer_address_id`
+- Set on insert from the address or agreement chain (see §5); treat as immutable unless the driving address/agreement FK changes
+
 ### Maintenance order items (`maintenance_order_items` — `// app-checked`)
 
+- Each `(maintenance_order_id, product_unit_id)` pair is unique (DB constraint)
 - `product_unit_id` must belong to the maintenance order's `customer_id` (`product_units` → `contract_items` → `contracts.customer_id`)
 - Unit must not be cancelled (`product_units.cancelled_at IS NULL`)
 - When `maintenance_type = 'in_warranty'`, unit's `warranty_started_at` must be set and warranty must not be expired (1 year from `warranty_started_at` — compute in API)
@@ -209,22 +238,30 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Enforce valid transitions; coordinate with inquiry status updates where required.
 
+### Vendor quotation email status (`vendor_quotation_emails.status`)
+
+- Values: `draft`, `sent`, `failed` — no `cancelled` state; a failed send remains `failed` for audit
+
 ### Entity status from dates (no status enum — derive in API layer)
 
-| Entity                     | Active                                                                                                  | Completed                 | Cancelled          |
-| -------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------ |
-| `contracts`                | no `completed_at` / `cancelled_at`; pending start (`started_at` null) or in progress (`started_at` set) | `completed_at` set        | `cancelled_at` set |
-| `contract_items`           | no `cancelled_at`                                                                                       | —                         | `cancelled_at` set |
-| `product_units`            | no `cancelled_at` (and not yet received by customer)                                                    | `warranty_started_at` set | `cancelled_at` set |
-| `production_plan_items`    | no `completed_at` / `cancelled_at`                                                                      | `completed_at` set        | `cancelled_at` set |
-| `previews`                 | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
-| `deliveries`               | scheduled, not delivered/cancelled                                                                      | `delivered_at` set        | `cancelled_at` set |
-| `installations`            | scheduled, not installed/cancelled                                                                      | `installed_at` set        | `cancelled_at` set |
-| `trips`                    | scheduled, not cancelled                                                                                | —                         | `cancelled_at` set |
-| `customer_receptions`      | —                                                                                                       | `received_at` set         | —                  |
-| `maintenance_orders`       | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
-| `material_purchase_orders` | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
-| `product_purchase_orders`  | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
+| Entity                       | Active                                                                                                  | Completed                 | Cancelled          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------ |
+| `contracts`                  | no `completed_at` / `cancelled_at`; pending start (`started_at` null) or in progress (`started_at` set) | `completed_at` set        | `cancelled_at` set |
+| `contract_items`             | no `cancelled_at`                                                                                       | —                         | `cancelled_at` set |
+| `product_units`              | no `cancelled_at` (and not yet received by customer)                                                    | `warranty_started_at` set | `cancelled_at` set |
+| `production_plan_items`      | no `completed_at` / `cancelled_at`                                                                      | `completed_at` set        | `cancelled_at` set |
+| `previews`                   | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
+| `deliveries`                 | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
+| `installations`              | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
+| `trips`                      | scheduled, not cancelled                                                                                | —                         | `cancelled_at` set |
+| `customer_receptions`        | —                                                                                                       | `received_at` set         | —                  |
+| `maintenance_orders`         | scheduled, not completed/cancelled                                                                      | `completed_at` set        | `cancelled_at` set |
+| `material_purchase_orders`   | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
+| `product_purchase_orders`    | open                                                                                                    | `completed_at` set        | `cancelled_at` set |
+| `material_purchase_receipts` | —                                                                                                       | `received_at` set         | —                  |
+| `product_purchase_receipts`  | —                                                                                                       | `received_at` set         | —                  |
+
+Receipts (`material_purchase_receipts`, `product_purchase_receipts`) have no cancellation column — completion is derived from `received_at`.
 
 Mutually exclusive completion and cancellation timestamps where both exist.
 

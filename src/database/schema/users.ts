@@ -24,13 +24,10 @@ export const users = pgTable(
     deletedAt,
   },
   (table) => [
-    index('users_code_idx').on(table.code),
+    index('users_name_idx').on(table.name),
     index('users_role_id_idx').on(table.roleId),
     index('users_department_id_idx').on(table.departmentId),
     index('users_production_sub_department_idx').on(table.productionSubDepartment),
-    index('users_name_idx').on(table.name),
-    index('users_phone_idx').on(table.phone),
-    index('users_email_idx').on(table.email),
     check(
       'users_admin_or_role_check',
       sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.roleId} IS NOT NULL)`,
@@ -60,10 +57,7 @@ export const permissions = pgTable(
       .references(() => roles.id),
     permission: permissionEnum('permission').notNull(),
   },
-  (table) => [
-    primaryKey({ columns: [table.roleId, table.permission] }),
-    index('role_permissions_role_id_idx').on(table.roleId),
-  ],
+  (table) => [primaryKey({ columns: [table.roleId, table.permission] }), index('permissions_role_id_idx').on(table.roleId)],
 );
 
 // ============================== RELATIONS ==============================

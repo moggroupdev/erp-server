@@ -53,9 +53,9 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | material_purchase_orders                    | uuid        | MPO  | cancelledAt field | YES       | YES (NOT NULL) |
 | material_purchase_order_items               | uuid        | —    | NO                | NO        | NO             |
 | material_purchase_order_item_contract_items | uuid        | —    | NO                | NO        | NO             |
-| material_purchase_receipts                  | uuid        | MPR  | cancelledAt field | YES       | YES (NOT NULL) |
+| material_purchase_receipts                  | uuid        | MPR  | NO                | YES       | YES (NOT NULL) |
 | material_purchase_receipt_items             | uuid        | —    | NO                | NO        | NO             |
-| vendor_quotation_emails                     | uuid        | —    | cancelled status  | YES       | YES (NOT NULL) |
+| vendor_quotation_emails                     | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | deliveries                                  | uuid        | DEL  | cancelledAt field | YES       | YES (NOT NULL) |
 | delivery_items                              | uuid        | —    | NO                | NO        | NO             |
 | trips                                       | uuid        | TRP  | cancelledAt field | YES       | YES (NOT NULL) |
@@ -77,5 +77,5 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | product_units                               | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_purchase_orders                     | uuid        | PPO  | cancelledAt field | YES       | YES (NOT NULL) |
 | product_purchase_order_items                | uuid        | —    | NO                | NO        | NO             |
-| product_purchase_receipts                   | uuid        | PPR  | cancelledAt field | YES       | YES (NOT NULL) |
+| product_purchase_receipts                   | uuid        | PPR  | NO                | YES       | YES (NOT NULL) |
 | product_purchase_receipt_items              | uuid        | —    | NO                | NO        | NO             |

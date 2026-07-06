@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, index, foreignKey, check } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, integer, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
 import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { vendors } from './vendors';
@@ -24,7 +24,6 @@ export const productPurchaseOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('ppo_code_idx').on(table.code),
     index('ppo_vendor_id_idx').on(table.vendorId),
     index('ppo_created_at_idx').on(table.createdAt),
     index('ppo_created_by_idx').on(table.createdBy),
@@ -58,6 +57,7 @@ export const productPurchaseOrderItems = pgTable(
     }),
     index('ppoi_ppo_id_idx').on(table.productPurchaseOrderId),
     index('ppoi_contract_item_id_idx').on(table.contractItemId),
+    unique('ppoi_ppo_contract_item_unique').on(table.productPurchaseOrderId, table.contractItemId),
     check('ppoi_quantity_ordered_positive', sql`${table.quantityOrdered} > 0`),
     positiveQuantityCheck('ppoi_unit_cost_positive', table.unitCost),
   ],
@@ -83,7 +83,6 @@ export const productPurchaseReceipts = pgTable(
       columns: [table.productPurchaseOrderId],
       foreignColumns: [productPurchaseOrders.id],
     }),
-    index('ppr_code_idx').on(table.code),
     index('ppr_ppo_id_idx').on(table.productPurchaseOrderId),
     index('ppr_received_at_idx').on(table.receivedAt),
     index('ppr_received_by_idx').on(table.receivedBy),
@@ -119,7 +118,6 @@ export const productPurchaseReceiptItems = pgTable(
     }),
     index('ppri_receipt_id_idx').on(table.productPurchaseReceiptId),
     index('ppri_ppoi_id_idx').on(table.productPurchaseOrderItemId),
-    index('ppri_product_unit_id_idx').on(table.productUnitId),
   ],
 );
 

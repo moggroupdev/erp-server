@@ -22,8 +22,9 @@ export const vendorQuotationEmails = pgTable(
   },
   (table) => [
     index('vendor_quotation_emails_vendor_id_idx').on(table.vendorId),
-    index('vendor_quotation_emails_created_by_idx').on(table.createdBy),
     index('vendor_quotation_emails_status_idx').on(table.status),
+    index('vendor_quotation_emails_created_at_idx').on(table.createdAt),
+    index('vendor_quotation_emails_created_by_idx').on(table.createdBy),
   ],
 );
 
