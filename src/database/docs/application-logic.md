@@ -24,6 +24,8 @@ Recalculate parent totals inside a transaction whenever line items are created, 
 
 Default to `0` when no items remain.
 
+**Negotiated totals (not stored):** `offers.discount_pct` and `contracts.discount_pct` are separate from `total_amount`. Compute the negotiated total in the API as `total_amount * (1 - discount_pct / 100)` when `discount_pct` is set; otherwise use `total_amount`. Do not bake the discount into line `unit_price` or parent `total_amount`.
+
 ---
 
 ## 2. Cached quantity sync
@@ -88,6 +90,7 @@ On contract creation:
 - Set `contracts.customer_id` from `inquiries.customer_id`.
 - Reject when inquiry and contract customer would diverge.
 - `delivery_address_id` must belong to that customer (see §6).
+- When `offer_id` is set, set `contracts.discount_pct` from `offers.discount_pct` (may be `NULL`). When `offer_id` is null, `discount_pct` may be set directly on contract creation.
 
 On maintenance order creation:
 
@@ -243,6 +246,16 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 ### Offer status (`offers.status`)
 
 - Enforce valid transitions; coordinate with inquiry status updates where required.
+
+### Offer negotiation (`offers.discount_pct`, `offer_negotiations`)
+
+- Negotiation is a **blanket discount at the offer header**, not per line item.
+- `offer_negotiations` is an **append-only** round log — no edits or hard-deletes. Each row records one proposed discount for a round.
+- `party` (`customer` | `company`) labels whose position the row records, not who authenticated in the system. Customers are not `users`; `created_by` is always the internal sales user logging the round (phone/email).
+- `discount_pct` on each negotiation row is the proposed discount for that round (0–100). When `party = 'company'`, enforce the acting user's role discount cap (see §11); customer-position rows are not capped.
+- `offers.discount_pct` holds the **currently agreed** discount. Update it in the service when a round is accepted — it is **not** auto-synced from the log's last row, and is not `// app-checked` in schema.
+- Reject new negotiation rounds when parent `offers.status` is `accepted`, `rejected`, or `cancelled`.
+- On contract creation from an accepted offer, copy `offers.discount_pct` to `contracts.discount_pct` (see §5). `contract_items.unit_price` stays the pre-discount quoted price.
 
 ### Vendor quotation email status (`vendor_quotation_emails.status`)
 
@@ -429,10 +442,17 @@ Item A (cancelled)  ←  Item B (cancelled)  ←  Item C (active)
 
 ### Role discount cap (`roles.max_discount_pct` — `// app-checked`)
 
-- On offer create/update, enforce the acting user's role discount cap (join `users` → `roles`).
+- On offer create/update and when appending `offer_negotiations` rows with `party = 'company'`, enforce the acting user's role discount cap (join `users` → `roles`) against `offer_negotiations.discount_pct`. When accepting a company round and updating `offers.discount_pct`, apply the same cap.
+- When creating a contract without `offer_id` and setting `contracts.discount_pct`, enforce the same role discount cap.
 - Admins (`isAdmin = true`, `roleId` null) are exempt — no role, no cap.
 - `NULL` on the role means **no discount allowed** — reject any discount greater than `0`.
 - A non-null value is the maximum discount percentage permitted (e.g. `10` → up to 10%). Reject when the requested discount exceeds that cap.
+
+### Contract discount (`contracts.discount_pct` — `// app-checked`)
+
+- When `offer_id` is set, must equal `offers.discount_pct` for that offer (copy on contract creation).
+- When `offer_id` is null, may be set directly on contract creation (nullable). Enforce the acting user's role discount cap when a non-null value is provided (see §11).
+- Treat as immutable after insert unless `offer_id` changes (re-validate in service if ever allowed).
 
 ### Role department scope (`roles.department_id` — `// app-checked`)
 

@@ -1,6 +1,6 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, integer, index } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, offerStatusEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, integer, index, check } from 'drizzle-orm/pg-core';
+import { createdAt, numeric, percentage, offerStatusEnum, negotiationPartyEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
 import { products, productDimensions } from './products';
@@ -16,6 +16,7 @@ export const offers = pgTable(
     status: offerStatusEnum('status').notNull().default('draft'),
     validUntil: timestamp('valid_until', { withTimezone: true }),
     totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from offer_items
+    discountPct: percentage('discount_pct'),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -28,6 +29,10 @@ export const offers = pgTable(
     index('offers_created_at_idx').on(table.createdAt),
     index('offers_created_by_idx').on(table.createdBy),
     nonNegativeQuantityCheck('offers_total_amount_non_negative', table.totalAmount),
+    check(
+      'offers_discount_pct_check',
+      sql`${table.discountPct} IS NULL OR (${table.discountPct} >= 0 AND ${table.discountPct} <= 100)`,
+    ),
   ],
 );
 
@@ -58,6 +63,32 @@ export const offerItems = pgTable(
   ],
 );
 
+export const offerNegotiations = pgTable(
+  'offer_negotiations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    offerId: uuid('offer_id')
+      .notNull()
+      .references(() => offers.id),
+    party: negotiationPartyEnum('party').notNull(),
+    discountPct: percentage('discount_pct').notNull(), // app-checked — when party = company, must not exceed the acting user's role.maxDiscountPct (roles.max_discount_pct)
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    index('offer_negotiations_offer_id_idx').on(table.offerId),
+    index('offer_negotiations_created_by_idx').on(table.createdBy),
+    index('offer_negotiations_created_at_idx').on(table.createdAt),
+    check(
+      'offer_negotiations_discount_pct_check',
+      sql`${table.discountPct} >= 0 AND ${table.discountPct} <= 100`,
+    ),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
 export const offersRelations = relations(offers, ({ one, many }) => ({
@@ -70,6 +101,7 @@ export const offersRelations = relations(offers, ({ one, many }) => ({
     references: [users.id],
   }),
   items: many(offerItems),
+  negotiations: many(offerNegotiations),
   contracts: many(contracts),
 }));
 
@@ -85,5 +117,16 @@ export const offerItemsRelations = relations(offerItems, ({ one }) => ({
   product: one(products, {
     fields: [offerItems.productCode],
     references: [products.code],
+  }),
+}));
+
+export const offerNegotiationsRelations = relations(offerNegotiations, ({ one }) => ({
+  offer: one(offers, {
+    fields: [offerNegotiations.offerId],
+    references: [offers.id],
+  }),
+  createdByUser: one(users, {
+    fields: [offerNegotiations.createdBy],
+    references: [users.id],
   }),
 }));

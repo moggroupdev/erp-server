@@ -19,7 +19,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Customer records with structured delivery addresses (country, governorate, and city)
 - Product inquiries listing requested equipment and quantities, progressing through preview scheduling, site visit, quotation, and acceptance or rejection
 - Site previews: scheduled visits with assigned staff, per-item measurements, and technical notes
-- Sales offers (quotations) with line pricing, validity period, and status
+- Sales offers (quotations) with line pricing, validity period, status, and optional blanket discount negotiation (round log before acceptance)
 - Contracts — the confirmed order — preserving the trail from inquiry through preview and offer, along with delivery address, expected delivery time, and work-order start date
 
 ### Products & Engineering
@@ -82,7 +82,7 @@ A project begins when a customer reaches out requesting equipment and pricing. T
 
 When a site visit is needed, the Preview Team schedules a preview, assigns staff, and visits the customer's location. They take measurements, assess installation constraints, and capture technical requirements — typically one preview line per inquiry product, copied at scheduling time as a standalone snapshot (same pattern as offer and contract lines).
 
-With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability. When production or fulfillment work begins, the contract's work-order start date (`started_at`) is recorded.
+With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer counters on price, sales records negotiation rounds (blanket discount) until terms are agreed. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability. When production or fulfillment work begins, the contract's work-order start date (`started_at`) is recorded.
 
 ### Order Breakdown
 

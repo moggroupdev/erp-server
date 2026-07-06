@@ -98,6 +98,16 @@ export const OFFER_STATUSES = Object.fromEntries(OFFER_STATUS_VALUES.map((status
   [K in Uppercase<(typeof OFFER_STATUS_VALUES)[number]>]: Lowercase<K>;
 };
 
+// ==================== NEGOTIATION_PARTIES ====================
+
+export const NEGOTIATION_PARTY_VALUES = ['customer', 'company'] as const;
+
+export const NEGOTIATION_PARTIES = Object.fromEntries(
+  NEGOTIATION_PARTY_VALUES.map((party) => [party.toUpperCase(), party]),
+) as {
+  [K in Uppercase<(typeof NEGOTIATION_PARTY_VALUES)[number]>]: Lowercase<K>;
+};
+
 // ==================== VENDOR_QUOTATION_EMAIL_STATUSES ====================
 
 export const VENDOR_QUOTATION_EMAIL_STATUS_VALUES = ['draft', 'sent', 'failed'] as const;

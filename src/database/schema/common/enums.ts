@@ -7,6 +7,7 @@ import {
   MAINTENANCE_TYPE_VALUES,
   MATERIAL_TYPE_VALUES,
   MATERIAL_UNIT_VALUES,
+  NEGOTIATION_PARTY_VALUES,
   OFFER_STATUS_VALUES,
   PERMISSION_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
@@ -31,6 +32,8 @@ export const productSourceTypeEnum = pgEnum('product_source_type', PRODUCT_SOURC
 export const inquiryStatusEnum = pgEnum('inquiry_status', INQUIRY_STATUS_VALUES);
 
 export const offerStatusEnum = pgEnum('offer_status', OFFER_STATUS_VALUES);
+
+export const negotiationPartyEnum = pgEnum('negotiation_party', NEGOTIATION_PARTY_VALUES);
 
 export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', VENDOR_QUOTATION_EMAIL_STATUS_VALUES);
 

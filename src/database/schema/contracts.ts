@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { numeric, createdAt, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import { numeric, createdAt, percentage, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { customers, customerAddresses } from './customers';
 import { products, productDimensions } from './products';
 import { inquiries } from './inquiries';
@@ -36,6 +36,7 @@ export const contracts = pgTable(
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
+    discountPct: percentage('discount_pct'), // app-checked. When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract creation.
     // Contract status can be deduced from these dates:
     startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -68,6 +69,10 @@ export const contracts = pgTable(
       sql`${table.cancelledAt} IS NULL OR ${table.startedAt} IS NULL OR ${table.cancelledAt} >= ${table.startedAt}`,
     ),
     nonNegativeQuantityCheck('contracts_total_amount_non_negative', table.totalAmount),
+    check(
+      'contracts_discount_pct_check',
+      sql`${table.discountPct} IS NULL OR (${table.discountPct} >= 0 AND ${table.discountPct} <= 100)`,
+    ),
   ],
 );
 
