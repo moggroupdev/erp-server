@@ -217,6 +217,12 @@ Rules below apply on create/update in NestJS. Mark the relevant schema column(s)
 
 - Only one `is_default = true` per product — enforced by partial unique index (not app-checked). Unset the previous default when setting a new one in the same transaction to avoid insert/update conflicts.
 
+### Catalog unit price (`products.pricing_factor`)
+
+- **BOM total cost:** `SUM(product_standard_boms.quantity_required * materials.unit_cost)` for the selected `product_dimension_id` (join `product_standard_boms` → `materials` via `material_code`).
+- **Suggested unit price:** `BOM total cost * products.pricing_factor`.
+- `pricing_factor` must be `> 0` (DB check). Apply rounding in the service when persisting offer/contract line prices.
+
 ---
 
 ## 7. Workflow guards
@@ -416,3 +422,20 @@ Item A (cancelled)  ←  Item B (cancelled)  ←  Item C (active)
 - **`contracts`** — omit from update DTOs: `cancelled_at`, `cancelled_by`, `cancellation_reason` (set only via cancel workflow).
 - **`contract_items`** — omit from update DTOs: `previous_version_id`, `cancelled_at`, `cancelled_by`, `cancellation_reason`, `created_by` (set on insert only).
 - Never hard-delete `contract_items`, `product_units`, or `production_plan_items`.
+
+---
+
+## 11. Role discount cap and department scope
+
+### Role discount cap (`roles.max_discount_pct` — `// app-checked`)
+
+- On offer create/update, enforce the acting user's role discount cap (join `users` → `roles`).
+- Admins (`isAdmin = true`, `roleId` null) are exempt — no role, no cap.
+- `NULL` on the role means **no discount allowed** — reject any discount greater than `0`.
+- A non-null value is the maximum discount percentage permitted (e.g. `10` → up to 10%). Reject when the requested discount exceeds that cap.
+
+### Role department scope (`roles.department_id` — `// app-checked`)
+
+- Optional metadata: when set, the role is scoped to that department (e.g. Sales-only roles).
+- On user create/update, when assigning a role, if the role has a non-null `departmentId`, it must equal the user's `departmentId` — reject mismatches.
+- Re-validate when either `users.departmentId` or `users.roleId` is updated.

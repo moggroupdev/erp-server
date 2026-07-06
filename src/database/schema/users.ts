@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt, permissionEnum, productionSubDepartmentEnum } from './common';
+import { createdAt, deletedAt, percentage, permissionEnum, productionSubDepartmentEnum } from './common';
 import { loginHistory } from './login-history';
 import { departments } from './departments';
 
@@ -41,12 +41,21 @@ export const roles = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull().unique(),
     description: text('description'),
+    maxDiscountPct: percentage('max_discount_pct'), // app-checked. NULL = no discount allowed; non-null = max percentage cap.
+    departmentId: uuid('department_id').references(() => departments.id), // app-checked. Optional department scope for role assignment.
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references((): AnyPgColumn => users.id),
   },
-  (table) => [index('roles_created_by_idx').on(table.createdBy)],
+  (table) => [
+    index('roles_created_by_idx').on(table.createdBy),
+    index('roles_department_id_idx').on(table.departmentId),
+    check(
+      'roles_max_discount_pct_check',
+      sql`${table.maxDiscountPct} IS NULL OR (${table.maxDiscountPct} >= 0 AND ${table.maxDiscountPct} <= 100)`,
+    ),
+  ],
 );
 
 export const permissions = pgTable(
@@ -90,6 +99,11 @@ export const rolesRelations = relations(roles, ({ one, many }) => ({
     fields: [roles.createdBy],
     references: [users.id],
     relationName: 'roleCreatedBy',
+  }),
+  department: one(departments, {
+    fields: [roles.departmentId],
+    references: [departments.id],
+    relationName: 'roleDepartment',
   }),
   permissions: many(permissions),
   users: many(users, { relationName: 'userRole' }),

@@ -1,7 +1,5 @@
 import { customType } from 'drizzle-orm/pg-core';
 
-export const numericPrecision = { precision: 15, scale: 3 };
-
 const createNumericType = (precision: number, scale: number) =>
   customType<{ data: number; driverData: string }>({
     dataType: () => `numeric(${precision}, ${scale})`,
@@ -9,7 +7,10 @@ const createNumericType = (precision: number, scale: number) =>
     toDriver: (value: number) => value.toString(),
   });
 
-export const numeric = createNumericType(numericPrecision.precision, numericPrecision.scale);
+export const numeric = createNumericType(15, 3);
+
+/** Percentage value — 0.00 – 100.00 */
+export const percentage = createNumericType(5, 2);
 
 /** Latitude — WGS84, ±90° with 8 decimal places (~1 mm precision). */
 export const geoLat = createNumericType(10, 8);

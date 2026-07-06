@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { pgTable, text, uuid, index, check, unique, integer, boolean, uniqueIndex, foreignKey } from 'drizzle-orm/pg-core';
 import {
   numeric,
+  percentage,
   createdAt,
   deletedAt,
   dimensionUnitEnum,
@@ -29,6 +30,7 @@ export const products = pgTable(
       .references(() => productCategorySubs.id),
     sourceType: productSourceTypeEnum('source_type').notNull(),
     estimatedProductionTime: integer('estimated_production_time'), // In Days
+    pricingFactor: numeric('pricing_factor').notNull(), // Multiplier on standard BOM total cost to derive catalog unit price
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
@@ -42,6 +44,7 @@ export const products = pgTable(
       'products_estimated_production_time_positive',
       sql`${table.estimatedProductionTime} IS NULL OR ${table.estimatedProductionTime} > 0`,
     ),
+    positiveQuantityCheck('products_pricing_factor_positive', table.pricingFactor),
   ],
 );
 
@@ -109,12 +112,12 @@ export const productProductionRoutes = pgTable(
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
-    subDepartment: productionSubDepartmentEnum('sub_department').notNull(),
+    productionDepartment: productionSubDepartmentEnum('production_department').notNull(),
     sequenceOrder: integer('sequence_order').notNull(), // app-checked. Sequential order within the product's production routes.
-    completionPercentage: numeric('completion_percentage').notNull(),
+    completionPercentage: percentage('completion_percentage').notNull(),
   },
   (table) => [
-    unique('product_production_routes_product_sub_dept_unique').on(table.productCode, table.subDepartment),
+    unique('product_production_routes_product_production_dept_unique').on(table.productCode, table.productionDepartment),
     unique('product_production_routes_product_sequence_unique').on(table.productCode, table.sequenceOrder),
     index('product_production_routes_product_code_idx').on(table.productCode),
     check('product_production_routes_sequence_order_positive', sql`${table.sequenceOrder} > 0`),
