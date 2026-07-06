@@ -1,176 +1,9 @@
 {
-  "id": "0a7cd6af-02eb-4176-bf3a-285dcf5f4a14",
+  "id": "9ad8b2a6-a78a-409a-b1e4-d01a6cb80320",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.boms": {
-      "name": "boms",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "product_unit_id": {
-          "name": "product_unit_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "material_code": {
-          "name": "material_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity_required": {
-          "name": "quantity_required",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unit_cost": {
-          "name": "unit_cost",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "boms_product_unit_id_idx": {
-          "name": "boms_product_unit_id_idx",
-          "columns": [
-            {
-              "expression": "product_unit_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "boms_material_code_idx": {
-          "name": "boms_material_code_idx",
-          "columns": [
-            {
-              "expression": "material_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "boms_created_by_idx": {
-          "name": "boms_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "boms_product_unit_id_product_units_id_fk": {
-          "name": "boms_product_unit_id_product_units_id_fk",
-          "tableFrom": "boms",
-          "tableTo": "product_units",
-          "columnsFrom": [
-            "product_unit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "boms_material_code_materials_code_fk": {
-          "name": "boms_material_code_materials_code_fk",
-          "tableFrom": "boms",
-          "tableTo": "materials",
-          "columnsFrom": [
-            "material_code"
-          ],
-          "columnsTo": [
-            "code"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "boms_created_by_users_id_fk": {
-          "name": "boms_created_by_users_id_fk",
-          "tableFrom": "boms",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "boms_product_unit_material_unique": {
-          "name": "boms_product_unit_material_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "product_unit_id",
-            "material_code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "boms_quantity_required_positive": {
-          "name": "boms_quantity_required_positive",
-          "value": "\"boms\".\"quantity_required\" > 0"
-        },
-        "boms_unit_cost_positive": {
-          "name": "boms_unit_cost_positive",
-          "value": "\"boms\".\"unit_cost\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.material_category_mains": {
       "name": "material_category_mains",
       "schema": "",
@@ -565,92 +398,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.contract_item_dimensions": {
-      "name": "contract_item_dimensions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "contract_item_id": {
-          "name": "contract_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "length": {
-          "name": "length",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "width": {
-          "name": "width",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "height": {
-          "name": "height",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unit": {
-          "name": "unit",
-          "type": "dimension_unit",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "contract_item_dimensions_contract_item_id_contract_items_id_fk": {
-          "name": "contract_item_dimensions_contract_item_id_contract_items_id_fk",
-          "tableFrom": "contract_item_dimensions",
-          "tableTo": "contract_items",
-          "columnsFrom": [
-            "contract_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "contract_item_dimensions_contract_item_id_unique": {
-          "name": "contract_item_dimensions_contract_item_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "contract_item_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "contract_item_dimensions_length_non_negative": {
-          "name": "contract_item_dimensions_length_non_negative",
-          "value": "\"contract_item_dimensions\".\"length\" >= 0"
-        },
-        "contract_item_dimensions_width_non_negative": {
-          "name": "contract_item_dimensions_width_non_negative",
-          "value": "\"contract_item_dimensions\".\"width\" >= 0"
-        },
-        "contract_item_dimensions_height_non_negative": {
-          "name": "contract_item_dimensions_height_non_negative",
-          "value": "\"contract_item_dimensions\".\"height\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.contract_items": {
       "name": "contract_items",
       "schema": "",
@@ -664,6 +411,12 @@
         },
         "contract_id": {
           "name": "contract_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_dimension_id": {
+          "name": "product_dimension_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -698,6 +451,36 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by": {
+          "name": "cancelled_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancellation_reason": {
+          "name": "cancellation_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_version_id": {
+          "name": "previous_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -716,11 +499,71 @@
           "method": "btree",
           "with": {}
         },
+        "contract_items_product_dimension_id_idx": {
+          "name": "contract_items_product_dimension_id_idx",
+          "columns": [
+            {
+              "expression": "product_dimension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "contract_items_product_code_idx": {
           "name": "contract_items_product_code_idx",
           "columns": [
             {
               "expression": "product_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contract_items_created_by_idx": {
+          "name": "contract_items_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contract_items_cancelled_at_idx": {
+          "name": "contract_items_cancelled_at_idx",
+          "columns": [
+            {
+              "expression": "cancelled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contract_items_previous_version_id_idx": {
+          "name": "contract_items_previous_version_id_idx",
+          "columns": [
+            {
+              "expression": "previous_version_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -746,6 +589,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "contract_items_product_dimension_id_product_dimensions_id_fk": {
+          "name": "contract_items_product_dimension_id_product_dimensions_id_fk",
+          "tableFrom": "contract_items",
+          "tableTo": "product_dimensions",
+          "columnsFrom": [
+            "product_dimension_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "contract_items_product_code_products_code_fk": {
           "name": "contract_items_product_code_products_code_fk",
           "tableFrom": "contract_items",
@@ -755,6 +611,45 @@
           ],
           "columnsTo": [
             "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "contract_items_created_by_users_id_fk": {
+          "name": "contract_items_created_by_users_id_fk",
+          "tableFrom": "contract_items",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "contract_items_cancelled_by_users_id_fk": {
+          "name": "contract_items_cancelled_by_users_id_fk",
+          "tableFrom": "contract_items",
+          "tableTo": "users",
+          "columnsFrom": [
+            "cancelled_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "contract_items_previous_version_id_contract_items_id_fk": {
+          "name": "contract_items_previous_version_id_contract_items_id_fk",
+          "tableFrom": "contract_items",
+          "tableTo": "contract_items",
+          "columnsFrom": [
+            "previous_version_id"
+          ],
+          "columnsTo": [
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -798,6 +693,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "preview_id": {
           "name": "preview_id",
           "type": "uuid",
@@ -809,12 +710,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
         },
         "delivery_address_id": {
           "name": "delivery_address_id",
@@ -834,6 +729,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "completed_at": {
           "name": "completed_at",
           "type": "timestamp with time zone",
@@ -843,6 +744,18 @@
         "cancelled_at": {
           "name": "cancelled_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_by": {
+          "name": "cancelled_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancellation_reason": {
+          "name": "cancellation_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -867,21 +780,6 @@
         }
       },
       "indexes": {
-        "contracts_code_idx": {
-          "name": "contracts_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "contracts_inquiry_id_idx": {
           "name": "contracts_inquiry_id_idx",
           "columns": [
@@ -912,11 +810,41 @@
           "method": "btree",
           "with": {}
         },
+        "contracts_delivery_address_id_idx": {
+          "name": "contracts_delivery_address_id_idx",
+          "columns": [
+            {
+              "expression": "delivery_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "contracts_delivery_time_idx": {
           "name": "contracts_delivery_time_idx",
           "columns": [
             {
               "expression": "delivery_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "contracts_started_at_idx": {
+          "name": "contracts_started_at_idx",
+          "columns": [
+            {
+              "expression": "started_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1002,6 +930,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "contracts_customer_id_customers_id_fk": {
+          "name": "contracts_customer_id_customers_id_fk",
+          "tableFrom": "contracts",
+          "tableTo": "customers",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "contracts_preview_id_previews_id_fk": {
           "name": "contracts_preview_id_previews_id_fk",
           "tableFrom": "contracts",
@@ -1028,12 +969,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "contracts_customer_id_customers_id_fk": {
-          "name": "contracts_customer_id_customers_id_fk",
+        "contracts_delivery_address_id_customer_addresses_id_fk": {
+          "name": "contracts_delivery_address_id_customer_addresses_id_fk",
           "tableFrom": "contracts",
-          "tableTo": "customers",
+          "tableTo": "customer_addresses",
           "columnsFrom": [
-            "customer_id"
+            "delivery_address_id"
           ],
           "columnsTo": [
             "id"
@@ -1041,12 +982,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "contracts_delivery_address_id_customer_addresses_id_fk": {
-          "name": "contracts_delivery_address_id_customer_addresses_id_fk",
+        "contracts_cancelled_by_users_id_fk": {
+          "name": "contracts_cancelled_by_users_id_fk",
           "tableFrom": "contracts",
-          "tableTo": "customer_addresses",
+          "tableTo": "users",
           "columnsFrom": [
-            "delivery_address_id"
+            "cancelled_by"
           ],
           "columnsTo": [
             "id"
@@ -1097,6 +1038,14 @@
         "contracts_completed_cancelled_exclusive": {
           "name": "contracts_completed_cancelled_exclusive",
           "value": "\"contracts\".\"completed_at\" IS NULL OR \"contracts\".\"cancelled_at\" IS NULL"
+        },
+        "contracts_completed_after_started": {
+          "name": "contracts_completed_after_started",
+          "value": "\"contracts\".\"completed_at\" IS NULL OR \"contracts\".\"started_at\" IS NULL OR \"contracts\".\"completed_at\" >= \"contracts\".\"started_at\""
+        },
+        "contracts_cancelled_after_started": {
+          "name": "contracts_cancelled_after_started",
+          "value": "\"contracts\".\"cancelled_at\" IS NULL OR \"contracts\".\"started_at\" IS NULL OR \"contracts\".\"cancelled_at\" >= \"contracts\".\"started_at\""
         },
         "contracts_total_amount_non_negative": {
           "name": "contracts_total_amount_non_negative",
@@ -1172,6 +1121,301 @@
       "uniqueConstraints": {
         "countries_code_unique": {
           "name": "countries_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.customer_reception_items": {
+      "name": "customer_reception_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "customer_reception_id": {
+          "name": "customer_reception_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_unit_id": {
+          "name": "product_unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "customer_reception_items_reception_id_idx": {
+          "name": "customer_reception_items_reception_id_idx",
+          "columns": [
+            {
+              "expression": "customer_reception_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "customer_reception_items_customer_reception_id_customer_receptions_id_fk": {
+          "name": "customer_reception_items_customer_reception_id_customer_receptions_id_fk",
+          "tableFrom": "customer_reception_items",
+          "tableTo": "customer_receptions",
+          "columnsFrom": [
+            "customer_reception_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "customer_reception_items_product_unit_id_product_units_id_fk": {
+          "name": "customer_reception_items_product_unit_id_product_units_id_fk",
+          "tableFrom": "customer_reception_items",
+          "tableTo": "product_units",
+          "columnsFrom": [
+            "product_unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "customer_reception_items_product_unit_id_unique": {
+          "name": "customer_reception_items_product_unit_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "product_unit_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.customer_receptions": {
+      "name": "customer_receptions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_id": {
+          "name": "delivery_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "installation_id": {
+          "name": "installation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "customer_receptions_customer_id_idx": {
+          "name": "customer_receptions_customer_id_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customer_receptions_delivery_id_idx": {
+          "name": "customer_receptions_delivery_id_idx",
+          "columns": [
+            {
+              "expression": "delivery_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customer_receptions_installation_id_idx": {
+          "name": "customer_receptions_installation_id_idx",
+          "columns": [
+            {
+              "expression": "installation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customer_receptions_received_at_idx": {
+          "name": "customer_receptions_received_at_idx",
+          "columns": [
+            {
+              "expression": "received_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "customer_receptions_created_by_idx": {
+          "name": "customer_receptions_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "customer_receptions_customer_id_customers_id_fk": {
+          "name": "customer_receptions_customer_id_customers_id_fk",
+          "tableFrom": "customer_receptions",
+          "tableTo": "customers",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "customer_receptions_delivery_id_deliveries_id_fk": {
+          "name": "customer_receptions_delivery_id_deliveries_id_fk",
+          "tableFrom": "customer_receptions",
+          "tableTo": "deliveries",
+          "columnsFrom": [
+            "delivery_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "customer_receptions_installation_id_installations_id_fk": {
+          "name": "customer_receptions_installation_id_installations_id_fk",
+          "tableFrom": "customer_receptions",
+          "tableTo": "installations",
+          "columnsFrom": [
+            "installation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "customer_receptions_created_by_users_id_fk": {
+          "name": "customer_receptions_created_by_users_id_fk",
+          "tableFrom": "customer_receptions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "customer_receptions_code_unique": {
+          "name": "customer_receptions_code_unique",
           "nullsNotDistinct": false,
           "columns": [
             "code"
@@ -1397,56 +1641,11 @@
         }
       },
       "indexes": {
-        "customers_code_idx": {
-          "name": "customers_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "customers_name_idx": {
           "name": "customers_name_idx",
           "columns": [
             {
               "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "customers_phone_idx": {
-          "name": "customers_phone_idx",
-          "columns": [
-            {
-              "expression": "phone",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "customers_email_idx": {
-          "name": "customers_email_idx",
-          "columns": [
-            {
-              "expression": "email",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1524,14 +1723,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "scheduled_at": {
           "name": "scheduled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "delivered_at": {
-          "name": "delivered_at",
+        "completed_at": {
+          "name": "completed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -1569,21 +1774,6 @@
         }
       },
       "indexes": {
-        "deliveries_code_idx": {
-          "name": "deliveries_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "deliveries_contract_id_idx": {
           "name": "deliveries_contract_id_idx",
           "columns": [
@@ -1599,11 +1789,11 @@
           "method": "btree",
           "with": {}
         },
-        "deliveries_assigned_to_idx": {
-          "name": "deliveries_assigned_to_idx",
+        "deliveries_trip_id_idx": {
+          "name": "deliveries_trip_id_idx",
           "columns": [
             {
-              "expression": "assigned_to",
+              "expression": "trip_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1629,11 +1819,11 @@
           "method": "btree",
           "with": {}
         },
-        "deliveries_delivered_at_idx": {
-          "name": "deliveries_delivered_at_idx",
+        "deliveries_completed_at_idx": {
+          "name": "deliveries_completed_at_idx",
           "columns": [
             {
-              "expression": "delivered_at",
+              "expression": "completed_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1658,6 +1848,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "deliveries_assigned_to_idx": {
+          "name": "deliveries_assigned_to_idx",
+          "columns": [
+            {
+              "expression": "assigned_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "deliveries_created_by_idx": {
+          "name": "deliveries_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1667,6 +1887,19 @@
           "tableTo": "contracts",
           "columnsFrom": [
             "contract_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "deliveries_trip_id_trips_id_fk": {
+          "name": "deliveries_trip_id_trips_id_fk",
+          "tableFrom": "deliveries",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
           ],
           "columnsTo": [
             "id"
@@ -1713,13 +1946,13 @@
       },
       "policies": {},
       "checkConstraints": {
-        "deliveries_delivered_cancelled_exclusive": {
-          "name": "deliveries_delivered_cancelled_exclusive",
-          "value": "\"deliveries\".\"delivered_at\" IS NULL OR \"deliveries\".\"cancelled_at\" IS NULL"
+        "deliveries_completed_cancelled_exclusive": {
+          "name": "deliveries_completed_cancelled_exclusive",
+          "value": "\"deliveries\".\"completed_at\" IS NULL OR \"deliveries\".\"cancelled_at\" IS NULL"
         },
-        "deliveries_delivered_at_gte_scheduled_at": {
-          "name": "deliveries_delivered_at_gte_scheduled_at",
-          "value": "\"deliveries\".\"delivered_at\" IS NULL OR \"deliveries\".\"scheduled_at\" IS NULL OR \"deliveries\".\"delivered_at\" >= \"deliveries\".\"scheduled_at\""
+        "deliveries_completed_at_gte_scheduled_at": {
+          "name": "deliveries_completed_at_gte_scheduled_at",
+          "value": "\"deliveries\".\"completed_at\" IS NULL OR \"deliveries\".\"scheduled_at\" IS NULL OR \"deliveries\".\"completed_at\" >= \"deliveries\".\"scheduled_at\""
         },
         "deliveries_cancelled_at_gte_scheduled_at": {
           "name": "deliveries_cancelled_at_gte_scheduled_at",
@@ -2031,8 +2264,8 @@
         }
       },
       "indexes": {
-        "role_permissions_role_id_idx": {
-          "name": "role_permissions_role_id_idx",
+        "permissions_role_id_idx": {
+          "name": "permissions_role_id_idx",
           "columns": [
             {
               "expression": "role_id",
@@ -2233,6 +2466,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "production_sub_department": {
+          "name": "production_sub_department",
+          "type": "production_sub_department",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_by": {
           "name": "created_by",
           "type": "uuid",
@@ -2254,11 +2494,11 @@
         }
       },
       "indexes": {
-        "users_code_idx": {
-          "name": "users_code_idx",
+        "users_name_idx": {
+          "name": "users_name_idx",
           "columns": [
             {
-              "expression": "code",
+              "expression": "name",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2299,41 +2539,11 @@
           "method": "btree",
           "with": {}
         },
-        "users_name_idx": {
-          "name": "users_name_idx",
+        "users_production_sub_department_idx": {
+          "name": "users_production_sub_department_idx",
           "columns": [
             {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_phone_idx": {
-          "name": "users_phone_idx",
-          "columns": [
-            {
-              "expression": "phone",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "users_email_idx": {
-          "name": "users_email_idx",
-          "columns": [
-            {
-              "expression": "email",
+              "expression": "production_sub_department",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2415,6 +2625,101 @@
         "users_admin_or_role_check": {
           "name": "users_admin_or_role_check",
           "value": "(\"users\".\"is_admin\" = true AND \"users\".\"role_id\" IS NULL) OR (\"users\".\"is_admin\" = false AND \"users\".\"role_id\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.production_sub_department_managers": {
+      "name": "production_sub_department_managers",
+      "schema": "",
+      "columns": {
+        "sub_department": {
+          "name": "sub_department",
+          "type": "production_sub_department",
+          "typeSchema": "public",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "manager_id": {
+          "name": "manager_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deputy_manager_id": {
+          "name": "deputy_manager_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "psdm_manager_id_idx": {
+          "name": "psdm_manager_id_idx",
+          "columns": [
+            {
+              "expression": "manager_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "psdm_deputy_manager_id_idx": {
+          "name": "psdm_deputy_manager_id_idx",
+          "columns": [
+            {
+              "expression": "deputy_manager_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "psdm_manager_id_fk": {
+          "name": "psdm_manager_id_fk",
+          "tableFrom": "production_sub_department_managers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "manager_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "psdm_deputy_manager_id_fk": {
+          "name": "psdm_deputy_manager_id_fk",
+          "tableFrom": "production_sub_department_managers",
+          "tableTo": "users",
+          "columnsFrom": [
+            "deputy_manager_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "psdm_manager_deputy_distinct": {
+          "name": "psdm_manager_deputy_distinct",
+          "value": "\"production_sub_department_managers\".\"manager_id\" IS NULL OR \"production_sub_department_managers\".\"deputy_manager_id\" IS NULL OR \"production_sub_department_managers\".\"manager_id\" <> \"production_sub_department_managers\".\"deputy_manager_id\""
         }
       },
       "isRLSEnabled": false
@@ -2634,56 +2939,11 @@
         }
       },
       "indexes": {
-        "vendors_code_idx": {
-          "name": "vendors_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "vendors_name_idx": {
           "name": "vendors_name_idx",
           "columns": [
             {
               "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "vendors_phone_idx": {
-          "name": "vendors_phone_idx",
-          "columns": [
-            {
-              "expression": "phone",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "vendors_email_idx": {
-          "name": "vendors_email_idx",
-          "columns": [
-            {
-              "expression": "email",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2738,8 +2998,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.product_boms": {
-      "name": "product_boms",
+    "public.product_dimensions": {
+      "name": "product_dimensions",
       "schema": "",
       "columns": {
         "id": {
@@ -2752,6 +3012,250 @@
         "product_code": {
           "name": "product_code",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "length": {
+          "name": "length",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "width": {
+          "name": "width",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "height": {
+          "name": "height",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dimension_unit": {
+          "name": "dimension_unit",
+          "type": "dimension_unit",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_default": {
+          "name": "is_default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "product_dimensions_product_code_idx": {
+          "name": "product_dimensions_product_code_idx",
+          "columns": [
+            {
+              "expression": "product_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "product_dimensions_default_per_product_idx": {
+          "name": "product_dimensions_default_per_product_idx",
+          "columns": [
+            {
+              "expression": "product_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"product_dimensions\".\"is_default\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "product_dimensions_product_code_products_code_fk": {
+          "name": "product_dimensions_product_code_products_code_fk",
+          "tableFrom": "product_dimensions",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "product_dimensions_created_by_users_id_fk": {
+          "name": "product_dimensions_created_by_users_id_fk",
+          "tableFrom": "product_dimensions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "product_dimensions_length_non_negative": {
+          "name": "product_dimensions_length_non_negative",
+          "value": "\"product_dimensions\".\"length\" >= 0"
+        },
+        "product_dimensions_width_non_negative": {
+          "name": "product_dimensions_width_non_negative",
+          "value": "\"product_dimensions\".\"width\" >= 0"
+        },
+        "product_dimensions_height_non_negative": {
+          "name": "product_dimensions_height_non_negative",
+          "value": "\"product_dimensions\".\"height\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.product_production_routes": {
+      "name": "product_production_routes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "product_code": {
+          "name": "product_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sub_department": {
+          "name": "sub_department",
+          "type": "production_sub_department",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence_order": {
+          "name": "sequence_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "completion_percentage": {
+          "name": "completion_percentage",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "product_production_routes_product_code_idx": {
+          "name": "product_production_routes_product_code_idx",
+          "columns": [
+            {
+              "expression": "product_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "product_production_routes_product_code_products_code_fk": {
+          "name": "product_production_routes_product_code_products_code_fk",
+          "tableFrom": "product_production_routes",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "product_production_routes_product_sub_dept_unique": {
+          "name": "product_production_routes_product_sub_dept_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "product_code",
+            "sub_department"
+          ]
+        },
+        "product_production_routes_product_sequence_unique": {
+          "name": "product_production_routes_product_sequence_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "product_code",
+            "sequence_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "product_production_routes_sequence_order_positive": {
+          "name": "product_production_routes_sequence_order_positive",
+          "value": "\"product_production_routes\".\"sequence_order\" > 0"
+        },
+        "product_production_routes_completion_percentage_range": {
+          "name": "product_production_routes_completion_percentage_range",
+          "value": "\"product_production_routes\".\"completion_percentage\" > 0 AND \"product_production_routes\".\"completion_percentage\" <= 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.product_standard_boms": {
+      "name": "product_standard_boms",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "product_dimension_id": {
+          "name": "product_dimension_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -2788,11 +3292,11 @@
         }
       },
       "indexes": {
-        "product_boms_product_code_idx": {
-          "name": "product_boms_product_code_idx",
+        "product_standard_boms_product_dimension_id_idx": {
+          "name": "product_standard_boms_product_dimension_id_idx",
           "columns": [
             {
-              "expression": "product_code",
+              "expression": "product_dimension_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2803,8 +3307,8 @@
           "method": "btree",
           "with": {}
         },
-        "product_boms_material_code_idx": {
-          "name": "product_boms_material_code_idx",
+        "product_standard_boms_material_code_idx": {
+          "name": "product_standard_boms_material_code_idx",
           "columns": [
             {
               "expression": "material_code",
@@ -2820,22 +3324,9 @@
         }
       },
       "foreignKeys": {
-        "product_boms_product_code_products_code_fk": {
-          "name": "product_boms_product_code_products_code_fk",
-          "tableFrom": "product_boms",
-          "tableTo": "products",
-          "columnsFrom": [
-            "product_code"
-          ],
-          "columnsTo": [
-            "code"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "product_boms_material_code_materials_code_fk": {
-          "name": "product_boms_material_code_materials_code_fk",
-          "tableFrom": "product_boms",
+        "product_standard_boms_material_code_materials_code_fk": {
+          "name": "product_standard_boms_material_code_materials_code_fk",
+          "tableFrom": "product_standard_boms",
           "tableTo": "materials",
           "columnsFrom": [
             "material_code"
@@ -2846,12 +3337,25 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "product_boms_created_by_users_id_fk": {
-          "name": "product_boms_created_by_users_id_fk",
-          "tableFrom": "product_boms",
+        "product_standard_boms_created_by_users_id_fk": {
+          "name": "product_standard_boms_created_by_users_id_fk",
+          "tableFrom": "product_standard_boms",
           "tableTo": "users",
           "columnsFrom": [
             "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "psb_product_dimension_id_fk": {
+          "name": "psb_product_dimension_id_fk",
+          "tableFrom": "product_standard_boms",
+          "tableTo": "product_dimensions",
+          "columnsFrom": [
+            "product_dimension_id"
           ],
           "columnsTo": [
             "id"
@@ -2862,20 +3366,20 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "product_boms_product_material_unique": {
-          "name": "product_boms_product_material_unique",
+        "product_standard_boms_dimension_material_unique": {
+          "name": "product_standard_boms_dimension_material_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "product_code",
+            "product_dimension_id",
             "material_code"
           ]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "product_boms_quantity_required_positive": {
-          "name": "product_boms_quantity_required_positive",
-          "value": "\"product_boms\".\"quantity_required\" > 0"
+        "product_standard_boms_quantity_required_positive": {
+          "name": "product_standard_boms_quantity_required_positive",
+          "value": "\"product_standard_boms\".\"quantity_required\" > 0"
         }
       },
       "isRLSEnabled": false
@@ -2914,31 +3418,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "length": {
-          "name": "length",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "width": {
-          "name": "width",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "height": {
-          "name": "height",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "dimension_unit": {
-          "name": "dimension_unit",
-          "type": "dimension_unit",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
         },
         "estimated_production_time": {
           "name": "estimated_production_time",
@@ -3030,22 +3509,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "products_dimensions_all_or_none": {
-          "name": "products_dimensions_all_or_none",
-          "value": "(\n        (\"products\".\"length\" IS NULL AND \"products\".\"width\" IS NULL AND \"products\".\"height\" IS NULL AND \"products\".\"dimension_unit\" IS NULL)\n        OR\n        (\"products\".\"length\" IS NOT NULL AND \"products\".\"width\" IS NOT NULL AND \"products\".\"height\" IS NOT NULL AND \"products\".\"dimension_unit\" IS NOT NULL)\n      )"
-        },
-        "products_length_non_negative": {
-          "name": "products_length_non_negative",
-          "value": "\"products\".\"length\" IS NULL OR \"products\".\"length\" >= 0"
-        },
-        "products_width_non_negative": {
-          "name": "products_width_non_negative",
-          "value": "\"products\".\"width\" IS NULL OR \"products\".\"width\" >= 0"
-        },
-        "products_height_non_negative": {
-          "name": "products_height_non_negative",
-          "value": "\"products\".\"height\" IS NULL OR \"products\".\"height\" >= 0"
-        },
         "products_estimated_production_time_positive": {
           "name": "products_estimated_production_time_positive",
           "value": "\"products\".\"estimated_production_time\" IS NULL OR \"products\".\"estimated_production_time\" > 0"
@@ -3285,21 +3748,6 @@
           "method": "btree",
           "with": {}
         },
-        "inquiries_created_by_idx": {
-          "name": "inquiries_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "inquiries_status_idx": {
           "name": "inquiries_status_idx",
           "columns": [
@@ -3320,6 +3768,21 @@
           "columns": [
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "inquiries_created_by_idx": {
+          "name": "inquiries_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3382,6 +3845,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "product_dimension_id": {
+          "name": "product_dimension_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "product_code": {
           "name": "product_code",
           "type": "text",
@@ -3424,6 +3893,21 @@
           "method": "btree",
           "with": {}
         },
+        "inquiry_items_product_dimension_id_idx": {
+          "name": "inquiry_items_product_dimension_id_idx",
+          "columns": [
+            {
+              "expression": "product_dimension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "inquiry_items_product_code_idx": {
           "name": "inquiry_items_product_code_idx",
           "columns": [
@@ -3447,6 +3931,19 @@
           "tableTo": "inquiries",
           "columnsFrom": [
             "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "inquiry_items_product_dimension_id_product_dimensions_id_fk": {
+          "name": "inquiry_items_product_dimension_id_product_dimensions_id_fk",
+          "tableFrom": "inquiry_items",
+          "tableTo": "product_dimensions",
+          "columnsFrom": [
+            "product_dimension_id"
           ],
           "columnsTo": [
             "id"
@@ -3479,92 +3976,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.preview_item_dimensions": {
-      "name": "preview_item_dimensions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "preview_item_id": {
-          "name": "preview_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "length": {
-          "name": "length",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "width": {
-          "name": "width",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "height": {
-          "name": "height",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "unit": {
-          "name": "unit",
-          "type": "dimension_unit",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "preview_item_dimensions_preview_item_id_preview_items_id_fk": {
-          "name": "preview_item_dimensions_preview_item_id_preview_items_id_fk",
-          "tableFrom": "preview_item_dimensions",
-          "tableTo": "preview_items",
-          "columnsFrom": [
-            "preview_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "preview_item_dimensions_preview_item_id_unique": {
-          "name": "preview_item_dimensions_preview_item_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "preview_item_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "preview_item_dimensions_length_non_negative": {
-          "name": "preview_item_dimensions_length_non_negative",
-          "value": "\"preview_item_dimensions\".\"length\" >= 0"
-        },
-        "preview_item_dimensions_width_non_negative": {
-          "name": "preview_item_dimensions_width_non_negative",
-          "value": "\"preview_item_dimensions\".\"width\" >= 0"
-        },
-        "preview_item_dimensions_height_non_negative": {
-          "name": "preview_item_dimensions_height_non_negative",
-          "value": "\"preview_item_dimensions\".\"height\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.preview_items": {
       "name": "preview_items",
       "schema": "",
@@ -3582,9 +3993,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "inquiry_item_id": {
-          "name": "inquiry_item_id",
+        "product_dimension_id": {
+          "name": "product_dimension_id",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_code": {
+          "name": "product_code",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -3611,11 +4028,26 @@
           "method": "btree",
           "with": {}
         },
-        "preview_items_inquiry_item_id_idx": {
-          "name": "preview_items_inquiry_item_id_idx",
+        "preview_items_product_dimension_id_idx": {
+          "name": "preview_items_product_dimension_id_idx",
           "columns": [
             {
-              "expression": "inquiry_item_id",
+              "expression": "product_dimension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "preview_items_product_code_idx": {
+          "name": "preview_items_product_code_idx",
+          "columns": [
+            {
+              "expression": "product_code",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3641,15 +4073,28 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "preview_items_inquiry_item_id_inquiry_items_id_fk": {
-          "name": "preview_items_inquiry_item_id_inquiry_items_id_fk",
+        "preview_items_product_dimension_id_product_dimensions_id_fk": {
+          "name": "preview_items_product_dimension_id_product_dimensions_id_fk",
           "tableFrom": "preview_items",
-          "tableTo": "inquiry_items",
+          "tableTo": "product_dimensions",
           "columnsFrom": [
-            "inquiry_item_id"
+            "product_dimension_id"
           ],
           "columnsTo": [
             "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "preview_items_product_code_products_code_fk": {
+          "name": "preview_items_product_code_products_code_fk",
+          "tableFrom": "preview_items",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_code"
+          ],
+          "columnsTo": [
+            "code"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -3906,6 +4351,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "product_dimension_id": {
+          "name": "product_dimension_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "product_code": {
           "name": "product_code",
           "type": "text",
@@ -3954,6 +4405,21 @@
           "method": "btree",
           "with": {}
         },
+        "offer_items_product_dimension_id_idx": {
+          "name": "offer_items_product_dimension_id_idx",
+          "columns": [
+            {
+              "expression": "product_dimension_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "offer_items_product_code_idx": {
           "name": "offer_items_product_code_idx",
           "columns": [
@@ -3977,6 +4443,19 @@
           "tableTo": "offers",
           "columnsFrom": [
             "offer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "offer_items_product_dimension_id_product_dimensions_id_fk": {
+          "name": "offer_items_product_dimension_id_product_dimensions_id_fk",
+          "tableFrom": "offer_items",
+          "tableTo": "product_dimensions",
+          "columnsFrom": [
+            "product_dimension_id"
           ],
           "columnsTo": [
             "id"
@@ -4086,21 +4565,6 @@
           "method": "btree",
           "with": {}
         },
-        "offers_created_by_idx": {
-          "name": "offers_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "offers_status_idx": {
           "name": "offers_status_idx",
           "columns": [
@@ -4121,6 +4585,21 @@
           "columns": [
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "offers_created_by_idx": {
+          "name": "offers_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4297,9 +4776,10 @@
           "primaryKey": false,
           "notNull": true
         },
-        "production_department_id": {
-          "name": "production_department_id",
-          "type": "uuid",
+        "production_stage": {
+          "name": "production_stage",
+          "type": "production_sub_department",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -4317,6 +4797,12 @@
         },
         "completed_at": {
           "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -4359,11 +4845,11 @@
           "method": "btree",
           "with": {}
         },
-        "production_plan_items_production_department_id_idx": {
-          "name": "production_plan_items_production_department_id_idx",
+        "production_plan_items_production_stage_idx": {
+          "name": "production_plan_items_production_stage_idx",
           "columns": [
             {
-              "expression": "production_department_id",
+              "expression": "production_stage",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4379,6 +4865,21 @@
           "columns": [
             {
               "expression": "completed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "production_plan_items_cancelled_at_idx": {
+          "name": "production_plan_items_cancelled_at_idx",
+          "columns": [
+            {
+              "expression": "cancelled_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4416,30 +4917,17 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "production_plan_items_production_department_id_departments_id_fk": {
-          "name": "production_plan_items_production_department_id_departments_id_fk",
-          "tableFrom": "production_plan_items",
-          "tableTo": "departments",
-          "columnsFrom": [
-            "production_department_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "production_plan_items_plan_unit_dept_unique": {
-          "name": "production_plan_items_plan_unit_dept_unique",
+        "production_plan_items_plan_unit_stage_unique": {
+          "name": "production_plan_items_plan_unit_stage_unique",
           "nullsNotDistinct": false,
           "columns": [
             "plan_id",
             "product_unit_id",
-            "production_department_id"
+            "production_stage"
           ]
         }
       },
@@ -4452,6 +4940,10 @@
         "production_plan_items_completed_at_gte_start_date": {
           "name": "production_plan_items_completed_at_gte_start_date",
           "value": "\"production_plan_items\".\"completed_at\" IS NULL OR \"production_plan_items\".\"start_date\" IS NULL OR \"production_plan_items\".\"completed_at\" >= \"production_plan_items\".\"start_date\""
+        },
+        "production_plan_items_completed_cancelled_exclusive": {
+          "name": "production_plan_items_completed_cancelled_exclusive",
+          "value": "\"production_plan_items\".\"completed_at\" IS NULL OR \"production_plan_items\".\"cancelled_at\" IS NULL"
         }
       },
       "isRLSEnabled": false
@@ -4512,21 +5004,6 @@
         }
       },
       "indexes": {
-        "production_plans_code_idx": {
-          "name": "production_plans_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "production_plans_name_idx": {
           "name": "production_plans_name_idx",
           "columns": [
@@ -4653,6 +5130,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "maintenance_order_spare_part_id": {
+          "name": "maintenance_order_spare_part_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -4706,6 +5189,21 @@
           "columns": [
             {
               "expression": "production_plan_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "inv_tx_items_mosp_id_idx": {
+          "name": "inv_tx_items_mosp_id_idx",
+          "columns": [
+            {
+              "expression": "maintenance_order_spare_part_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4769,6 +5267,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "inv_tx_items_mosp_id_fk": {
+          "name": "inv_tx_items_mosp_id_fk",
+          "tableFrom": "inventory_transaction_items",
+          "tableTo": "maintenance_order_spare_parts",
+          "columnsFrom": [
+            "maintenance_order_spare_part_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4785,7 +5296,7 @@
         },
         "inv_tx_items_source_non_conflicting": {
           "name": "inv_tx_items_source_non_conflicting",
-          "value": "(\n        \"inventory_transaction_items\".\"material_purchase_receipt_item_id\" IS NULL OR \"inventory_transaction_items\".\"production_plan_item_id\" IS NULL\n      )"
+          "value": "(\n        (\"inventory_transaction_items\".\"material_purchase_receipt_item_id\" IS NULL OR \"inventory_transaction_items\".\"production_plan_item_id\" IS NULL)\n        AND (\"inventory_transaction_items\".\"material_purchase_receipt_item_id\" IS NULL OR \"inventory_transaction_items\".\"maintenance_order_spare_part_id\" IS NULL)\n        AND (\"inventory_transaction_items\".\"production_plan_item_id\" IS NULL OR \"inventory_transaction_items\".\"maintenance_order_spare_part_id\" IS NULL)\n      )"
         }
       },
       "isRLSEnabled": false
@@ -4835,21 +5346,6 @@
         }
       },
       "indexes": {
-        "inventory_transactions_code_idx": {
-          "name": "inventory_transactions_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "inventory_transactions_transaction_type_idx": {
           "name": "inventory_transactions_transaction_type_idx",
           "columns": [
@@ -4998,11 +5494,11 @@
           "method": "btree",
           "with": {}
         },
-        "vendor_quotation_emails_created_by_idx": {
-          "name": "vendor_quotation_emails_created_by_idx",
+        "vendor_quotation_emails_status_idx": {
+          "name": "vendor_quotation_emails_status_idx",
           "columns": [
             {
-              "expression": "created_by",
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5013,11 +5509,26 @@
           "method": "btree",
           "with": {}
         },
-        "vendor_quotation_emails_status_idx": {
-          "name": "vendor_quotation_emails_status_idx",
+        "vendor_quotation_emails_created_at_idx": {
+          "name": "vendor_quotation_emails_created_at_idx",
           "columns": [
             {
-              "expression": "status",
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "vendor_quotation_emails_created_by_idx": {
+          "name": "vendor_quotation_emails_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5061,6 +5572,116 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.material_purchase_order_item_contract_items": {
+      "name": "material_purchase_order_item_contract_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "material_purchase_order_item_id": {
+          "name": "material_purchase_order_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contract_item_id": {
+          "name": "contract_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity_allocated": {
+          "name": "quantity_allocated",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "mpoici_mpoi_id_idx": {
+          "name": "mpoici_mpoi_id_idx",
+          "columns": [
+            {
+              "expression": "material_purchase_order_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "mpoici_contract_item_id_idx": {
+          "name": "mpoici_contract_item_id_idx",
+          "columns": [
+            {
+              "expression": "contract_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mpoici_mpoi_id_fk": {
+          "name": "mpoici_mpoi_id_fk",
+          "tableFrom": "material_purchase_order_item_contract_items",
+          "tableTo": "material_purchase_order_items",
+          "columnsFrom": [
+            "material_purchase_order_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mpoici_contract_item_id_fk": {
+          "name": "mpoici_contract_item_id_fk",
+          "tableFrom": "material_purchase_order_item_contract_items",
+          "tableTo": "contract_items",
+          "columnsFrom": [
+            "contract_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mpoici_mpoi_contract_item_unique": {
+          "name": "mpoici_mpoi_contract_item_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "material_purchase_order_item_id",
+            "contract_item_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "mpoici_quantity_allocated_positive": {
+          "name": "mpoici_quantity_allocated_positive",
+          "value": "\"material_purchase_order_item_contract_items\".\"quantity_allocated\" IS NULL OR \"material_purchase_order_item_contract_items\".\"quantity_allocated\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.material_purchase_order_items": {
@@ -5138,19 +5759,6 @@
         }
       },
       "foreignKeys": {
-        "material_purchase_order_items_material_purchase_order_id_material_purchase_orders_id_fk": {
-          "name": "material_purchase_order_items_material_purchase_order_id_material_purchase_orders_id_fk",
-          "tableFrom": "material_purchase_order_items",
-          "tableTo": "material_purchase_orders",
-          "columnsFrom": [
-            "material_purchase_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "material_purchase_order_items_material_code_materials_code_fk": {
           "name": "material_purchase_order_items_material_code_materials_code_fk",
           "tableFrom": "material_purchase_order_items",
@@ -5160,6 +5768,19 @@
           ],
           "columnsTo": [
             "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mpoi_mpo_id_fk": {
+          "name": "mpoi_mpo_id_fk",
+          "tableFrom": "material_purchase_order_items",
+          "tableTo": "material_purchase_orders",
+          "columnsFrom": [
+            "material_purchase_order_id"
+          ],
+          "columnsTo": [
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -5251,21 +5872,6 @@
         }
       },
       "indexes": {
-        "mpo_code_idx": {
-          "name": "mpo_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "mpo_vendor_id_idx": {
           "name": "mpo_vendor_id_idx",
           "columns": [
@@ -5311,11 +5917,11 @@
           "method": "btree",
           "with": {}
         },
-        "mpo_created_by_idx": {
-          "name": "mpo_created_by_idx",
+        "mpo_created_at_idx": {
+          "name": "mpo_created_at_idx",
           "columns": [
             {
-              "expression": "created_by",
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5326,11 +5932,11 @@
           "method": "btree",
           "with": {}
         },
-        "mpo_created_at_idx": {
-          "name": "mpo_created_at_idx",
+        "mpo_created_by_idx": {
+          "name": "mpo_created_by_idx",
           "columns": [
             {
-              "expression": "created_at",
+              "expression": "created_by",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5576,21 +6182,6 @@
         }
       },
       "indexes": {
-        "mpr_code_idx": {
-          "name": "mpr_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "mpr_mpo_id_idx": {
           "name": "mpr_mpo_id_idx",
           "columns": [
@@ -5668,19 +6259,6 @@
         }
       },
       "foreignKeys": {
-        "material_purchase_receipts_material_purchase_order_id_material_purchase_orders_id_fk": {
-          "name": "material_purchase_receipts_material_purchase_order_id_material_purchase_orders_id_fk",
-          "tableFrom": "material_purchase_receipts",
-          "tableTo": "material_purchase_orders",
-          "columnsFrom": [
-            "material_purchase_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "material_purchase_receipts_received_by_users_id_fk": {
           "name": "material_purchase_receipts_received_by_users_id_fk",
           "tableFrom": "material_purchase_receipts",
@@ -5700,6 +6278,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mpr_mpo_id_fk": {
+          "name": "mpr_mpo_id_fk",
+          "tableFrom": "material_purchase_receipts",
+          "tableTo": "material_purchase_orders",
+          "columnsFrom": [
+            "material_purchase_order_id"
           ],
           "columnsTo": [
             "id"
@@ -5797,8 +6388,8 @@
         }
       },
       "foreignKeys": {
-        "product_purchase_order_items_product_purchase_order_id_product_purchase_orders_id_fk": {
-          "name": "product_purchase_order_items_product_purchase_order_id_product_purchase_orders_id_fk",
+        "ppoi_ppo_id_fk": {
+          "name": "ppoi_ppo_id_fk",
           "tableFrom": "product_purchase_order_items",
           "tableTo": "product_purchase_orders",
           "columnsFrom": [
@@ -5810,8 +6401,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "product_purchase_order_items_contract_item_id_contract_items_id_fk": {
-          "name": "product_purchase_order_items_contract_item_id_contract_items_id_fk",
+        "ppoi_contract_item_id_fk": {
+          "name": "ppoi_contract_item_id_fk",
           "tableFrom": "product_purchase_order_items",
           "tableTo": "contract_items",
           "columnsFrom": [
@@ -5825,7 +6416,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "ppoi_ppo_contract_item_unique": {
+          "name": "ppoi_ppo_contract_item_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "product_purchase_order_id",
+            "contract_item_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "ppoi_quantity_ordered_positive": {
@@ -5901,21 +6501,6 @@
         }
       },
       "indexes": {
-        "ppo_code_idx": {
-          "name": "ppo_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "ppo_vendor_id_idx": {
           "name": "ppo_vendor_id_idx",
           "columns": [
@@ -6109,37 +6694,9 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "ppri_product_unit_id_idx": {
-          "name": "ppri_product_unit_id_idx",
-          "columns": [
-            {
-              "expression": "product_unit_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
-        "product_purchase_receipt_items_product_unit_id_product_units_id_fk": {
-          "name": "product_purchase_receipt_items_product_unit_id_product_units_id_fk",
-          "tableFrom": "product_purchase_receipt_items",
-          "tableTo": "product_units",
-          "columnsFrom": [
-            "product_unit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "ppri_receipt_id_fk": {
           "name": "ppri_receipt_id_fk",
           "tableFrom": "product_purchase_receipt_items",
@@ -6159,6 +6716,19 @@
           "tableTo": "product_purchase_order_items",
           "columnsFrom": [
             "product_purchase_order_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "ppri_product_unit_id_fk": {
+          "name": "ppri_product_unit_id_fk",
+          "tableFrom": "product_purchase_receipt_items",
+          "tableTo": "product_units",
+          "columnsFrom": [
+            "product_unit_id"
           ],
           "columnsTo": [
             "id"
@@ -6237,21 +6807,6 @@
         }
       },
       "indexes": {
-        "ppr_code_idx": {
-          "name": "ppr_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "ppr_ppo_id_idx": {
           "name": "ppr_ppo_id_idx",
           "columns": [
@@ -6329,19 +6884,6 @@
         }
       },
       "foreignKeys": {
-        "product_purchase_receipts_product_purchase_order_id_product_purchase_orders_id_fk": {
-          "name": "product_purchase_receipts_product_purchase_order_id_product_purchase_orders_id_fk",
-          "tableFrom": "product_purchase_receipts",
-          "tableTo": "product_purchase_orders",
-          "columnsFrom": [
-            "product_purchase_order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "product_purchase_receipts_received_by_users_id_fk": {
           "name": "product_purchase_receipts_received_by_users_id_fk",
           "tableFrom": "product_purchase_receipts",
@@ -6367,6 +6909,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "ppr_ppo_id_fk": {
+          "name": "ppr_ppo_id_fk",
+          "tableFrom": "product_purchase_receipts",
+          "tableTo": "product_purchase_orders",
+          "columnsFrom": [
+            "product_purchase_order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6381,6 +6936,151 @@
       },
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trips": {
+      "name": "trips",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduled_at": {
+          "name": "scheduled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "trips_scheduled_at_idx": {
+          "name": "trips_scheduled_at_idx",
+          "columns": [
+            {
+              "expression": "scheduled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trips_cancelled_at_idx": {
+          "name": "trips_cancelled_at_idx",
+          "columns": [
+            {
+              "expression": "cancelled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trips_created_at_idx": {
+          "name": "trips_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trips_created_by_idx": {
+          "name": "trips_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trips_created_by_users_id_fk": {
+          "name": "trips_created_by_users_id_fk",
+          "tableFrom": "trips",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trips_code_unique": {
+          "name": "trips_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "trips_cancelled_at_gte_scheduled_at": {
+          "name": "trips_cancelled_at_gte_scheduled_at",
+          "value": "\"trips\".\"cancelled_at\" IS NULL OR \"trips\".\"scheduled_at\" IS NULL OR \"trips\".\"cancelled_at\" >= \"trips\".\"scheduled_at\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.installation_items": {
@@ -6495,14 +7195,20 @@
           "primaryKey": false,
           "notNull": true
         },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "scheduled_at": {
           "name": "scheduled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "installed_at": {
-          "name": "installed_at",
+        "completed_at": {
+          "name": "completed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -6540,21 +7246,6 @@
         }
       },
       "indexes": {
-        "installations_code_idx": {
-          "name": "installations_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "installations_contract_id_idx": {
           "name": "installations_contract_id_idx",
           "columns": [
@@ -6570,11 +7261,11 @@
           "method": "btree",
           "with": {}
         },
-        "installations_assigned_to_idx": {
-          "name": "installations_assigned_to_idx",
+        "installations_trip_id_idx": {
+          "name": "installations_trip_id_idx",
           "columns": [
             {
-              "expression": "assigned_to",
+              "expression": "trip_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6600,11 +7291,11 @@
           "method": "btree",
           "with": {}
         },
-        "installations_installed_at_idx": {
-          "name": "installations_installed_at_idx",
+        "installations_completed_at_idx": {
+          "name": "installations_completed_at_idx",
           "columns": [
             {
-              "expression": "installed_at",
+              "expression": "completed_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6629,6 +7320,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "installations_assigned_to_idx": {
+          "name": "installations_assigned_to_idx",
+          "columns": [
+            {
+              "expression": "assigned_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "installations_created_by_idx": {
+          "name": "installations_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6638,6 +7359,19 @@
           "tableTo": "contracts",
           "columnsFrom": [
             "contract_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "installations_trip_id_trips_id_fk": {
+          "name": "installations_trip_id_trips_id_fk",
+          "tableFrom": "installations",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
           ],
           "columnsTo": [
             "id"
@@ -6684,17 +7418,733 @@
       },
       "policies": {},
       "checkConstraints": {
-        "installations_installed_cancelled_exclusive": {
-          "name": "installations_installed_cancelled_exclusive",
-          "value": "\"installations\".\"installed_at\" IS NULL OR \"installations\".\"cancelled_at\" IS NULL"
+        "installations_completed_cancelled_exclusive": {
+          "name": "installations_completed_cancelled_exclusive",
+          "value": "\"installations\".\"completed_at\" IS NULL OR \"installations\".\"cancelled_at\" IS NULL"
         },
-        "installations_installed_at_gte_scheduled_at": {
-          "name": "installations_installed_at_gte_scheduled_at",
-          "value": "\"installations\".\"installed_at\" IS NULL OR \"installations\".\"scheduled_at\" IS NULL OR \"installations\".\"installed_at\" >= \"installations\".\"scheduled_at\""
+        "installations_completed_at_gte_scheduled_at": {
+          "name": "installations_completed_at_gte_scheduled_at",
+          "value": "\"installations\".\"completed_at\" IS NULL OR \"installations\".\"scheduled_at\" IS NULL OR \"installations\".\"completed_at\" >= \"installations\".\"scheduled_at\""
         },
         "installations_cancelled_at_gte_scheduled_at": {
           "name": "installations_cancelled_at_gte_scheduled_at",
           "value": "\"installations\".\"cancelled_at\" IS NULL OR \"installations\".\"scheduled_at\" IS NULL OR \"installations\".\"cancelled_at\" >= \"installations\".\"scheduled_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.service_agreements": {
+      "name": "service_agreements",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_address_id": {
+          "name": "customer_address_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interval": {
+          "name": "interval",
+          "type": "service_contract_interval",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "service_agreements_customer_address_id_idx": {
+          "name": "service_agreements_customer_address_id_idx",
+          "columns": [
+            {
+              "expression": "customer_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "service_agreements_started_at_idx": {
+          "name": "service_agreements_started_at_idx",
+          "columns": [
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "service_agreements_customer_address_id_customer_addresses_id_fk": {
+          "name": "service_agreements_customer_address_id_customer_addresses_id_fk",
+          "tableFrom": "service_agreements",
+          "tableTo": "customer_addresses",
+          "columnsFrom": [
+            "customer_address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "service_agreements_created_by_users_id_fk": {
+          "name": "service_agreements_created_by_users_id_fk",
+          "tableFrom": "service_agreements",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "service_agreements_code_unique": {
+          "name": "service_agreements_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "service_agreements_ended_at_gt_started_at": {
+          "name": "service_agreements_ended_at_gt_started_at",
+          "value": "\"service_agreements\".\"ended_at\" IS NULL OR \"service_agreements\".\"ended_at\" > \"service_agreements\".\"started_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.maintenance_order_items": {
+      "name": "maintenance_order_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "maintenance_order_id": {
+          "name": "maintenance_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_unit_id": {
+          "name": "product_unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "maintenance_order_items_maintenance_order_id_idx": {
+          "name": "maintenance_order_items_maintenance_order_id_idx",
+          "columns": [
+            {
+              "expression": "maintenance_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_order_items_product_unit_id_idx": {
+          "name": "maintenance_order_items_product_unit_id_idx",
+          "columns": [
+            {
+              "expression": "product_unit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "maintenance_order_items_product_unit_id_product_units_id_fk": {
+          "name": "maintenance_order_items_product_unit_id_product_units_id_fk",
+          "tableFrom": "maintenance_order_items",
+          "tableTo": "product_units",
+          "columnsFrom": [
+            "product_unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "moi_mo_id_fk": {
+          "name": "moi_mo_id_fk",
+          "tableFrom": "maintenance_order_items",
+          "tableTo": "maintenance_orders",
+          "columnsFrom": [
+            "maintenance_order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "moi_mo_product_unit_unique": {
+          "name": "moi_mo_product_unit_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "maintenance_order_id",
+            "product_unit_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.maintenance_order_spare_parts": {
+      "name": "maintenance_order_spare_parts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "maintenance_order_id": {
+          "name": "maintenance_order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "material_code": {
+          "name": "material_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_price": {
+          "name": "unit_price",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_billable": {
+          "name": "is_billable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "maintenance_order_spare_parts_maintenance_order_id_idx": {
+          "name": "maintenance_order_spare_parts_maintenance_order_id_idx",
+          "columns": [
+            {
+              "expression": "maintenance_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_order_spare_parts_material_code_idx": {
+          "name": "maintenance_order_spare_parts_material_code_idx",
+          "columns": [
+            {
+              "expression": "material_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "maintenance_order_spare_parts_material_code_materials_code_fk": {
+          "name": "maintenance_order_spare_parts_material_code_materials_code_fk",
+          "tableFrom": "maintenance_order_spare_parts",
+          "tableTo": "materials",
+          "columnsFrom": [
+            "material_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mosp_mo_id_fk": {
+          "name": "mosp_mo_id_fk",
+          "tableFrom": "maintenance_order_spare_parts",
+          "tableTo": "maintenance_orders",
+          "columnsFrom": [
+            "maintenance_order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "maintenance_order_spare_parts_quantity_positive": {
+          "name": "maintenance_order_spare_parts_quantity_positive",
+          "value": "\"maintenance_order_spare_parts\".\"quantity\" > 0"
+        },
+        "maintenance_order_spare_parts_unit_price_positive": {
+          "name": "maintenance_order_spare_parts_unit_price_positive",
+          "value": "\"maintenance_order_spare_parts\".\"unit_price\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.maintenance_orders": {
+      "name": "maintenance_orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "maintenance_type": {
+          "name": "maintenance_type",
+          "type": "maintenance_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "service_agreement_id": {
+          "name": "service_agreement_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "service_location": {
+          "name": "service_location",
+          "type": "maintenance_service_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_address_id": {
+          "name": "customer_address_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scheduled_at": {
+          "name": "scheduled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_to": {
+          "name": "assigned_to",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "maintenance_orders_customer_id_idx": {
+          "name": "maintenance_orders_customer_id_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_service_agreement_id_idx": {
+          "name": "maintenance_orders_service_agreement_id_idx",
+          "columns": [
+            {
+              "expression": "service_agreement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_customer_address_id_idx": {
+          "name": "maintenance_orders_customer_address_id_idx",
+          "columns": [
+            {
+              "expression": "customer_address_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_trip_id_idx": {
+          "name": "maintenance_orders_trip_id_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_scheduled_at_idx": {
+          "name": "maintenance_orders_scheduled_at_idx",
+          "columns": [
+            {
+              "expression": "scheduled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_completed_at_idx": {
+          "name": "maintenance_orders_completed_at_idx",
+          "columns": [
+            {
+              "expression": "completed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_cancelled_at_idx": {
+          "name": "maintenance_orders_cancelled_at_idx",
+          "columns": [
+            {
+              "expression": "cancelled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_assigned_to_idx": {
+          "name": "maintenance_orders_assigned_to_idx",
+          "columns": [
+            {
+              "expression": "assigned_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "maintenance_orders_created_by_idx": {
+          "name": "maintenance_orders_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "maintenance_orders_customer_address_id_customer_addresses_id_fk": {
+          "name": "maintenance_orders_customer_address_id_customer_addresses_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "customer_addresses",
+          "columnsFrom": [
+            "customer_address_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "maintenance_orders_customer_id_customers_id_fk": {
+          "name": "maintenance_orders_customer_id_customers_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "customers",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "maintenance_orders_trip_id_trips_id_fk": {
+          "name": "maintenance_orders_trip_id_trips_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "maintenance_orders_assigned_to_users_id_fk": {
+          "name": "maintenance_orders_assigned_to_users_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "assigned_to"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "maintenance_orders_created_by_users_id_fk": {
+          "name": "maintenance_orders_created_by_users_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mo_service_agreement_id_fk": {
+          "name": "mo_service_agreement_id_fk",
+          "tableFrom": "maintenance_orders",
+          "tableTo": "service_agreements",
+          "columnsFrom": [
+            "service_agreement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "maintenance_orders_code_unique": {
+          "name": "maintenance_orders_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "maintenance_orders_service_agreement_required": {
+          "name": "maintenance_orders_service_agreement_required",
+          "value": "\"maintenance_orders\".\"maintenance_type\" <> 'service_contract' OR \"maintenance_orders\".\"service_agreement_id\" IS NOT NULL"
+        },
+        "maintenance_orders_customer_address_null_service_contract": {
+          "name": "maintenance_orders_customer_address_null_service_contract",
+          "value": "\"maintenance_orders\".\"maintenance_type\" <> 'service_contract' OR \"maintenance_orders\".\"customer_address_id\" IS NULL"
+        },
+        "maintenance_orders_completed_cancelled_exclusive": {
+          "name": "maintenance_orders_completed_cancelled_exclusive",
+          "value": "\"maintenance_orders\".\"completed_at\" IS NULL OR \"maintenance_orders\".\"cancelled_at\" IS NULL"
+        },
+        "maintenance_orders_completed_at_gte_scheduled_at": {
+          "name": "maintenance_orders_completed_at_gte_scheduled_at",
+          "value": "\"maintenance_orders\".\"completed_at\" IS NULL OR \"maintenance_orders\".\"scheduled_at\" IS NULL OR \"maintenance_orders\".\"completed_at\" >= \"maintenance_orders\".\"scheduled_at\""
         }
       },
       "isRLSEnabled": false
@@ -6847,298 +8297,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.material_transfer_items": {
-      "name": "material_transfer_items",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "transfer_id": {
-          "name": "transfer_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "material_code": {
-          "name": "material_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "numeric(15, 3)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "from_production_plan_item_id": {
-          "name": "from_production_plan_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "to_production_plan_item_id": {
-          "name": "to_production_plan_item_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "material_transfer_items_transfer_id_idx": {
-          "name": "material_transfer_items_transfer_id_idx",
-          "columns": [
-            {
-              "expression": "transfer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "material_transfer_items_material_code_idx": {
-          "name": "material_transfer_items_material_code_idx",
-          "columns": [
-            {
-              "expression": "material_code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "material_transfer_items_from_pp_item_id_idx": {
-          "name": "material_transfer_items_from_pp_item_id_idx",
-          "columns": [
-            {
-              "expression": "from_production_plan_item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "material_transfer_items_to_pp_item_id_idx": {
-          "name": "material_transfer_items_to_pp_item_id_idx",
-          "columns": [
-            {
-              "expression": "to_production_plan_item_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "material_transfer_items_material_code_materials_code_fk": {
-          "name": "material_transfer_items_material_code_materials_code_fk",
-          "tableFrom": "material_transfer_items",
-          "tableTo": "materials",
-          "columnsFrom": [
-            "material_code"
-          ],
-          "columnsTo": [
-            "code"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "mat_transfer_items_transfer_id_fk": {
-          "name": "mat_transfer_items_transfer_id_fk",
-          "tableFrom": "material_transfer_items",
-          "tableTo": "material_transfers",
-          "columnsFrom": [
-            "transfer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "mat_transfer_items_from_pp_item_id_fk": {
-          "name": "mat_transfer_items_from_pp_item_id_fk",
-          "tableFrom": "material_transfer_items",
-          "tableTo": "production_plan_items",
-          "columnsFrom": [
-            "from_production_plan_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "mat_transfer_items_to_pp_item_id_fk": {
-          "name": "mat_transfer_items_to_pp_item_id_fk",
-          "tableFrom": "material_transfer_items",
-          "tableTo": "production_plan_items",
-          "columnsFrom": [
-            "to_production_plan_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "material_transfer_items_quantity_positive": {
-          "name": "material_transfer_items_quantity_positive",
-          "value": "\"material_transfer_items\".\"quantity\" > 0"
-        },
-        "material_transfer_items_different_plan_items": {
-          "name": "material_transfer_items_different_plan_items",
-          "value": "\"material_transfer_items\".\"from_production_plan_item_id\" <> \"material_transfer_items\".\"to_production_plan_item_id\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.material_transfers": {
-      "name": "material_transfers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "notes": {
-          "name": "notes",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "material_transfers_code_idx": {
-          "name": "material_transfers_code_idx",
-          "columns": [
-            {
-              "expression": "code",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "material_transfers_created_at_idx": {
-          "name": "material_transfers_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "material_transfers_created_by_idx": {
-          "name": "material_transfers_created_by_idx",
-          "columns": [
-            {
-              "expression": "created_by",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "material_transfers_created_by_users_id_fk": {
-          "name": "material_transfers_created_by_users_id_fk",
-          "tableFrom": "material_transfers",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "material_transfers_code_unique": {
-          "name": "material_transfers_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.product_units": {
       "name": "product_units",
       "schema": "",
@@ -7188,6 +8346,18 @@
         },
         "installed_at": {
           "name": "installed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "warranty_started_at": {
+          "name": "warranty_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -7302,6 +8472,36 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "product_units_warranty_started_at_idx": {
+          "name": "product_units_warranty_started_at_idx",
+          "columns": [
+            {
+              "expression": "warranty_started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "product_units_cancelled_at_idx": {
+          "name": "product_units_cancelled_at_idx",
+          "columns": [
+            {
+              "expression": "cancelled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7394,6 +8594,23 @@
         "failed"
       ]
     },
+    "public.maintenance_service_location": {
+      "name": "maintenance_service_location",
+      "schema": "public",
+      "values": [
+        "on_site",
+        "in_factory"
+      ]
+    },
+    "public.maintenance_type": {
+      "name": "maintenance_type",
+      "schema": "public",
+      "values": [
+        "in_warranty",
+        "out_of_warranty",
+        "service_contract"
+      ]
+    },
     "public.material_type": {
       "name": "material_type",
       "schema": "public",
@@ -7448,6 +8665,32 @@
       "values": [
         "manufactured",
         "imported"
+      ]
+    },
+    "public.production_sub_department": {
+      "name": "production_sub_department",
+      "schema": "public",
+      "values": [
+        "cutting",
+        "bending",
+        "refrigeration",
+        "electricity",
+        "gas",
+        "injection",
+        "sheet_metal_neutral",
+        "sheet_metal_cold",
+        "sheet_metal_hot",
+        "blacksmithing"
+      ]
+    },
+    "public.service_contract_interval": {
+      "name": "service_contract_interval",
+      "schema": "public",
+      "values": [
+        "monthly",
+        "quarterly",
+        "semi_annual",
+        "annual"
       ]
     },
     "public.vendor_quotation_email_status": {

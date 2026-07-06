@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1782636793526,
-      "tag": "0000_friendly_human_cannonball",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1782714184049,
-      "tag": "0001_lowly_bulldozer",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1782720992300,
-      "tag": "0002_cuddly_whistler",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1782730585324,
-      "tag": "0003_careless_anita_blake",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1782812182026,
-      "tag": "0004_concerned_proemial_gods",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1782816588547,
-      "tag": "0005_spooky_hellfire_club",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1782819957199,
-      "tag": "0006_free_professor_monster",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1782823195088,
-      "tag": "0007_brief_nemesis",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1782885769504,
-      "tag": "0008_lucky_multiple_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1782909838857,
-      "tag": "0009_wakeful_zodiak",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1783235603775,
-      "tag": "0010_hesitant_lionheart",
+      "when": 1783317278587,
+      "tag": "0000_demonic_mikhail_rasputin",
       "breakpoints": true
     }
   ]
