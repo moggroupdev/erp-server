@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1783317278587,
-      "tag": "0000_demonic_mikhail_rasputin",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1783331615554,
-      "tag": "0001_charming_outlaw_kid",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1783337882085,
-      "tag": "0002_cold_dagger",
+      "when": 1783407216390,
+      "tag": "0000_greedy_infant_terrible",
       "breakpoints": true
     }
   ]

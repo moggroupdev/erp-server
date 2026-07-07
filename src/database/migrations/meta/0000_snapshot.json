@@ -1,5 +1,5 @@
 {
-  "id": "9ad8b2a6-a78a-409a-b1e4-d01a6cb80320",
+  "id": "a0b112f3-9557-43bb-9704-eaa8f85cd3af",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -296,104 +296,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.cities": {
-      "name": "cities",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "governorate_id": {
-          "name": "governorate_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_en": {
-          "name": "name_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_ar": {
-          "name": "name_ar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "cities_governorate_id_idx": {
-          "name": "cities_governorate_id_idx",
-          "columns": [
-            {
-              "expression": "governorate_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cities_name_en_idx": {
-          "name": "cities_name_en_idx",
-          "columns": [
-            {
-              "expression": "name_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "cities_name_ar_idx": {
-          "name": "cities_name_ar_idx",
-          "columns": [
-            {
-              "expression": "name_ar",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "cities_governorate_id_governorates_id_fk": {
-          "name": "cities_governorate_id_governorates_id_fk",
-          "tableFrom": "cities",
-          "tableTo": "governorates",
-          "columnsFrom": [
-            "governorate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -729,6 +631,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "discount_pct": {
+          "name": "discount_pct",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "started_at": {
           "name": "started_at",
           "type": "timestamp with time zone",
@@ -1050,85 +958,12 @@
         "contracts_total_amount_non_negative": {
           "name": "contracts_total_amount_non_negative",
           "value": "\"contracts\".\"total_amount\" >= 0"
+        },
+        "contracts_discount_pct_check": {
+          "name": "contracts_discount_pct_check",
+          "value": "\"contracts\".\"discount_pct\" IS NULL OR (\"contracts\".\"discount_pct\" >= 0 AND \"contracts\".\"discount_pct\" <= 100)"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.countries": {
-      "name": "countries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_en": {
-          "name": "name_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_ar": {
-          "name": "name_ar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "countries_name_en_idx": {
-          "name": "countries_name_en_idx",
-          "columns": [
-            {
-              "expression": "name_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "countries_name_ar_idx": {
-          "name": "countries_name_ar_idx",
-          "columns": [
-            {
-              "expression": "name_ar",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "countries_code_unique": {
-          "name": "countries_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.customer_reception_items": {
@@ -2182,69 +2017,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.governorates": {
-      "name": "governorates",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name_en": {
-          "name": "name_en",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name_ar": {
-          "name": "name_ar",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "governorates_name_en_idx": {
-          "name": "governorates_name_en_idx",
-          "columns": [
-            {
-              "expression": "name_en",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "governorates_name_ar_idx": {
-          "name": "governorates_name_ar_idx",
-          "columns": [
-            {
-              "expression": "name_ar",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.permissions": {
       "name": "permissions",
       "schema": "",
@@ -2332,6 +2104,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "max_discount_pct": {
+          "name": "max_discount_pct",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2361,9 +2145,37 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "roles_department_id_idx": {
+          "name": "roles_department_id_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
+        "roles_department_id_departments_id_fk": {
+          "name": "roles_department_id_departments_id_fk",
+          "tableFrom": "roles",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "roles_created_by_users_id_fk": {
           "name": "roles_created_by_users_id_fk",
           "tableFrom": "roles",
@@ -2389,7 +2201,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "roles_max_discount_pct_check": {
+          "name": "roles_max_discount_pct_check",
+          "value": "\"roles\".\"max_discount_pct\" IS NULL OR (\"roles\".\"max_discount_pct\" >= 0 AND \"roles\".\"max_discount_pct\" <= 100)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.users": {
@@ -2722,6 +2539,244 @@
           "value": "\"production_sub_department_managers\".\"manager_id\" IS NULL OR \"production_sub_department_managers\".\"deputy_manager_id\" IS NULL OR \"production_sub_department_managers\".\"manager_id\" <> \"production_sub_department_managers\".\"deputy_manager_id\""
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.cities": {
+      "name": "cities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "governorate_id": {
+          "name": "governorate_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_en": {
+          "name": "name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_ar": {
+          "name": "name_ar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "cities_governorate_id_idx": {
+          "name": "cities_governorate_id_idx",
+          "columns": [
+            {
+              "expression": "governorate_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_name_en_idx": {
+          "name": "cities_name_en_idx",
+          "columns": [
+            {
+              "expression": "name_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cities_name_ar_idx": {
+          "name": "cities_name_ar_idx",
+          "columns": [
+            {
+              "expression": "name_ar",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cities_governorate_id_governorates_id_fk": {
+          "name": "cities_governorate_id_governorates_id_fk",
+          "tableFrom": "cities",
+          "tableTo": "governorates",
+          "columnsFrom": [
+            "governorate_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.countries": {
+      "name": "countries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_en": {
+          "name": "name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_ar": {
+          "name": "name_ar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "countries_name_en_idx": {
+          "name": "countries_name_en_idx",
+          "columns": [
+            {
+              "expression": "name_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "countries_name_ar_idx": {
+          "name": "countries_name_ar_idx",
+          "columns": [
+            {
+              "expression": "name_ar",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "countries_code_unique": {
+          "name": "countries_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.governorates": {
+      "name": "governorates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name_en": {
+          "name": "name_en",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name_ar": {
+          "name": "name_ar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "governorates_name_en_idx": {
+          "name": "governorates_name_en_idx",
+          "columns": [
+            {
+              "expression": "name_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "governorates_name_ar_idx": {
+          "name": "governorates_name_ar_idx",
+          "columns": [
+            {
+              "expression": "name_ar",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.vendor_addresses": {
@@ -3158,8 +3213,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "sub_department": {
-          "name": "sub_department",
+        "production_sub_department": {
+          "name": "production_sub_department",
           "type": "production_sub_department",
           "typeSchema": "public",
           "primaryKey": false,
@@ -3173,7 +3228,7 @@
         },
         "completion_percentage": {
           "name": "completion_percentage",
-          "type": "numeric(15, 3)",
+          "type": "numeric(5, 2)",
           "primaryKey": false,
           "notNull": true
         }
@@ -3217,7 +3272,7 @@
           "nullsNotDistinct": false,
           "columns": [
             "product_code",
-            "sub_department"
+            "production_sub_department"
           ]
         },
         "product_production_routes_product_sequence_unique": {
@@ -3394,6 +3449,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_code": {
+          "name": "legacy_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "title": {
           "name": "title",
           "type": "text",
@@ -3424,6 +3485,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "pricing_factor": {
+          "name": "pricing_factor",
+          "type": "numeric(15, 3)",
+          "primaryKey": false,
+          "notNull": true
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -3506,12 +3573,24 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "products_legacy_code_unique": {
+          "name": "products_legacy_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "legacy_code"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "products_estimated_production_time_positive": {
           "name": "products_estimated_production_time_positive",
           "value": "\"products\".\"estimated_production_time\" IS NULL OR \"products\".\"estimated_production_time\" > 0"
+        },
+        "products_pricing_factor_positive": {
+          "name": "products_pricing_factor_positive",
+          "value": "\"products\".\"pricing_factor\" > 0"
         }
       },
       "isRLSEnabled": false
@@ -3525,6 +3604,12 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_code": {
+          "name": "legacy_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "title": {
           "name": "title",
@@ -3665,7 +3750,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "materials_legacy_code_unique": {
+          "name": "materials_legacy_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "legacy_code"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "materials_quantity_non_negative": {
@@ -4123,6 +4216,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "scheduled_at": {
           "name": "scheduled_at",
           "type": "timestamp with time zone",
@@ -4173,6 +4272,21 @@
           "columns": [
             {
               "expression": "inquiry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "previews_trip_id_idx": {
+          "name": "previews_trip_id_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4281,6 +4395,19 @@
           "tableTo": "inquiries",
           "columnsFrom": [
             "inquiry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "previews_trip_id_trips_id_fk": {
+          "name": "previews_trip_id_trips_id_fk",
+          "tableFrom": "previews",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
           ],
           "columnsTo": [
             "id"
@@ -4492,6 +4619,142 @@
       },
       "isRLSEnabled": false
     },
+    "public.offer_negotiations": {
+      "name": "offer_negotiations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "offer_id": {
+          "name": "offer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "party": {
+          "name": "party",
+          "type": "negotiation_party",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discount_pct": {
+          "name": "discount_pct",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "offer_negotiations_offer_id_idx": {
+          "name": "offer_negotiations_offer_id_idx",
+          "columns": [
+            {
+              "expression": "offer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "offer_negotiations_created_by_idx": {
+          "name": "offer_negotiations_created_by_idx",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "offer_negotiations_created_at_idx": {
+          "name": "offer_negotiations_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "offer_negotiations_offer_id_offers_id_fk": {
+          "name": "offer_negotiations_offer_id_offers_id_fk",
+          "tableFrom": "offer_negotiations",
+          "tableTo": "offers",
+          "columnsFrom": [
+            "offer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "offer_negotiations_created_by_users_id_fk": {
+          "name": "offer_negotiations_created_by_users_id_fk",
+          "tableFrom": "offer_negotiations",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "offer_negotiations_discount_pct_check": {
+          "name": "offer_negotiations_discount_pct_check",
+          "value": "\"offer_negotiations\".\"discount_pct\" >= 0 AND \"offer_negotiations\".\"discount_pct\" <= 100"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.offers": {
       "name": "offers",
       "schema": "",
@@ -4528,6 +4791,12 @@
           "type": "numeric(15, 3)",
           "primaryKey": false,
           "notNull": true
+        },
+        "discount_pct": {
+          "name": "discount_pct",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
         },
         "notes": {
           "name": "notes",
@@ -4646,6 +4915,10 @@
         "offers_total_amount_non_negative": {
           "name": "offers_total_amount_non_negative",
           "value": "\"offers\".\"total_amount\" >= 0"
+        },
+        "offers_discount_pct_check": {
+          "name": "offers_discount_pct_check",
+          "value": "\"offers\".\"discount_pct\" IS NULL OR (\"offers\".\"discount_pct\" >= 0 AND \"offers\".\"discount_pct\" <= 100)"
         }
       },
       "isRLSEnabled": false
@@ -4889,6 +5162,34 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "production_plan_items_plan_unit_stage_active_unique": {
+          "name": "production_plan_items_plan_unit_stage_active_unique",
+          "columns": [
+            {
+              "expression": "plan_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "product_unit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "production_stage",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"production_plan_items\".\"cancelled_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4920,17 +5221,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "production_plan_items_plan_unit_stage_unique": {
-          "name": "production_plan_items_plan_unit_stage_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "plan_id",
-            "product_unit_id",
-            "production_stage"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
         "production_plan_items_estimated_end_date_gte_start_date": {
@@ -8632,6 +8923,14 @@
         "sheet",
         "roll",
         "box"
+      ]
+    },
+    "public.negotiation_party": {
+      "name": "negotiation_party",
+      "schema": "public",
+      "values": [
+        "customer",
+        "company"
       ]
     },
     "public.offer_status": {
