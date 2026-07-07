@@ -12,12 +12,12 @@ export const customerReceptions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: REC-00000001
-    customerId: uuid('customer_id')
+    customerId: uuid('customer_id') // @APP_CHECKED - Must match the customer on every unit's contract
       .notNull()
       .references(() => customers.id),
-    deliveryId: uuid('delivery_id') // app-checked — when set, all items must belong to this delivery
+    deliveryId: uuid('delivery_id') // @APP_CHECKED - When set, all items must belong to this delivery
       .references(() => deliveries.id),
-    installationId: uuid('installation_id') // app-checked — when set, all items must belong to this installation
+    installationId: uuid('installation_id') // @APP_CHECKED - When set, all items must belong to this installation
       .references(() => installations.id),
     receivedAt: timestamp('received_at', { withTimezone: true }).notNull(), // Warranty start date
     notes: text('notes'),

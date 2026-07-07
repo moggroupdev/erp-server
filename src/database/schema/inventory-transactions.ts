@@ -35,10 +35,10 @@ export const inventoryTransactionItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
-    unitCost: numeric('unit_cost').notNull(), // Historical cost record (snapshot)
-    materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // app-checked. Source must match parent transaction_type.
-    productionPlanItemId: uuid('production_plan_item_id'), // app-checked. Source must match parent transaction_type.
-    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // app-checked. Source must match parent transaction_type.
+    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual cost at transaction time
+    materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type
+    productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type
+    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // @APP_CHECKED - Source must match parent transaction_type
   },
   (table) => [
     foreignKey({

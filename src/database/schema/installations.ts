@@ -54,7 +54,7 @@ export const installationItems = pgTable(
     installationId: uuid('installation_id')
       .notNull()
       .references(() => installations.id),
-    productUnitId: uuid('product_unit_id') // app-checked — must belong to parent installation's contract_id
+    productUnitId: uuid('product_unit_id') // @APP_CHECKED - Must belong to parent installation's contract_id
       .notNull()
       .unique()
       .references(() => productUnits.id),

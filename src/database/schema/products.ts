@@ -113,7 +113,7 @@ export const productProductionRoutes = pgTable(
       .notNull()
       .references(() => products.code),
     productionDepartment: productionSubDepartmentEnum('production_department').notNull(),
-    sequenceOrder: integer('sequence_order').notNull(), // app-checked. Sequential order within the product's production routes.
+    sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Sequential step order within the product's production routes
     completionPercentage: percentage('completion_percentage').notNull(),
   },
   (table) => [

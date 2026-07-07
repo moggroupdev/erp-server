@@ -40,7 +40,7 @@ export const inquiryItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code') // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+    productCode: text('product_code') // @RFP_APP_CHECKED - Must match product_dimensions.product_code for product_dimension_id
       .notNull()
       .references(() => products.code),
     title: text('title'),

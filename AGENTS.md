@@ -6,10 +6,10 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 ## Enums & constants
 
-| Layer | File                          | Role                                                                                                                                                                             |
-| ----- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                                                                |
-| DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts` (`pgEnum`), `properties.ts` (shared columns), `types.ts` (`numeric`), `constraints.ts` (check helpers). Imports enum values from constants. |
+| Layer | File                          | Role                                                                                                                                      |
+| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                         |
+| DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts`, `properties.ts` (shared columns), `types.ts`, `constraints.ts`. Imports enum values from constants. |
 
 **New enum:** constants → `common/enums.ts` → schema. Migration is done manually by a developer (see Migrations).
 
@@ -24,34 +24,34 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - **Uniqueness:** use `.unique()` on a column **or** `uniqueIndex()` — never both with the same name (breaks migrations).
 - Use `uniqueIndex()` only for partial uniqueness (e.g. one default address).
 - Status often comes from timestamps (`cancelledAt`, `completedAt`) — avoid redundant status enums.
-- **Materials** → `purchasing-materials.ts` · **Products** → `purchasing-products.ts` (symmetric naming).
 
 ### DRY vs. performance
 
 - **Default:** no redundancy. Prefer FKs + joins over duplicated codes, names, or IDs.
 - **Exception:** a denormalized column is allowed when it avoids a hot join on frequent reads (list/filter APIs). Keep these rare.
-- Mark such columns with `// RFP — app-checked` (brief inline sync rule) and document them in `src/database/docs/db-duplications.md` (definition, sync rules, and when to add). Validation rules also belong in `application-logic.md`.
-- Mark application-maintained derived columns with `// app-synced`; document behavior in `src/database/docs/application-logic.md`.
-- Mark columns whose values must be validated in NestJS (cross-table rules, conditional requiredness, workflow guards) with `// app-checked`; document rules in `src/database/docs/application-logic.md`.
+- Mark RFP (Redundant For Performance columns) copies with `// @RFP_APP_CHECKED - …` and document in `src/database/docs/db-duplications.md`; sync/validation rules in `src/database/docs/application-logic.md`.
+- Mark cached/derived columns with `// @CACHING_APP_SYNCED - …`; document in both `src/database/docs/db-duplications.md` and `src/database/docs/application-logic.md`.
+- Mark point-in-time price/cost copies with `// @HISTORICAL_SNAPSHOT - …`; document in `src/database/docs/db-duplications.md`.
+- Mark service-validated columns with `// @APP_CHECKED - …`; document in `src/database/docs/application-logic.md`.
 
 ### Performance
 
 - Index columns used in `WHERE`, `ORDER BY`, and join keys.
 - Prefer narrow selects; use Drizzle `with` only when needed.
 - Use `src/utils/services/query-builder.service.ts` for list/filter/pagination.
-- Quantity updates: `sql\`quantity + ${n}\`` in transactions — never read-modify-write in Node.
+- Quantity updates: `sql\`quantity + ${n}` in transactions — never read-modify-write in Node.
 
 ---
 
 ## Docs & triggers
 
-| File                                     | Purpose                                                                                                                                                    |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`                              | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                          |
-| `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes.                                                       |
-| `src/database/docs/application-logic.md` | Business logic removed from DB triggers — implement in NestJS (totals, validations, inventory sync, workflow guards). Update when adding derived behavior. |
-| `src/database/docs/db-duplications.md`   | `// RFP` columns (Redundant For Performance) — definition, sync rules, and inventory.                                                                      |
-| `src/database/sql/triggers.sql`          | Low-level integrity only (like auto-generated `code` on INSERT). Not business logic.                                                                       |
+| File                                     | Purpose                                                                                              |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `README.md`                              | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.    |
+| `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes. |
+| `src/database/docs/db-duplications.md`   | `@RFP_APP_CHECKED`, `@CACHING_APP_SYNCED`, and `@HISTORICAL_SNAPSHOT` column inventory.              |
+| `src/database/docs/application-logic.md` | Business logic that is not handled in DB — caching sync, RFP sync, validations, workflow guards.     |
+| `src/database/sql/triggers.sql`          | Low-level integrity only (like auto-generated `code` on INSERT). Not business logic.                 |
 
 **Triggers example:** `CTR-00000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
 
@@ -59,17 +59,17 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 After **every** change, update all affected docs in the **same** change — never leave them stale.
 
-| Change type                                  | Update                                                                           |
-| -------------------------------------------- | -------------------------------------------------------------------------------- |
-| New/changed table                            | `tables-summary.md`                                                              |
-| New/changed `code` prefix or coded table     | `tables-summary.md`, `triggers.sql`                                              |
-| `// app-synced` column or derived behavior   | `application-logic.md`                                                           |
-| `// app-checked` column or validation rule   | `application-logic.md`                                                           |
-| `// RFP` column                              | `db-duplications.md`                                                             |
-| New/changed domain, entity, or workflow step | `README.md` (What the System Manages, business process, Current Scope as needed) |
-| Schema or feature scope shift                | `README.md` Current Scope                                                        |
+| Change type                                                                  | Update                                                                           |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| New/changed table                                                            | `tables-summary.md`                                                              |
+| New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |
+| `@RFP_APP_CHECKED` redundant column, or `@CACHING_APP_SYNCED` derived column | `db-duplications.md` and `application-logic.md`                                  |
+| `@HISTORICAL_SNAPSHOT column`                                                | `db-duplications.md`                                                             |
+| `@APP_CHECKED` column or validation rule                                     | `application-logic.md`                                                           |
+| New/changed domain, entity, or workflow step                                 | `README.md` (What the System Manages, business process, Current Scope as needed) |
+| Schema or feature scope shift                                                | `README.md` Current Scope                                                        |
 
-Updating existing docs is required; do not create new markdown files unless the user asks (see Agent rules).
+Updating existing docs is required; do not create new markdown files unless the user asks, and keep these docs summarized.
 
 ---
 
@@ -88,18 +88,11 @@ Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, th
 ## NestJS
 
 - Transactions for multi-table writes and recalculations.
-- Nest HTTP exceptions with clear messages; omit immutable fields (`code`, `createdAt`) from update DTOs.
+- Nest HTTP exceptions with clear messages; omit immutable fields (`code`, `createdAt`, `createdBy`) from update DTOs.
 - Permissions from `PERMISSION_VALUES` in constants.
 
 ---
 
-## Agent rules
+## Comments
 
-1. Constants first → common → schema.
-2. Schema is the contract (FKs, indexes, checks, relations).
-3. Minimize redundancy; `// RFP — app-checked` + `db-duplications.md` + `application-logic.md` for performance copies; `// app-synced` + `application-logic.md` for derived fields; `// app-checked` + `application-logic.md` for other service-layer validations.
-4. **Keep docs in sync** — after every change, update all affected files from the table above (`README.md`, `src/database/docs/*`, `triggers.sql` when relevant) in the same change. Use the checklist in Docs & triggers.
-5. **Do not migrate** — never run `db:generate`, `db:migrate`, or `db:triggers`; leave that to a developer.
-6. Do not commit unless asked.
-7. Do not add new markdown files unless requested (updating existing docs is required).
-8. **Comments:** brief inline comments are allowed to explain non-obvious business logic, schema intent. Keep them short — do not restate what the code already says.
+Brief inline comments are allowed to explain non-obvious business logic, schema intent. Keep them short — do not restate what the code already says.

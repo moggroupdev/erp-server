@@ -18,7 +18,7 @@ export const users = pgTable(
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
     departmentId: uuid('department_id').references(() => departments.id),
-    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // app-checked. Required only if the main department is Production.
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // @APP_CHECKED - Required only when department_id is Production
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
     createdAt,
     deletedAt,
@@ -41,8 +41,8 @@ export const roles = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     name: text('name').notNull().unique(),
     description: text('description'),
-    maxDiscountPct: percentage('max_discount_pct'), // app-checked. NULL = no discount allowed; non-null = max percentage cap.
-    departmentId: uuid('department_id').references(() => departments.id), // app-checked. Optional department scope for role assignment.
+    maxDiscountPct: percentage('max_discount_pct'), // @APP_CHECKED - NULL = no discount allowed; non-null = max percentage cap
+    departmentId: uuid('department_id').references(() => departments.id), // @APP_CHECKED - Optional department scope; must match user's department when assigning role
     createdAt,
     createdBy: uuid('created_by')
       .notNull()

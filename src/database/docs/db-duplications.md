@@ -1,74 +1,75 @@
 # Database duplications
 
-**RFP** = **Redundant For Performance** — the `// RFP` schema comment marks a column that duplicates data already reachable via FKs, kept to avoid hot-path joins on frequent reads (list/filter APIs).
+Columns that duplicate data reachable elsewhere. Default is DRY — add only when the benefit outweighs sync cost.
 
-Default is DRY — add entries here only when the join cost outweighs storage + sync complexity.
+| Marker                 | Purpose                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `@RFP_APP_CHECKED`     | Redundant for performance — copy on insert for list/filter without hot joins; validated in service |
+| `@CACHING_APP_SYNCED`  | Live cache — app recomputes from child rows or events                                              |
+| `@HISTORICAL_SNAPSHOT` | Point-in-time price/cost — frozen on insert; catalog may change later                              |
 
-**Not listed here:** derived/cached values (`total_amount`, `quantity`, synced timestamps) and non-RFP service-validated columns. Those live in [`application-logic.md`](./application-logic.md) and use the `// app-synced` or `// app-checked` schema markers.
+Schema format: `// @MARKER - brief rule`.
 
-**RFP columns are always `// app-checked` too** — every denormalized copy must be set from its canonical source and kept consistent in the service layer. Use `// RFP — app-checked` on the column with a brief inline sync rule.
-
----
-
-## When to add a duplication
-
-1. The column is reachable via an existing FK chain but queried/filtered often without needing the parent row.
-2. The join cost outweighs storage + sync complexity.
-3. Add `// RFP` on the column, document below, and implement sync in the service layer.
-
-## Entry template
-
-```markdown
-### `table.column`
-
-- **Canonical source:** `other_table.column` via `fk_column`
-- **Why:** e.g. list/filter API without joining `other_table`
-- **Sync:** set on INSERT from source; immutable / or updated when …
-- **Index:** `index_name` (if any)
-```
+Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 ---
 
-## Current duplications
+## @RFP_APP_CHECKED
 
-### `contracts.customer_id`
+| Column                           | Canonical source                                                                                                 | Why                                                    |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `contracts.customer_id`          | `inquiries.customer_id` via `inquiry_id`                                                                         | Filter contracts by customer without joining inquiries |
+| `maintenance_orders.customer_id` | `customer_addresses.customer_id` via `customer_address_id`; or service agreement address when `service_contract` | Filter MOs by customer without deep joins              |
+| `inquiry_items.product_code`     | `product_dimensions.product_code` via `product_dimension_id`                                                     | Filter lines by product without joining dimensions     |
+| `offer_items.product_code`       | Same                                                                                                             | Same                                                   |
+| `preview_items.product_code`     | Same                                                                                                             | Same                                                   |
+| `contract_items.product_code`    | Same                                                                                                             | Same                                                   |
 
-- **Canonical source:** `inquiries.customer_id` via `contracts.inquiry_id`
-- **Why:** List and filter contracts by customer without joining `inquiries` on every contract query.
-- **Sync:** Copy `inquiries.customer_id` on contract creation. Must match the inquiry's customer; treat as immutable unless `inquiry_id` changes (validate in service if ever allowed).
-- **Index:** `contracts_customer_id_idx`
+**Sync:** copy from canonical source on INSERT; immutable unless the driving FK changes (re-validate in service).
 
-### `inquiry_items.product_code`
+---
 
-- **Canonical source:** `product_dimensions.product_code` via `inquiry_items.product_dimension_id`
-- **Why:** List and filter inquiry lines by product without joining `product_dimensions` on every item query.
-- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
-- **Index:** `inquiry_items_product_code_idx`
+## @CACHING_APP_SYNCED
 
-### `offer_items.product_code`
+| Column                                  | Source                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `offers.total_amount`                   | `SUM(quantity × unit_price)` from `offer_items`                                             |
+| `contracts.total_amount`                | `SUM(quantity × unit_price)` from `contract_items` where `cancelled_at IS NULL`             |
+| `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_cost)` from `material_purchase_order_items`                    |
+| `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_cost)` from `product_purchase_order_items`                     |
+| `materials.quantity`                    | Net from `inventory_transaction_items` by `transaction_type` (receipt +, issue −, return +) |
+| `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
+| `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
+| `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit                                      |
+| `product_units.received_at`             | Parent `product_purchase_receipts.received_at` via receipt item                             |
+| `product_units.delivered_at`            | Parent `deliveries.completed_at` via `delivery_items`                                       |
+| `product_units.installed_at`            | Parent `installations.completed_at` via `installation_items`                                |
+| `product_units.warranty_started_at`     | Parent `customer_receptions.received_at` via `customer_reception_items`                     |
+| `product_units.cancelled_at`            | Parent `contract_items` cancelled/replaced, or unit dropped on quantity decrease            |
 
-- **Canonical source:** `product_dimensions.product_code` via `offer_items.product_dimension_id`
-- **Why:** List and filter offer lines by product without joining `product_dimensions` on every item query.
-- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
-- **Index:** `offer_items_product_code_idx`
+**Concurrency:** use `sql\`quantity + ${n}`for`materials.quantity` — never read-modify-write in Node.
 
-### `preview_items.product_code`
+---
 
-- **Canonical source:** `product_dimensions.product_code` via `preview_items.product_dimension_id`
-- **Why:** List and filter preview lines by product without joining `product_dimensions` on every item query.
-- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
-- **Index:** `preview_items_product_code_idx`
+## @HISTORICAL_SNAPSHOT
 
-### `contract_items.product_code`
+| Column                                     | Set on insert from                                             |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `offer_items.unit_price`                   | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
+| `contract_items.unit_price`                | Pre-discount quoted price; changes via cancel-and-replace only |
+| `material_purchase_order_items.unit_cost`  | Agreed purchase price on the PO line                           |
+| `product_purchase_order_items.unit_cost`   | Agreed purchase price on the PO line                           |
+| `inventory_transaction_items.unit_cost`    | User-provided actual cost at transaction time                  |
+| `maintenance_order_spare_parts.unit_price` | Selling price at time of use                                   |
 
-- **Canonical source:** `product_dimensions.product_code` via `contract_items.product_dimension_id`
-- **Why:** List and filter contract lines by product without joining `product_dimensions` on every item query.
-- **Sync:** Copy `product_dimensions.product_code` on item insert. Immutable after insert.
-- **Index:** `contract_items_product_code_idx`
+**Rules:** set once on INSERT; omit from update DTOs. Not the same as live catalog (`materials.unit_cost`).
 
-### `maintenance_orders.customer_id`
+---
 
-- **Canonical source:** `customer_addresses.customer_id` via `maintenance_orders.customer_address_id`; when `maintenance_type = 'service_contract'`, via `service_agreements.customer_address_id` → `customer_addresses.customer_id`
-- **Why:** List and filter maintenance orders by customer without joining address, agreement, or item/unit chains.
-- **Sync:** Set on INSERT from `customer_address_id` or the linked service agreement's address. Must match the customer on every serviced unit; validate in service when adding items.
-- **Index:** `maintenance_orders_customer_id_idx`
+## When to add
+
+1. **RFP** — column reachable via FK chain but queried/filtered often; join cost > storage + sync.
+2. **Caching** — aggregate or status mirror recomputed from children/events.
+3. **Snapshot** — business value must stay fixed while master data changes.
+
+Add the marker on the column and document it here.

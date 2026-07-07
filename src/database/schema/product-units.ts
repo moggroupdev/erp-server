@@ -19,13 +19,13 @@ export const productUnits = pgTable(
     contractItemId: uuid('contract_item_id')
       .notNull()
       .references(() => contractItems.id),
-    // Status can be deduced from the following timestamps. The following timestamps are app-synced (which means they are derived from other tables)
-    producedAt: timestamp('produced_at', { withTimezone: true }), // app-synced — derived when the last production_plan_items row for this unit has completed_at set
-    receivedAt: timestamp('received_at', { withTimezone: true }), // app-synced — derived from product_purchase_receipt_items when parent receipt received_at is set
-    deliveredAt: timestamp('delivered_at', { withTimezone: true }), // app-synced — derived from deliveries.completed_at via delivery_items referencing this unit
-    installedAt: timestamp('installed_at', { withTimezone: true }), // app-synced — derived from installations.completed_at via installation_items referencing this unit
-    warrantyStartedAt: timestamp('warranty_started_at', { withTimezone: true }), // app-synced — derived from customer_receptions.received_at via customer_reception_items referencing this unit
-    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // app-synced — set when parent contract_item is cancelled/replaced, or unit is dropped on quantity decrease
+    // @CACHING_APP_SYNCED - Unit lifecycle timestamps derived from workflow child tables
+    producedAt: timestamp('produced_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when the last production_plan_items row for this unit has completed_at
+    receivedAt: timestamp('received_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Derived from product_purchase_receipt_items when parent receipt received_at is set
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Derived from deliveries.completed_at via delivery_items
+    installedAt: timestamp('installed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Derived from installations.completed_at via installation_items
+    warrantyStartedAt: timestamp('warranty_started_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Derived from customer_receptions.received_at via customer_reception_items
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when parent contract_item is cancelled/replaced, or unit dropped on quantity decrease
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

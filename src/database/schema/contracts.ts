@@ -22,7 +22,7 @@ export const contracts = pgTable(
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
-    customerId: uuid('customer_id') // RFP — app-checked. Must match inquiries.customer_id for inquiry_id and customer_addresses.customer_id for delivery_address_id.
+    customerId: uuid('customer_id') // @RFP_APP_CHECKED - Must match inquiries.customer_id for inquiry_id and customer_addresses.customer_id for delivery_address_id
       .notNull()
       .references(() => customers.id),
     previewId: uuid('preview_id') // Nullable — some contracts are not from previews
@@ -31,12 +31,12 @@ export const contracts = pgTable(
     offerId: uuid('offer_id') // Nullable — some contracts are not from offers
       .unique()
       .references(() => offers.id),
-    deliveryAddressId: uuid('delivery_address_id') // app-checked. Must belong to contracts.customer_id.
+    deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Must belong to contracts.customer_id
       .notNull()
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
-    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
-    discountPct: percentage('discount_pct'), // app-checked. When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract creation.
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
+    discountPct: percentage('discount_pct'), // @APP_CHECKED - When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract creation
     // Contract status can be deduced from these dates:
     startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -88,10 +88,10 @@ export const contractItems = pgTable(
       .references(() => productDimensions.id),
     productCode: text('product_code')
       .notNull()
-      .references(() => products.code), // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+      .references(() => products.code), // @RFP_APP_CHECKED - Must match product_dimensions.product_code for product_dimension_id
     title: text('title'),
     notes: text('notes'),
-    unitPrice: numeric('unit_price').notNull(),
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Pre-discount quoted price; changes via cancel-and-replace only
     quantity: integer('quantity').notNull().default(1),
     createdBy: uuid('created_by')
       .notNull()

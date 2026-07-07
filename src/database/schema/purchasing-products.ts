@@ -14,8 +14,8 @@ export const productPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity_ordered * unit_cost) from product_purchase_order_items
-    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced — set when every ordered unit has a linked product_purchase_receipt_items row
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_cost) from product_purchase_order_items
+    completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when every ordered unit has a linked product_purchase_receipt_items row
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
@@ -41,7 +41,7 @@ export const productPurchaseOrderItems = pgTable(
     productPurchaseOrderId: uuid('product_purchase_order_id').notNull(),
     contractItemId: uuid('contract_item_id').notNull(),
     quantityOrdered: integer('quantity_ordered').notNull(),
-    unitCost: numeric('unit_cost').notNull(),
+    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
     notes: text('notes'),
   },
   (table) => [

@@ -21,8 +21,8 @@ export const materialPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity_ordered * unit_cost) from material_purchase_order_items
-    completedAt: timestamp('completed_at', { withTimezone: true }), // app-synced — set when all order lines are fully received (received + rejected = ordered) across all receipts
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_cost) from material_purchase_order_items
+    completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when all order lines are fully received across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
@@ -50,7 +50,7 @@ export const materialPurchaseOrderItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityOrdered: numeric('quantity_ordered').notNull(),
-    unitCost: numeric('unit_cost').notNull(),
+    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
     notes: text('notes'),
   },
   (table) => [

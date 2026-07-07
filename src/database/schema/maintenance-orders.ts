@@ -18,7 +18,7 @@ export const maintenanceOrders = pgTable(
     serviceAgreementId: uuid('service_agreement_id'),
     serviceLocation: maintenanceServiceLocationEnum('service_location').notNull(),
     customerAddressId: uuid('customer_address_id').references(() => customerAddresses.id),
-    customerId: uuid('customer_id') // RFP — app-checked. Must match customer_addresses.customer_id for customer_address_id (or service agreement address when service_contract).
+    customerId: uuid('customer_id') // @RFP_APP_CHECKED - Must match customer_addresses.customer_id for customer_address_id (or service agreement address when service_contract)
       .notNull()
       .references(() => customers.id),
     tripId: uuid('trip_id').references(() => trips.id),
@@ -71,7 +71,7 @@ export const maintenanceOrderItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     maintenanceOrderId: uuid('maintenance_order_id').notNull(),
-    productUnitId: uuid('product_unit_id') // app-checked — unit must be in-warranty (warranty_started_at set, not expired) when parent maintenance_type = 'in_warranty'
+    productUnitId: uuid('product_unit_id') // @APP_CHECKED - Unit must be in-warranty when parent maintenance_type = in_warranty
       .notNull()
       .references(() => productUnits.id),
     notes: text('notes'),
@@ -97,7 +97,7 @@ export const maintenanceOrderSpareParts = pgTable(
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
-    unitPrice: numeric('unit_price').notNull(), // Selling price snapshot at time of use
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Selling price at time of use
     isBillable: boolean('is_billable').notNull(),
     notes: text('notes'),
   },

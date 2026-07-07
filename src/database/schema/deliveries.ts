@@ -54,7 +54,7 @@ export const deliveryItems = pgTable(
     deliveryId: uuid('delivery_id')
       .notNull()
       .references(() => deliveries.id),
-    productUnitId: uuid('product_unit_id') // app-checked — must belong to parent delivery's contract_id
+    productUnitId: uuid('product_unit_id') // @APP_CHECKED - Must belong to parent delivery's contract_id
       .notNull()
       .unique()
       .references(() => productUnits.id),

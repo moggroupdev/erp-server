@@ -15,7 +15,7 @@ export const offers = pgTable(
       .references(() => inquiries.id),
     status: offerStatusEnum('status').notNull().default('draft'),
     validUntil: timestamp('valid_until', { withTimezone: true }),
-    totalAmount: numeric('total_amount').notNull(), // app-synced — SUM(quantity * unit_price) from offer_items
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from offer_items
     discountPct: percentage('discount_pct'),
     notes: text('notes'),
     createdAt,
@@ -46,13 +46,13 @@ export const offerItems = pgTable(
     productDimensionId: uuid('product_dimension_id')
       .notNull()
       .references(() => productDimensions.id),
-    productCode: text('product_code') // RFP — app-checked. Must match product_dimensions.product_code for product_dimension_id.
+    productCode: text('product_code') // @RFP_APP_CHECKED - Must match product_dimensions.product_code for product_dimension_id
       .notNull()
       .references(() => products.code),
     title: text('title'),
     notes: text('notes'),
     quantity: integer('quantity').notNull().default(1),
-    unitPrice: numeric('unit_price').notNull(),
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Quoted price at offer creation
   },
   (table) => [
     index('offer_items_offer_id_idx').on(table.offerId),
@@ -71,7 +71,7 @@ export const offerNegotiations = pgTable(
       .notNull()
       .references(() => offers.id),
     party: negotiationPartyEnum('party').notNull(),
-    discountPct: percentage('discount_pct').notNull(), // app-checked — when party = company, must not exceed the acting user's role.maxDiscountPct (roles.max_discount_pct)
+    discountPct: percentage('discount_pct').notNull(), // @APP_CHECKED - When party = company, must not exceed the acting user's role.maxDiscountPct
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
