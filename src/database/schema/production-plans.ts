@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, check, index, foreignKey, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, check, index, foreignKey, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createdAt, productionSubDepartmentEnum } from './common';
 import { inventoryTransactionItems } from './inventory-transactions';
 import { productUnits } from './product-units';
@@ -50,7 +50,9 @@ export const productionPlanItems = pgTable(
     index('production_plan_items_production_stage_idx').on(table.productionStage),
     index('production_plan_items_completed_at_idx').on(table.completedAt),
     index('production_plan_items_cancelled_at_idx').on(table.cancelledAt),
-    unique('production_plan_items_plan_unit_stage_unique').on(table.planId, table.productUnitId, table.productionStage),
+    uniqueIndex('production_plan_items_plan_unit_stage_active_unique')
+      .on(table.planId, table.productUnitId, table.productionStage)
+      .where(sql`${table.cancelledAt} IS NULL`),
     check(
       'production_plan_items_estimated_end_date_gte_start_date',
       sql`${table.estimatedEndDate} IS NULL OR ${table.startDate} IS NULL OR ${table.estimatedEndDate} >= ${table.startDate}`,

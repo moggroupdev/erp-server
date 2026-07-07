@@ -112,12 +112,12 @@ export const productProductionRoutes = pgTable(
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
-    productionDepartment: productionSubDepartmentEnum('production_department').notNull(),
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
     sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Sequential step order within the product's production routes
-    completionPercentage: percentage('completion_percentage').notNull(),
+    completionPercentage: percentage('completion_percentage').notNull(), // @APP_CHECKED - Active routes for a product must sum to 100%
   },
   (table) => [
-    unique('product_production_routes_product_production_dept_unique').on(table.productCode, table.productionDepartment),
+    unique('product_production_routes_product_sub_dept_unique').on(table.productCode, table.productionSubDepartment),
     unique('product_production_routes_product_sequence_unique').on(table.productCode, table.sequenceOrder),
     index('product_production_routes_product_code_idx').on(table.productCode),
     check('product_production_routes_sequence_order_positive', sql`${table.sequenceOrder} > 0`),
