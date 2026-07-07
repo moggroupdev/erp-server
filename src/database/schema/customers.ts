@@ -2,8 +2,7 @@ import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg
 import { relations, sql } from 'drizzle-orm';
 import { createdAt, deletedAt } from './common';
 import { users } from './users';
-import { cities } from './cities';
-import { countries } from './countries';
+import { cities, countries } from './locations';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
 import { customerReceptions } from './customer-receptions';
