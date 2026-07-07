@@ -75,7 +75,7 @@ async function main() {
 
   try {
     const materialsPath = path.join(__dirname, '../data/categories/materials.json');
-    const productsPath = path.join(__dirname, '../categories/products.json');
+    const productsPath = path.join(__dirname, '../data/categories/products.json');
 
     const materialsData = JSON.parse(fs.readFileSync(materialsPath, 'utf-8')) as CategoryJson[];
     const productsData = JSON.parse(fs.readFileSync(productsPath, 'utf-8')) as CategoryJson[];
