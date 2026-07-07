@@ -5,6 +5,7 @@ import { users } from './users';
 import { deliveries } from './deliveries';
 import { installations } from './installations';
 import { maintenanceOrders } from './maintenance-orders';
+import { previews } from './previews';
 
 export const trips = pgTable(
   'trips',
@@ -42,4 +43,5 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   deliveries: many(deliveries),
   installations: many(installations),
   maintenanceOrders: many(maintenanceOrders),
+  previews: many(previews),
 }));

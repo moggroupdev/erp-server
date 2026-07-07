@@ -80,7 +80,7 @@ The following describes how a typical project moves through the company, from fi
 
 A project begins when a customer reaches out requesting equipment and pricing. The company opens an inquiry and records the products and quantities the customer is interested in.
 
-When a site visit is needed, the Preview Team schedules a preview, assigns staff, and visits the customer's location. They take measurements, assess installation constraints, and capture technical requirements — typically one preview line per inquiry product, copied at scheduling time as a standalone snapshot (same pattern as offer and contract lines).
+When a site visit is needed, the Preview Team schedules a preview, assigns staff, and visits the customer's location. They take measurements, assess installation constraints, and capture technical requirements — typically one preview line per inquiry product, copied at scheduling time as a standalone snapshot (same pattern as offer and contract lines). When multiple site visits travel on the same vehicle, they can be grouped into a trip.
 
 With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer counters on price, sales records negotiation rounds (blanket discount) until terms are agreed. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability. When production or fulfillment work begins, the contract's work-order start date (`started_at`) is recorded.
 
@@ -106,7 +106,7 @@ For catalog items sourced from outside suppliers rather than built in-house, Pur
 
 ### Delivery, Installation, and Completion
 
-Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Each delivery and installation is tied to one contract; the visit address comes from that contract's delivery address. When multiple tasks travel on the same vehicle, they are grouped into a trip — a delivery, installation, and maintenance visit to different addresses can share one trip.
+Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Each delivery and installation is tied to one contract; the visit address comes from that contract's delivery address. When multiple tasks travel on the same vehicle, they are grouped into a trip — a preview, delivery, installation, or maintenance visit to different addresses can share one trip.
 
 Customer reception is recorded separately when the customer physically receives units — at the factory, after delivery, or after installation. That handover starts the 1-year warranty period for each unit. When every item is received and the project is accepted, the contract is marked complete.
 

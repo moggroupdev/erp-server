@@ -23,6 +23,7 @@ export const products = pgTable(
   'products',
   {
     code: text('code').primaryKey(),
+    legacyCode: text('legacy_code').unique(),
     title: text('title').notNull(),
     description: text('description'),
     subCategoryId: uuid('sub_category_id')

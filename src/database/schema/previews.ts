@@ -4,6 +4,7 @@ import { createdAt } from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
 import { products, productDimensions } from './products';
+import { trips } from './trips';
 import { users } from './users';
 
 export const previews = pgTable(
@@ -13,6 +14,7 @@ export const previews = pgTable(
     inquiryId: uuid('inquiry_id')
       .notNull()
       .references(() => inquiries.id),
+    tripId: uuid('trip_id').references(() => trips.id),
     // Preview status can be deduced from these dates:
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }).notNull(),
     completedAt: timestamp('completed_at', { withTimezone: true }),
@@ -28,6 +30,7 @@ export const previews = pgTable(
   },
   (table) => [
     index('previews_inquiry_id_idx').on(table.inquiryId),
+    index('previews_trip_id_idx').on(table.tripId),
     index('previews_scheduled_at_idx').on(table.scheduledAt),
     index('previews_completed_at_idx').on(table.completedAt),
     index('previews_cancelled_at_idx').on(table.cancelledAt),
@@ -74,6 +77,10 @@ export const previewsRelations = relations(previews, ({ one, many }) => ({
   inquiry: one(inquiries, {
     fields: [previews.inquiryId],
     references: [inquiries.id],
+  }),
+  trip: one(trips, {
+    fields: [previews.tripId],
+    references: [trips.id],
   }),
   assignedTo: one(users, {
     fields: [previews.assignedTo],
