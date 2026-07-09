@@ -1,4 +1,5 @@
 import { registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { applyDecorators } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
 
@@ -30,6 +31,21 @@ export function IsPhone(validationOptions?: PhoneValidationOptions) {
       },
     });
   };
+}
+
+/** Trims string values before validation. Requires ValidationPipe `transform: true`. */
+export function Trim() {
+  return Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
+}
+
+/** Trims strings and coerces whitespace-only values to `null`. */
+export function TrimToNull() {
+  return Transform(({ value }) => {
+    if (value == null) return value;
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+  });
 }
 
 export function ApiListQueries() {

@@ -28,6 +28,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true, // Ignore non-whitelisted properties (that are not in the DTO)
       forbidNonWhitelisted: true, // Throw an error if non-whitelisted properties are present
+      transform: true, // Apply class-transformer decorators (e.g. @Trim)
     }),
   );
 
