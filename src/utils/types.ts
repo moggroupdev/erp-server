@@ -11,7 +11,7 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
 } from './constants';
-import { roles, users, vendors } from 'src/database/schema';
+import { departments, users, roles, vendors } from 'src/database/schema';
 
 export type Pagination = {
   page: number;
@@ -50,6 +50,8 @@ export type VendorQuotationEmailStatus = (typeof VENDOR_QUOTATION_EMAIL_STATUS_V
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number];
 
 // ==================== ENTITIES ====================
+
+export type Department = typeof departments.$inferSelect;
 
 export type User = typeof users.$inferSelect;
 

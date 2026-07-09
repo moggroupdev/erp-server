@@ -22,6 +22,10 @@ export const PERMISSION_VALUES = [
   'list_vendors',
   'get_vendor',
   'update_vendor',
+  'add_department',
+  'list_departments',
+  'get_department',
+  'update_department',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
