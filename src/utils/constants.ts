@@ -11,20 +11,18 @@ export const PRODUCTION_DEPARTMENT_ID = '3f2a91bc-4d8e-4a1f-b563-7c94e21a0b01';
 
 export const PERMISSION_VALUES = [
   'add_user',
-  'list_users',
+  'read_users',
   'update_user',
   'delete_user',
   'add_role',
-  'list_roles',
+  'read_roles',
   'update_role',
   'delete_role',
   'add_vendor',
-  'list_vendors',
-  'get_vendor',
+  'read_vendors',
   'update_vendor',
   'add_department',
-  'list_departments',
-  'get_department',
+  'read_departments',
   'update_department',
 ] as const;
 

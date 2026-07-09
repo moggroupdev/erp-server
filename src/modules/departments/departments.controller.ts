@@ -21,7 +21,7 @@ export class DepartmentsController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.LIST_DEPARTMENTS)
+  @AllowedPermission(PERMISSIONS.READ_DEPARTMENTS)
   @ApiBearerAuth()
   list() {
     return this.departmentsService.list();
@@ -29,7 +29,7 @@ export class DepartmentsController {
 
   @Get(':id')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.GET_DEPARTMENT)
+  @AllowedPermission(PERMISSIONS.READ_DEPARTMENTS)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.departmentsService.get(id);

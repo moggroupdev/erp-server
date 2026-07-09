@@ -24,7 +24,7 @@ export class VendorsController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.LIST_VENDORS)
+  @AllowedPermission(PERMISSIONS.READ_VENDORS)
   @ApiBearerAuth()
   @ApiListQueries()
   list(@Query() query: QueryParams) {
@@ -33,7 +33,7 @@ export class VendorsController {
 
   @Get(':id')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.GET_VENDOR)
+  @AllowedPermission(PERMISSIONS.READ_VENDORS)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.vendorsService.get(id);
