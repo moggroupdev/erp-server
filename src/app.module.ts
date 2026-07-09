@@ -7,10 +7,18 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { LocationsModule } from './modules/locations/locations.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), DatabaseModule, AuthModule, DepartmentsModule, VendorsModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    DatabaseModule,
+    AuthModule,
+    DepartmentsModule,
+    LocationsModule,
+    VendorsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
