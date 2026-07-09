@@ -21,7 +21,7 @@ export class VendorsService {
       .insert(vendors)
       .values({ ...createVendorDto, code: sql`DEFAULT`, createdBy: user.id })
       .returning();
-    return vendor; // CreatedBy is not populated here
+    return this.get(vendor.id); // Returns the vendor with population
   }
 
   public async list(queryParams: QueryParams) {
@@ -36,7 +36,7 @@ export class VendorsService {
     });
   }
 
-  // The `get` can return a deleted vendor normally
+  // We allow the `get` method to return a deleted vendor too
   public async get(id: string) {
     const vendor = await this.db.query.vendors.findFirst({ where: eq(vendors.id, id), with: POPULATION });
     if (!vendor) throw new NotFoundException(`Vendor with ID ${id} does not exist.`);
@@ -50,6 +50,6 @@ export class VendorsService {
       .where(and(eq(vendors.id, id), isNull(vendors.deletedAt)))
       .returning();
     if (!updatedVendor) throw new NotFoundException(`Vendor with ID ${id} does not exist.`);
-    return updatedVendor; // CreatedBy is not populated here
+    return this.get(updatedVendor.id); // Returns the updated vendor with population
   }
 }
