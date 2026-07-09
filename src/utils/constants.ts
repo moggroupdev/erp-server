@@ -18,6 +18,10 @@ export const PERMISSION_VALUES = [
   'list_roles',
   'update_role',
   'delete_role',
+  'add_vendor',
+  'list_vendors',
+  'get_vendor',
+  'update_vendor',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
@@ -153,9 +157,7 @@ export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
 
 export const MAINTENANCE_TYPE_VALUES = ['in_warranty', 'out_of_warranty', 'service_contract'] as const;
 
-export const MAINTENANCE_TYPES = Object.fromEntries(
-  MAINTENANCE_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
-) as {
+export const MAINTENANCE_TYPES = Object.fromEntries(MAINTENANCE_TYPE_VALUES.map((type) => [type.toUpperCase(), type])) as {
   [K in Uppercase<(typeof MAINTENANCE_TYPE_VALUES)[number]>]: Lowercase<K>;
 };
 
