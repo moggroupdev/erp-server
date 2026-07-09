@@ -22,6 +22,7 @@ interface QueryBuilderOptions {
   fieldLimiting?: boolean;
   pagination?: boolean;
   sorting?: boolean;
+  additionalConditions?: SQL[];
 
   withRelations?: RelationConfig;
 }
@@ -49,7 +50,7 @@ export class QueryBuilderService {
     } = options;
 
     const tableColumns = getTableColumns(table);
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [...(options.additionalConditions ?? [])];
 
     // 1. Filtering
     if (filtering) {
