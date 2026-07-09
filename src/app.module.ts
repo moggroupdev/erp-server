@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { LocaleMiddleware } from './utils/middlewares/locale.middleware';
 import { LoggerMiddleware } from './utils/middlewares/logger.middleware';
 import { DatabaseModule } from './database/database.module';
 import { AppController } from './app.controller';
@@ -14,6 +15,6 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes('*');
+    consumer.apply(LocaleMiddleware, LoggerMiddleware).forRoutes('*');
   }
 }

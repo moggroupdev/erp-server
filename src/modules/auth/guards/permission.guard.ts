@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Permission } from 'src/utils/types';
 import { REQUEST_USER_KEY, ALLOWED_PERMISSION_KEY } from 'src/utils/constants';
+import { translate } from 'src/utils/i18n/translate';
 import { AccessTokenGuard } from './access-token.guard';
 import { AuthService } from '../auth.service';
 
@@ -32,7 +33,10 @@ export class PermissionGuard extends AccessTokenGuard {
   async canActivate(context: ExecutionContext) {
     const requiredPermission = this.reflector.get<Permission>(ALLOWED_PERMISSION_KEY, context.getHandler());
 
-    if (!requiredPermission) throw new InternalServerErrorException('No permission specified for permission guard.');
+    if (!requiredPermission)
+      throw new InternalServerErrorException(
+        translate('No permission specified for permission guard.', 'لم يتم تحديد صلاحية لحارس الصلاحيات.'),
+      );
 
     // Get request object and verify token using parent class method
     const request: Request = context.switchToHttp().getRequest();
@@ -49,10 +53,16 @@ export class PermissionGuard extends AccessTokenGuard {
     }
 
     // Non-admin users must have a role with the required permission
-    if (!user.role) throw new ForbiddenException('Access denied: Insufficient permissions.');
+    if (!user.role)
+      throw new ForbiddenException(
+        translate('Access denied: Insufficient permissions.', 'تم رفض الوصول: صلاحيات غير كافية.'),
+      );
 
     const hasPermission = user.role.permissions.includes(requiredPermission);
-    if (!hasPermission) throw new ForbiddenException('Access denied: Insufficient permissions.');
+    if (!hasPermission)
+      throw new ForbiddenException(
+        translate('Access denied: Insufficient permissions.', 'تم رفض الوصول: صلاحيات غير كافية.'),
+      );
 
     // Attach user to request
     request[REQUEST_USER_KEY] = user;

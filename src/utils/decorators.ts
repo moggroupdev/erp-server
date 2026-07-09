@@ -2,6 +2,7 @@ import { registerDecorator, ValidationOptions, ValidationArguments } from 'class
 import { Transform } from 'class-transformer';
 import { applyDecorators } from '@nestjs/common';
 import { ApiQuery } from '@nestjs/swagger';
+import { translate } from 'src/utils/i18n/translate';
 
 export interface PhoneValidationOptions extends ValidationOptions {
   egyptianOnly?: boolean;
@@ -25,8 +26,15 @@ export function IsPhone(validationOptions?: PhoneValidationOptions) {
         },
 
         defaultMessage(args: ValidationArguments) {
-          if (validationOptions?.egyptianOnly) return `${args.property} must be a valid Egyptian phone number`;
-          return `${args.property} must be a valid phone number`;
+          if (validationOptions?.egyptianOnly)
+            return translate(
+              `${args.property} must be a valid Egyptian phone number`,
+              `${args.property} يجب أن يكون رقم هاتف مصريًا صالحًا`,
+            );
+          return translate(
+            `${args.property} must be a valid phone number`,
+            `${args.property} يجب أن يكون رقم هاتف صالحًا`,
+          );
         },
       },
     });

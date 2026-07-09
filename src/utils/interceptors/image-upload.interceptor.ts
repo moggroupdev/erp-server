@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
+import { translate } from 'src/utils/i18n/translate';
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -10,7 +11,15 @@ const multerOptions: MulterOptions = {
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, callback) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype))
-      callback(new BadRequestException(`Only image files are allowed (${ALLOWED_EXTENSTIONS.join(', ')}).`), false);
+      callback(
+        new BadRequestException(
+          translate(
+            `Only image files are allowed (${ALLOWED_EXTENSTIONS.join(', ')}).`,
+            `يُسمح بملفات الصور فقط (${ALLOWED_EXTENSTIONS.join(', ')}).`,
+          ),
+        ),
+        false,
+      );
     else callback(null, true);
   },
 };

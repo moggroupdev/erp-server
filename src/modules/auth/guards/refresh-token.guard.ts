@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { JwtPayload } from 'src/utils/types';
 import { REQUEST_USER_KEY, REFRESH_TOKEN_COOKIE } from 'src/utils/constants';
+import { translate } from 'src/utils/i18n/translate';
 import { AuthService } from '../auth.service';
 
 @Injectable()
@@ -17,7 +18,10 @@ export class RefreshTokenGuard implements CanActivate {
   private extractRefreshToken(request: Request): string {
     // Extract refresh token from HttpOnly cookie
     const token = request.cookies?.[REFRESH_TOKEN_COOKIE] as string;
-    if (!token) throw new UnauthorizedException('Access denied: No refresh token provided.');
+    if (!token)
+      throw new UnauthorizedException(
+        translate('Access denied: No refresh token provided.', 'تم رفض الوصول: لم يتم توفير رمز التحديث.'),
+      );
     return token;
   }
 
@@ -26,10 +30,15 @@ export class RefreshTokenGuard implements CanActivate {
       const secret = this.config.get<string>('RT_SECRET_KEY');
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, { secret });
       // Ensure this is a refresh token, not an access token
-      if (payload.type !== 'refresh') throw new UnauthorizedException('Access denied: Invalid refresh token.');
+      if (payload.type !== 'refresh')
+        throw new UnauthorizedException(
+          translate('Access denied: Invalid refresh token.', 'تم رفض الوصول: رمز التحديث غير صالح.'),
+        );
       return payload;
     } catch {
-      throw new UnauthorizedException('Access denied: Invalid refresh token.');
+      throw new UnauthorizedException(
+        translate('Access denied: Invalid refresh token.', 'تم رفض الوصول: رمز التحديث غير صالح.'),
+      );
     }
   }
 

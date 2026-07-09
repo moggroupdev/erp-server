@@ -9,6 +9,7 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { JwtPayload, User, UserWithRoleWithPermissions } from 'src/utils/types';
 import { REFRESH_TOKEN_COOKIE } from 'src/utils/constants';
 import { isProductionMode } from 'src/utils/env';
+import { translate } from 'src/utils/i18n/translate';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -31,7 +32,10 @@ export class AuthService {
 
   public async register(dto: RegisterDto, res: Response): Promise<AuthenticationResponse> {
     // Step 1: Ensure at least one identifier is provided
-    if (!dto.email && !dto.phone) throw new BadRequestException('Either email or phone must be provided.');
+    if (!dto.email && !dto.phone)
+      throw new BadRequestException(
+        translate('Either email or phone must be provided.', 'يجب إدخال البريد الإلكتروني أو رقم الهاتف.'),
+      );
 
     // Step 2: Hash password
     const hashedPassword = await bcrypt.hash(dto.password, 12);
@@ -65,7 +69,10 @@ export class AuthService {
 
   public async login(dto: LoginDto, res: Response): Promise<AuthenticationResponse> {
     // Step 1: Ensure at least one identifier is provided
-    if (!dto.email && !dto.phone) throw new BadRequestException('Either email or phone must be provided.');
+    if (!dto.email && !dto.phone)
+      throw new BadRequestException(
+        translate('Either email or phone must be provided.', 'يجب إدخال البريد الإلكتروني أو رقم الهاتف.'),
+      );
 
     // Step 2: Find user by email or phone
     const user = await this.db.query.users.findFirst({
@@ -75,11 +82,12 @@ export class AuthService {
       ),
     });
 
-    if (!user) throw new UnauthorizedException('Invalid credentials.');
+    if (!user) throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
 
     // Step 3: Verify password
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials.');
+    if (!isPasswordValid)
+      throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
 
     // Step 4: Generate tokens and set refresh token cookie
     const tokens = this.generateTokens(user.id);
@@ -115,7 +123,10 @@ export class AuthService {
       .select()
       .from(users)
       .where(and(eq(users.id, id), isNull(users.deletedAt)));
-    if (!user) throw new UnauthorizedException('Access denied: User does not exist.');
+    if (!user)
+      throw new UnauthorizedException(
+        translate('Access denied: User does not exist.', 'تم رفض الوصول: المستخدم غير موجود.'),
+      );
     return user;
   }
 
@@ -132,7 +143,10 @@ export class AuthService {
       with: { role: { with: { permissions: true } } },
     });
 
-    if (!rawUser) throw new UnauthorizedException('Access denied: User does not exist.');
+    if (!rawUser)
+      throw new UnauthorizedException(
+        translate('Access denied: User does not exist.', 'تم رفض الوصول: المستخدم غير موجود.'),
+      );
 
     // Flatten the permissions list
     const user = rawUser.role

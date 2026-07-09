@@ -17,7 +17,7 @@ async function bootstrap() {
     origin: JSON.parse(process.env.WHITELIST || '[]') as string[],
     credentials: true, // Required for cookies to be sent cross-origin
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
   });
 
   // Enable cookie parsing for refresh token handling

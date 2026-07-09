@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Response } from 'express';
+import { translate } from 'src/utils/i18n/translate';
 
 interface PostgresError extends Error {
   code?: string;
@@ -22,7 +23,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | string[] = 'An unexpected error occurred';
+    let message: string | string[] = translate('An unexpected error occurred', 'حدث خطأ غير متوقع');
     let errorType = 'Internal Server Error';
 
     if (exception instanceof HttpException) {
@@ -82,8 +83,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // Format: "email_address" -> "Email address"
       const label = field.replace('_', ' ');
       return value
-        ? `This ${label} \`${value}\` is already registered. Please try another one.`
-        : `This ${label} is already registered. Please try another one.`;
+        ? translate(
+            `This ${label} \`${value}\` is already registered. Please try another one.`,
+            `هذا ${label} \`${value}\` مسجل بالفعل. يرجى تجربة قيمة أخرى.`,
+          )
+        : translate(
+            `This ${label} is already registered. Please try another one.`,
+            `هذا ${label} مسجل بالفعل. يرجى تجربة قيمة أخرى.`,
+          );
     }
 
     // 2. Handle Foreign Key Violations (Code 23503)
@@ -94,10 +101,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // Remove '_id' and clean up formatting
       const cleanField = field.replace('_id', '').replace('_', ' ');
       return value
-        ? `We couldn't find the ${cleanField} of \`${value}\` you selected.`
-        : `We couldn't find the ${cleanField} you selected.`;
+        ? translate(
+            `We couldn't find the ${cleanField} of \`${value}\` you selected.`,
+            `لم نتمكن من العثور على ${cleanField} \`${value}\` الذي اخترته.`,
+          )
+        : translate(`We couldn't find the ${cleanField} you selected.`, `لم نتمكن من العثور على ${cleanField} الذي اخترته.`);
     }
 
-    return dbError.message || 'A database integrity error occurred.';
+    return dbError.message || translate('A database integrity error occurred.', 'حدث خطأ في تكامل قاعدة البيانات.');
   }
 }

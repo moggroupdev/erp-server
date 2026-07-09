@@ -3,6 +3,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { vendors } from 'src/database/schema';
 import { Vendor, QueryParams, User } from 'src/utils/types';
+import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
@@ -39,7 +40,10 @@ export class VendorsService {
   // We allow the `get` method to return a deleted vendor too
   public async get(id: string) {
     const vendor = await this.db.query.vendors.findFirst({ where: eq(vendors.id, id), with: POPULATION });
-    if (!vendor) throw new NotFoundException(`Vendor with ID ${id} does not exist.`);
+    if (!vendor)
+      throw new NotFoundException(
+        translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`),
+      );
     return vendor;
   }
 
@@ -49,7 +53,10 @@ export class VendorsService {
       .set(updateVendorDto)
       .where(and(eq(vendors.id, id), isNull(vendors.deletedAt)))
       .returning();
-    if (!updatedVendor) throw new NotFoundException(`Vendor with ID ${id} does not exist.`);
+    if (!updatedVendor)
+      throw new NotFoundException(
+        translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`),
+      );
     return this.get(updatedVendor.id); // Returns the updated vendor with population
   }
 }
