@@ -50,6 +50,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         status = HttpStatus.BAD_REQUEST;
         message = this.formatDatabaseMessage(dbError);
         errorType = 'Bad Request';
+      } else if (dbError?.code === '23502') {
+        status = HttpStatus.BAD_REQUEST;
+        message = this.formatDatabaseMessage(dbError);
+        errorType = 'Bad Request';
       } else message = dbError?.message ?? exception.message;
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -106,6 +110,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             `لم نتمكن من العثور على ${cleanField} \`${value}\` الذي اخترته.`,
           )
         : translate(`We couldn't find the ${cleanField} you selected.`, `لم نتمكن من العثور على ${cleanField} الذي اخترته.`);
+    }
+
+    // 3. Handle Not-Null Violations (Code 23502)
+    if (dbError.code === '23502') {
+      const column = dbError.column || dbError.message.match(/null value in column "([^"]+)"/)?.[1] || 'field';
+      const label = column.replace(/_/g, ' ');
+      return translate(`The ${label} is required.`, `حقل ${label} مطلوب.`);
     }
 
     return dbError.message || translate('A database integrity error occurred.', 'حدث خطأ في تكامل قاعدة البيانات.');
