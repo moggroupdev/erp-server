@@ -46,17 +46,6 @@ export class VendorsService {
     return vendor;
   }
 
-  // We allow the `getWithAddresses` method to return a deleted vendor too
-  public async getWithAddresses(id: string) {
-    const vendor = await this.db.query.vendors.findFirst({
-      where: eq(vendors.id, id),
-      with: { ...POPULATION, addresses: true },
-    });
-    if (!vendor)
-      throw new NotFoundException(translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
-    return vendor;
-  }
-
   public async update(id: string, updateVendorDto: UpdateVendorDto) {
     const [updatedVendor] = await this.db
       .update(vendors)

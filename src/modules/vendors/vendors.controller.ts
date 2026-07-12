@@ -40,14 +40,6 @@ export class VendorsController {
     return this.vendorsService.get(id);
   }
 
-  @Get(':id/with-addresses')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_VENDORS)
-  @ApiBearerAuth()
-  getWithAddresses(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.getWithAddresses(id);
-  }
-
   @Put(':id')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
