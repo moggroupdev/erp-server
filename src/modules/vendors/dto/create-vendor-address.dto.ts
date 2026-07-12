@@ -15,8 +15,7 @@ function ValidateVendorAddressCity(validationOptions?: ValidationOptions) {
       validator: {
         validate(cityId: unknown, args: ValidationArguments) {
           const dto = args.object as { countryId: string; cityId?: string | null };
-          if (dto.countryId === EGYPT_COUNTRY_ID)
-            return typeof cityId === 'string' && cityId.length > 0 && isUUID(cityId);
+          if (dto.countryId === EGYPT_COUNTRY_ID) return typeof cityId === 'string' && cityId.length > 0 && isUUID(cityId);
           return cityId === undefined || cityId === null;
         },
         defaultMessage(args: ValidationArguments) {
@@ -51,6 +50,6 @@ export class CreateVendorAddressDto {
 
   @IsBoolean()
   @IsOptional()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ default: false })
   isDefault: boolean | null;
 }

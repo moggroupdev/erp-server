@@ -32,6 +32,30 @@ export class VendorsController {
     return this.vendorsService.list(query);
   }
 
+  @Get(':id')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_VENDORS)
+  @ApiBearerAuth()
+  get(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vendorsService.get(id);
+  }
+
+  @Get(':id/with-addresses')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_VENDORS)
+  @ApiBearerAuth()
+  getWithAddresses(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vendorsService.getWithAddresses(id);
+  }
+
+  @Put(':id')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
+  @ApiBearerAuth()
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateVendorDto: UpdateVendorDto) {
+    return this.vendorsService.update(id, updateVendorDto);
+  }
+
   @Post(':id/addresses')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
@@ -46,21 +70,5 @@ export class VendorsController {
   @ApiBearerAuth()
   getAddresses(@Param('id', ParseUUIDPipe) id: string) {
     return this.vendorsService.getAddresses(id);
-  }
-
-  @Get(':id')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_VENDORS)
-  @ApiBearerAuth()
-  get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.get(id);
-  }
-
-  @Put(':id')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
-  @ApiBearerAuth()
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateVendorDto: UpdateVendorDto) {
-    return this.vendorsService.update(id, updateVendorDto);
   }
 }
