@@ -110,6 +110,10 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 - Suggested price = `SUM(bom.quantity_required × materials.unit_cost) × products.pricing_factor` for selected dimension
 
+### Vendor addresses
+
+- `vendor_addresses.city_id` — required when `country_id = EGYPT_COUNTRY_ID`; must be omitted (null) for other countries
+
 ---
 
 ## Workflow guards
