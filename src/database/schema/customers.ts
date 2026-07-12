@@ -24,9 +24,7 @@ export const customers = pgTable(
       .notNull()
       .references(() => users.id),
   },
-  (table) => [
-    index('customers_name_idx').on(table.name),
-  ],
+  (table) => [index('customers_name_idx').on(table.name)],
 );
 
 export const customerAddresses = pgTable(
@@ -40,7 +38,7 @@ export const customerAddresses = pgTable(
       .notNull()
       .references(() => countries.id),
     cityId: uuid('city_id').references(() => cities.id),
-    addressLine: text('address_line').notNull(),
+    addressLine: text('address_line'),
     isDefault: boolean('is_default').notNull().default(false),
   },
   (table) => [
