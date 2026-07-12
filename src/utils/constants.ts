@@ -7,6 +7,9 @@ export const REFRESH_TOKEN_COOKIE = 'refresh_token';
 /** Seeded Production root department — see data/departments.csv */
 export const PRODUCTION_DEPARTMENT_ID = '3f2a91bc-4d8e-4a1f-b563-7c94e21a0b01';
 
+/** Seeded Egypt country — see data/locations/countries.csv */
+export const EGYPT_COUNTRY_ID = 'f1dd27d6-ac02-5671-97b2-0679193340c4';
+
 // ==================== PERMISSIONS ====================
 
 export const PERMISSION_VALUES = [

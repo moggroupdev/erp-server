@@ -1,11 +1,12 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { vendors } from 'src/database/schema';
+import { vendorAddresses, vendors } from 'src/database/schema';
 import { Vendor, QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
+import { CreateVendorAddressDto } from './dto/create-vendor-address.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 
 const POPULATION = { createdBy: { columns: { id: true, name: true } } };
@@ -41,9 +42,7 @@ export class VendorsService {
   public async get(id: string) {
     const vendor = await this.db.query.vendors.findFirst({ where: eq(vendors.id, id), with: POPULATION });
     if (!vendor)
-      throw new NotFoundException(
-        translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`),
-      );
+      throw new NotFoundException(translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
     return vendor;
   }
 
@@ -54,9 +53,34 @@ export class VendorsService {
       .where(and(eq(vendors.id, id), isNull(vendors.deletedAt)))
       .returning();
     if (!updatedVendor)
-      throw new NotFoundException(
-        translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`),
-      );
+      throw new NotFoundException(translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
     return this.get(updatedVendor.id); // Returns the updated vendor with population
+  }
+
+  public async addAddress(vendorId: string, createVendorAddressDto: CreateVendorAddressDto) {
+    const { isDefault: rawIsDefault, ...addressData } = createVendorAddressDto;
+    const isDefault = rawIsDefault || false;
+
+    return await this.db.transaction(async (tx) => {
+      if (isDefault) {
+        await tx
+          .update(vendorAddresses)
+          .set({ isDefault: false })
+          .where(and(eq(vendorAddresses.vendorId, vendorId), eq(vendorAddresses.isDefault, true)));
+      }
+
+      const [address] = await tx
+        .insert(vendorAddresses)
+        .values({ ...addressData, vendorId, isDefault })
+        .returning();
+
+      return address;
+    });
+  }
+
+  public async getAddresses(vendorId: string) {
+    return await this.db.query.vendorAddresses.findMany({
+      where: eq(vendorAddresses.vendorId, vendorId),
+    });
   }
 }
