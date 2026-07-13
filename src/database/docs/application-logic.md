@@ -113,6 +113,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 ### Vendor addresses
 
 - `vendor_addresses.city_id` — required when `country_id = EGYPT_COUNTRY_ID`; must be omitted (null) for other countries
+- At most one default address per vendor (`vendor_addresses_one_default`); setting a new default clears the previous one in `addAddress` and `setDefaultAddress`
 
 ---
 

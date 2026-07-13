@@ -82,4 +82,35 @@ export class VendorsService {
       where: eq(vendorAddresses.vendorId, vendorId),
     });
   }
+
+  public async setDefaultAddress(vendorId: string, addressId: string) {
+    const address = await this.db.query.vendorAddresses.findFirst({
+      where: and(eq(vendorAddresses.id, addressId), eq(vendorAddresses.vendorId, vendorId)),
+    });
+
+    if (!address)
+      throw new NotFoundException(
+        translate(
+          `Address with ID ${addressId} does not exist for vendor ${vendorId}.`,
+          `لا يوجد عنوان بالمعرف ${addressId} للمورد ${vendorId}.`,
+        ),
+      );
+
+    if (address.isDefault) return address;
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .update(vendorAddresses)
+        .set({ isDefault: false })
+        .where(and(eq(vendorAddresses.vendorId, vendorId), eq(vendorAddresses.isDefault, true)));
+
+      const [updatedAddress] = await tx
+        .update(vendorAddresses)
+        .set({ isDefault: true })
+        .where(eq(vendorAddresses.id, addressId))
+        .returning();
+
+      return updatedAddress;
+    });
+  }
 }

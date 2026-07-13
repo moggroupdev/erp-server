@@ -63,4 +63,12 @@ export class VendorsController {
   getAddresses(@Param('id', ParseUUIDPipe) id: string) {
     return this.vendorsService.getAddresses(id);
   }
+
+  @Put(':id/addresses/:addressId/default')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
+  @ApiBearerAuth()
+  setDefaultAddress(@Param('id', ParseUUIDPipe) id: string, @Param('addressId', ParseUUIDPipe) addressId: string) {
+    return this.vendorsService.setDefaultAddress(id, addressId);
+  }
 }
