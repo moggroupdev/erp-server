@@ -94,23 +94,14 @@ async function rejectIfAdminsExist(db: ReturnType<typeof drizzle<typeof schema>>
   if (existingAdmins.length === 0) return;
 
   const adminList = existingAdmins.map((admin) => `  - ${admin.code} (${admin.name})`).join('\n');
-  throw new Error(
-    `Cannot create first admin: ${existingAdmins.length} admin user(s) already exist.\n${adminList}`,
-  );
+  throw new Error(`Cannot create first admin: ${existingAdmins.length} admin user(s) already exist.\n${adminList}`);
 }
 
-async function assertUniqueIdentifiers(
-  db: ReturnType<typeof drizzle<typeof schema>>,
-  email?: string,
-  phone?: string,
-) {
+async function assertUniqueIdentifiers(db: ReturnType<typeof drizzle<typeof schema>>, email?: string, phone?: string) {
   const existingUser = await db.query.users.findFirst({
     where: and(
       isNull(schema.users.deletedAt),
-      or(
-        email ? eq(schema.users.email, email) : undefined,
-        phone ? eq(schema.users.phone, phone) : undefined,
-      ),
+      or(email ? eq(schema.users.email, email) : undefined, phone ? eq(schema.users.phone, phone) : undefined),
     ),
     columns: { id: true, email: true, phone: true },
   });
