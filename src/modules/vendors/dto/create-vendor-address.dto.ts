@@ -40,7 +40,7 @@ export class CreateVendorAddressDto {
 
   @ValidateVendorAddressCity()
   @ApiPropertyOptional()
-  cityId?: string | null;
+  cityId: string | null;
 
   @TrimToNull()
   @IsString()
