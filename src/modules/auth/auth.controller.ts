@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, HttpCode, Res, ServiceUnavailableException } from '@nestjs/common';
 import { ApiBearerAuth, ApiCookieAuth } from '@nestjs/swagger';
 import { type Response } from 'express';
 import { type User } from 'src/utils/types';
@@ -15,7 +15,8 @@ export class AuthController {
 
   @Post('register')
   public register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
-    return this.authService.register(dto, res);
+    throw new ServiceUnavailableException('Registration is disabled.');
+    // return this.authService.register(dto, res);
   }
 
   @Post('login')
