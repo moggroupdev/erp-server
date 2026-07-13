@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { vendorAddresses, vendors } from 'src/database/schema';
@@ -57,6 +57,8 @@ export class VendorsService {
     return this.get(updatedVendor.id); // Returns the updated vendor with population
   }
 
+  // ========================= Addresses =========================
+
   public async addAddress(vendorId: string, createVendorAddressDto: CreateVendorAddressDto) {
     const { isDefault, ...addressData } = createVendorAddressDto;
 
@@ -77,9 +79,10 @@ export class VendorsService {
     });
   }
 
-  public async getAddresses(vendorId: string) {
+  public async listAddresses(vendorId: string) {
     return await this.db.query.vendorAddresses.findMany({
       where: eq(vendorAddresses.vendorId, vendorId),
+      orderBy: desc(vendorAddresses.isDefault),
     });
   }
 

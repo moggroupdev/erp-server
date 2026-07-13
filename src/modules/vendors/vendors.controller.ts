@@ -48,6 +48,8 @@ export class VendorsController {
     return this.vendorsService.update(id, updateVendorDto);
   }
 
+  // ========================= Addresses =========================
+
   @Post(':id/addresses')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
@@ -60,8 +62,8 @@ export class VendorsController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_VENDORS)
   @ApiBearerAuth()
-  getAddresses(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.getAddresses(id);
+  listAddresses(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vendorsService.listAddresses(id);
   }
 
   @Put(':id/addresses/:addressId/default')
