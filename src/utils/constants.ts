@@ -21,12 +21,15 @@ export const PERMISSION_VALUES = [
   'read_roles',
   'update_role',
   'delete_role',
-  'add_vendor',
-  'read_vendors',
-  'update_vendor',
   'add_department',
   'read_departments',
   'update_department',
+  'add_vendor',
+  'read_vendors',
+  'update_vendor',
+  'add_customer',
+  'read_customers',
+  'update_customer',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(

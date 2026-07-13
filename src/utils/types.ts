@@ -11,7 +11,7 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
 } from './constants';
-import { departments, users, roles, vendors } from 'src/database/schema';
+import { departments, users, roles, vendors, customers } from 'src/database/schema';
 
 export type Pagination = {
   page: number;
@@ -63,3 +63,5 @@ export type RoleWithPermissions = Role & { permissions: Permission[] };
 export type UserWithRoleWithPermissions = User & { role: RoleWithPermissions | null };
 
 export type Vendor = typeof vendors.$inferSelect;
+
+export type Customer = typeof customers.$inferSelect;
