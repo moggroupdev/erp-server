@@ -8,7 +8,7 @@ import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator'
 import { PERMISSIONS } from 'src/utils/constants';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { CreateCustomerAddressDto } from './dto/create-customer-address.dto';
+import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Controller('customers')
@@ -54,7 +54,7 @@ export class CustomersController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_CUSTOMER)
   @ApiBearerAuth()
-  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createCustomerAddressDto: CreateCustomerAddressDto) {
+  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createCustomerAddressDto: CreateAddressDto) {
     return this.customersService.addAddress(id, createCustomerAddressDto);
   }
 

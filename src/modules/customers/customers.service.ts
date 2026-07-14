@@ -6,7 +6,7 @@ import { Customer, QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
-import { CreateCustomerAddressDto } from './dto/create-customer-address.dto';
+import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 const POPULATION = { createdBy: { columns: { id: true, name: true } } };
@@ -59,7 +59,7 @@ export class CustomersService {
 
   // ========================= Addresses =========================
 
-  public async addAddress(customerId: string, createCustomerAddressDto: CreateCustomerAddressDto) {
+  public async addAddress(customerId: string, createCustomerAddressDto: CreateAddressDto) {
     const { isDefault, ...addressData } = createCustomerAddressDto;
 
     return await this.db.transaction(async (tx) => {

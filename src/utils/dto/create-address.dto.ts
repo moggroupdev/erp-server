@@ -5,10 +5,11 @@ import { EGYPT_COUNTRY_ID } from 'src/utils/constants';
 import { TrimToNull } from 'src/utils/decorators';
 import { translate } from 'src/utils/i18n/translate';
 
-function ValidateVendorAddressCity(validationOptions?: ValidationOptions) {
+/** cityId is required when countryId is Egypt, and must be absent otherwise. */
+function ValidateAddressCity(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: 'validateVendorAddressCity',
+      name: 'validateAddressCity',
       target: object.constructor,
       propertyName,
       options: validationOptions,
@@ -32,13 +33,14 @@ function ValidateVendorAddressCity(validationOptions?: ValidationOptions) {
   };
 }
 
-export class CreateVendorAddressDto {
+/** Shared address shape for entities that own addresses (customers, vendors, …). */
+export class CreateAddressDto {
   @IsUUID()
   @IsNotEmpty()
   @ApiProperty()
   countryId: string;
 
-  @ValidateVendorAddressCity()
+  @ValidateAddressCity()
   @ApiPropertyOptional()
   cityId: string | null;
 

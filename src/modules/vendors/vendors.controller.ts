@@ -8,7 +8,7 @@ import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator'
 import { PERMISSIONS } from 'src/utils/constants';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
-import { CreateVendorAddressDto } from './dto/create-vendor-address.dto';
+import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 
 @Controller('vendors')
@@ -54,7 +54,7 @@ export class VendorsController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
   @ApiBearerAuth()
-  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createVendorAddressDto: CreateVendorAddressDto) {
+  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createVendorAddressDto: CreateAddressDto) {
     return this.vendorsService.addAddress(id, createVendorAddressDto);
   }
 

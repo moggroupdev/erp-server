@@ -6,7 +6,7 @@ import { Vendor, QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
-import { CreateVendorAddressDto } from './dto/create-vendor-address.dto';
+import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 
 const POPULATION = { createdBy: { columns: { id: true, name: true } } };
@@ -59,7 +59,7 @@ export class VendorsService {
 
   // ========================= Addresses =========================
 
-  public async addAddress(vendorId: string, createVendorAddressDto: CreateVendorAddressDto) {
+  public async addAddress(vendorId: string, createVendorAddressDto: CreateAddressDto) {
     const { isDefault, ...addressData } = createVendorAddressDto;
 
     return await this.db.transaction(async (tx) => {
