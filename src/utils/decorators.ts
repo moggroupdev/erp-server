@@ -41,6 +41,32 @@ export function IsPhone(validationOptions?: PhoneValidationOptions) {
   };
 }
 
+/**
+ * Accepts any hex UUID string Postgres accepts (8-4-4-4-12).
+ * Unlike `@IsUUID()`, does not require RFC 4122 version/variant bits — needed for
+ * some seeded IDs in `data/departments.csv` that are valid PG uuids but not RFC-strict.
+ */
+export function IsUuidString(validationOptions?: ValidationOptions) {
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'IsUuidString',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(value: unknown) {
+          if (value === undefined || value === null || value === '') return true;
+          return typeof value === 'string' && UUID_RE.test(value);
+        },
+        defaultMessage(args: ValidationArguments) {
+          return translate(`${args.property} must be a UUID`, `${args.property} يجب أن يكون معرف UUID صالحًا`);
+        },
+      },
+    });
+  };
+}
+
 /** Trims string values before validation. Requires ValidationPipe `transform: true`. */
 export function Trim() {
   return Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));
