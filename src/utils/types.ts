@@ -22,6 +22,12 @@ export type Pagination = {
   hasPreviousPage: boolean;
 };
 
+export type PaginatedData<T> = {
+  results: number;
+  pagination: Pagination;
+  data: Partial<T>[];
+};
+
 export type QueryParams = Record<string, string | string[] | undefined>;
 
 export type TokenType = (typeof TOKEN_TYPE_VALUES)[number];

@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { getTableColumns, SQL, and, or, asc, desc, count, eq, gt, gte, lt, lte, ne, ilike, inArray } from 'drizzle-orm';
 import { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { Pagination, QueryParams } from '../types';
+import { PaginatedData, Pagination, QueryParams } from '../types';
 
 const OPERATORS_MAP = { gt, gte, lt, lte, ne } as const;
 const RESERVED_KEYS = ['keyword', 'fields', 'sortBy', 'page', 'limit'];
@@ -16,16 +16,16 @@ interface RelationConfig {
       };
 }
 
-interface QueryBuilderOptions {
+interface QueryBuilderOptionsBase {
   filtering?: boolean;
   searchableFields?: string[];
   fieldLimiting?: boolean;
-  pagination?: boolean;
   sorting?: boolean;
   additionalConditions?: SQL[];
-
   withRelations?: RelationConfig;
 }
+
+type QueryBuilderOptions = QueryBuilderOptionsBase & ({ pagination?: false } | { pagination: true });
 
 @Injectable()
 export class QueryBuilderService {
@@ -37,8 +37,18 @@ export class QueryBuilderService {
    * @param table The Drizzle table schema.
    * @param queryParams The query parameters from the request.
    * @param options Configuration options for the query features.
-   * @returns An object containing the query results, and optionally pagination metadata.
+   * @returns An array when pagination is disabled, or pagination metadata with data when enabled.
    */
+  async execute<T extends Record<string, any>>(
+    table: PgTable,
+    queryParams: QueryParams,
+    options: QueryBuilderOptionsBase & { pagination: true },
+  ): Promise<PaginatedData<T>>;
+  async execute<T extends Record<string, any>>(
+    table: PgTable,
+    queryParams: QueryParams,
+    options?: QueryBuilderOptionsBase & { pagination?: false },
+  ): Promise<Partial<T>[]>;
   async execute<T extends Record<string, any>>(table: PgTable, queryParams: QueryParams, options: QueryBuilderOptions = {}) {
     const {
       filtering = false,
@@ -190,10 +200,7 @@ export class QueryBuilderService {
       };
     }
 
-    return {
-      results: data.length,
-      data: data as Partial<T>[],
-    };
+    return data as Partial<T>[];
   }
 
   // =============== Private Methods ===============
@@ -205,8 +212,8 @@ export class QueryBuilderService {
     table: PgTable,
     queryParams: QueryParams,
     whereClause: SQL | undefined,
-    options: QueryBuilderOptions,
-  ) {
+    options: QueryBuilderOptionsBase & { pagination?: boolean },
+  ): Promise<Partial<T>[] | PaginatedData<T>> {
     const { pagination, sorting, withRelations } = options;
     const tableColumns = getTableColumns(table);
 
@@ -306,10 +313,7 @@ export class QueryBuilderService {
       };
     }
 
-    return {
-      results: data.length,
-      data: data as Partial<T>[],
-    };
+    return data as Partial<T>[];
   }
 }
 
