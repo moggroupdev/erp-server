@@ -15,6 +15,13 @@
       "when": 1783835987892,
       "tag": "0001_organic_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784013977915,
+      "tag": "0002_lean_pet_avengers",
+      "breakpoints": true
     }
   ]
 }

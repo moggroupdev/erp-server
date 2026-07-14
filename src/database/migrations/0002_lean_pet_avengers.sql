@@ -1,0 +1,4 @@
+ALTER TABLE "permissions" ALTER COLUMN "permission" SET DATA TYPE text;--> statement-breakpoint
+DROP TYPE "public"."permission";--> statement-breakpoint
+CREATE TYPE "public"."permission" AS ENUM('add_user', 'read_users', 'update_user', 'delete_user', 'add_role', 'read_roles', 'update_role', 'delete_role', 'add_department', 'read_departments', 'update_department', 'add_vendor', 'read_vendors', 'update_vendor', 'add_customer', 'read_customers', 'update_customer');--> statement-breakpoint
+ALTER TABLE "permissions" ALTER COLUMN "permission" SET DATA TYPE "public"."permission" USING "permission"::"public"."permission";
