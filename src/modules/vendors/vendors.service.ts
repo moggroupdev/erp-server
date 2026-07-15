@@ -2,14 +2,12 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { vendorAddresses, vendors } from 'src/database/schema';
-import { Vendor, QueryParams, User } from 'src/utils/types';
+import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
-
-const POPULATION = { createdBy: { columns: { id: true, name: true } } };
 
 @Injectable()
 export class VendorsService {
@@ -33,14 +31,16 @@ export class VendorsService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: POPULATION,
       additionalConditions: [isNull(vendors.deletedAt)],
     });
   }
 
   // We allow the `get` method to return a deleted vendor too
   public async get(id: string) {
-    const vendor = await this.db.query.vendors.findFirst({ where: eq(vendors.id, id), with: POPULATION });
+    const vendor = await this.db.query.vendors.findFirst({
+      where: eq(vendors.id, id),
+      with: { createdBy: { columns: { id: true, name: true } } },
+    });
     if (!vendor)
       throw new NotFoundException(translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
     return vendor;
