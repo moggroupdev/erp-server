@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { roles, users } from 'src/database/schema';
@@ -10,7 +10,8 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-const POPULATION = { createdBy: { columns: { id: true, name: true } } };
+// Get all columns of the users table except the password column
+const { password: _password, ...userColumnsWithoutPassword } = getTableColumns(users);
 
 @Injectable()
 export class UsersService {
@@ -51,7 +52,7 @@ export class UsersService {
         roleId: createUserDto.roleId,
         createdBy: user.id,
       })
-      .returning();
+      .returning(userColumnsWithoutPassword);
 
     return newUser;
   }
@@ -63,7 +64,6 @@ export class UsersService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: POPULATION,
       columns: { password: false },
       additionalConditions: [isNull(users.deletedAt)],
     });
@@ -74,7 +74,7 @@ export class UsersService {
     const user = await this.db.query.users.findFirst({
       where: eq(users.id, id),
       columns: { password: false },
-      with: POPULATION,
+      with: { createdBy: { columns: { id: true, name: true } } },
     });
     if (!user) throw new NotFoundException(translate(`User with ID ${id} does not exist.`, `لا يوجد مستخدم بالمعرف ${id}.`));
     return user;
@@ -120,7 +120,7 @@ export class UsersService {
       .update(users)
       .set(setValues)
       .where(and(eq(users.id, id), isNull(users.deletedAt)))
-      .returning();
+      .returning(userColumnsWithoutPassword);
 
     if (!updatedUser)
       throw new NotFoundException(translate(`User with ID ${id} does not exist.`, `لا يوجد مستخدم بالمعرف ${id}.`));
