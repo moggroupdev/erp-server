@@ -72,7 +72,7 @@ export const permissions = pgTable(
 // ============================== RELATIONS ==============================
 
 export const usersRelations = relations(users, ({ one, many }) => ({
-  creator: one(users, {
+  createdBy: one(users, {
     fields: [users.createdBy],
     references: [users.id],
     relationName: 'userCreatedBy',

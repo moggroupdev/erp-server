@@ -23,6 +23,8 @@ interface QueryBuilderOptionsBase {
   sorting?: boolean;
   additionalConditions?: SQL[];
   withRelations?: RelationConfig;
+  /** Drizzle column selection for relational queries (e.g. `{ password: false }`). */
+  columns?: Record<string, boolean>;
 }
 
 type QueryBuilderOptions = QueryBuilderOptionsBase & ({ pagination?: false } | { pagination: true });
@@ -57,6 +59,7 @@ export class QueryBuilderService {
       pagination = false,
       sorting = false,
       withRelations,
+      columns,
     } = options;
 
     const tableColumns = getTableColumns(table);
@@ -124,6 +127,7 @@ export class QueryBuilderService {
         pagination,
         sorting,
         withRelations,
+        columns,
       });
     }
 
@@ -214,7 +218,7 @@ export class QueryBuilderService {
     whereClause: SQL | undefined,
     options: QueryBuilderOptionsBase & { pagination?: boolean },
   ): Promise<Partial<T>[] | PaginatedData<T>> {
-    const { pagination, sorting, withRelations } = options;
+    const { pagination, sorting, withRelations, columns } = options;
     const tableColumns = getTableColumns(table);
 
     // Get table name from the table object
@@ -255,6 +259,7 @@ export class QueryBuilderService {
     // Execute relational query
     interface QueryOptions {
       where?: SQL;
+      columns?: Record<string, boolean>;
       with?: RelationConfig;
       orderBy?: SQL;
       limit?: number;
@@ -266,6 +271,7 @@ export class QueryBuilderService {
       with: withRelations,
     };
 
+    if (columns) queryOptions.columns = columns;
     if (orderByClause) queryOptions.orderBy = orderByClause;
 
     if (pagination) {
@@ -278,7 +284,7 @@ export class QueryBuilderService {
       [key: string]: { findMany: (options: QueryOptions) => Promise<unknown[]> };
     };
 
-    const dbQuery = this.db.query as QueryBuilder;
+    const dbQuery = this.db.query as unknown as QueryBuilder;
     let queryBuilderTable = dbQuery[tableName];
 
     // If table not found directly, try converting snake_case to camelCase (e.g., fixed_assets -> fixedAssets)

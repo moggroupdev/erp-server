@@ -10,6 +10,7 @@ import {
   VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
+  PRODUCTION_SUB_DEPARTMENT_VALUES,
 } from './constants';
 import { departments, users, roles, vendors, customers } from 'src/database/schema';
 
@@ -55,9 +56,9 @@ export type VendorQuotationEmailStatus = (typeof VENDOR_QUOTATION_EMAIL_STATUS_V
 
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number];
 
-// ==================== ENTITIES ====================
+export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number];
 
-export type Department = typeof departments.$inferSelect;
+// ==================== ENTITIES ====================
 
 export type User = typeof users.$inferSelect;
 
@@ -65,8 +66,9 @@ export type Role = typeof roles.$inferSelect;
 
 export type RoleWithPermissions = Role & { permissions: Permission[] };
 
-/** User with their role and the role's permissions joined in. */
 export type UserWithRoleWithPermissions = User & { role: RoleWithPermissions | null };
+
+export type Department = typeof departments.$inferSelect;
 
 export type Vendor = typeof vendors.$inferSelect;
 

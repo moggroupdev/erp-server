@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { UsersModule } from './modules/users/users.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { CustomersModule } from './modules/customers/customers.module';
 
@@ -20,6 +21,7 @@ import { CustomersModule } from './modules/customers/customers.module';
     DepartmentsModule,
     LocationsModule,
     RolesModule,
+    UsersModule,
     VendorsModule,
     CustomersModule,
   ],
