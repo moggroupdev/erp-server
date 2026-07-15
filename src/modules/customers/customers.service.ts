@@ -2,14 +2,12 @@ import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { customerAddresses, customers } from 'src/database/schema';
-import { Customer, QueryParams, User } from 'src/utils/types';
+import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-
-const POPULATION = { createdBy: { columns: { id: true, name: true } } };
 
 @Injectable()
 export class CustomersService {
@@ -33,14 +31,16 @@ export class CustomersService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: POPULATION,
       additionalConditions: [isNull(customers.deletedAt)],
     });
   }
 
   // We allow the `get` method to return a deleted customer too
   public async get(id: string) {
-    const customer = await this.db.query.customers.findFirst({ where: eq(customers.id, id), with: POPULATION });
+    const customer = await this.db.query.customers.findFirst({
+      where: eq(customers.id, id),
+      with: { createdBy: { columns: { id: true, name: true } } },
+    });
     if (!customer)
       throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
     return customer;
