@@ -23,11 +23,11 @@ export class VendorsService {
       .insert(vendors)
       .values({ ...createVendorDto, code: sql`DEFAULT`, createdBy: user.id })
       .returning();
-    return this.get(vendor.id); // Returns the vendor with population
+    return vendor;
   }
 
   public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute<Vendor>(vendors, queryParams, {
+    return await this.queryBuilderService.execute(vendors, queryParams, {
       filtering: true,
       searchableFields: ['name', 'code', 'email', 'phone'],
       fieldLimiting: true,
@@ -54,7 +54,7 @@ export class VendorsService {
       .returning();
     if (!updatedVendor)
       throw new NotFoundException(translate(`Vendor with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
-    return this.get(updatedVendor.id); // Returns the updated vendor with population
+    return updatedVendor;
   }
 
   // ========================= Addresses =========================

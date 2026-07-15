@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { permissions, roles } from 'src/database/schema';
-import { QueryParams, Role, User } from 'src/utils/types';
+import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateRoleDto } from './dto/create-role.dto';
@@ -20,7 +20,7 @@ export class RolesService {
   public async create(createRoleDto: CreateRoleDto, user: User) {
     const { permissions: permissionValues, ...roleData } = createRoleDto;
 
-    const roleId = await this.db.transaction(async (tx) => {
+    const role = await this.db.transaction(async (tx) => {
       const [role] = await tx
         .insert(roles)
         .values({ ...roleData, createdBy: user.id })
@@ -29,14 +29,14 @@ export class RolesService {
       if (permissionValues.length > 0)
         await tx.insert(permissions).values(permissionValues.map((permission) => ({ roleId: role.id, permission })));
 
-      return role.id;
+      return role;
     });
 
-    return this.get(roleId);
+    return role;
   }
 
   public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute<Role>(roles, queryParams, {
+    return await this.queryBuilderService.execute(roles, queryParams, {
       filtering: true,
       searchableFields: ['name', 'description'],
       fieldLimiting: true,

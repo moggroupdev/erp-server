@@ -14,7 +14,7 @@ export class DepartmentsService {
 
   public async create(createDepartmentDto: CreateDepartmentDto) {
     const [department] = await this.db.insert(departments).values(createDepartmentDto).returning();
-    return department; // No population here as the manager is not set in the creation endpoint. It will be null here.
+    return department;
   }
 
   public async list() {
@@ -36,6 +36,6 @@ export class DepartmentsService {
       .returning();
     if (!updatedDepartment)
       throw new NotFoundException(translate(`Department with ID ${id} does not exist.`, `لا يوجد قسم بالمعرف ${id}.`));
-    return this.get(updatedDepartment.id); // Returns the updated department with population
+    return updatedDepartment;
   }
 }

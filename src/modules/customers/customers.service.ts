@@ -23,11 +23,11 @@ export class CustomersService {
       .insert(customers)
       .values({ ...createCustomerDto, code: sql`DEFAULT`, createdBy: user.id })
       .returning();
-    return this.get(customer.id); // Returns the customer with population
+    return customer;
   }
 
   public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute<Customer>(customers, queryParams, {
+    return await this.queryBuilderService.execute(customers, queryParams, {
       filtering: true,
       searchableFields: ['name', 'code', 'email', 'phone'],
       fieldLimiting: true,
@@ -54,7 +54,7 @@ export class CustomersService {
       .returning();
     if (!updatedCustomer)
       throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
-    return this.get(updatedCustomer.id); // Returns the updated customer with population
+    return updatedCustomer;
   }
 
   // ========================= Addresses =========================
