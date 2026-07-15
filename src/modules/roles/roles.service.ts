@@ -8,8 +8,6 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
-const POPULATION = { createdBy: { columns: { id: true, name: true } } };
-
 @Injectable()
 export class RolesService {
   constructor(
@@ -24,7 +22,7 @@ export class RolesService {
       const [role] = await tx
         .insert(roles)
         .values({ ...roleData, createdBy: user.id })
-        .returning({ id: roles.id });
+        .returning();
 
       if (permissionValues.length > 0)
         await tx.insert(permissions).values(permissionValues.map((permission) => ({ roleId: role.id, permission })));
@@ -41,14 +39,13 @@ export class RolesService {
       searchableFields: ['name', 'description'],
       fieldLimiting: true,
       sorting: true,
-      withRelations: POPULATION,
     });
   }
 
   public async get(id: string) {
     const role = await this.db.query.roles.findFirst({
       where: eq(roles.id, id),
-      with: { ...POPULATION, permissions: true },
+      with: { createdBy: { columns: { id: true, name: true } }, permissions: true },
     });
 
     if (!role) throw new NotFoundException(translate(`Role with ID ${id} does not exist.`, `لا يوجد دور بالمعرف ${id}.`));
@@ -59,17 +56,20 @@ export class RolesService {
   public async update(id: string, updateRoleDto: UpdateRoleDto) {
     const { permissions: permissionValues, ...roleData } = updateRoleDto;
 
-    await this.db.transaction(async (tx) => {
-      if (Object.keys(roleData).length > 0)
-        await tx.update(roles).set(roleData).where(eq(roles.id, id)).returning({ id: roles.id });
+    const updatedRole = await this.db.transaction(async (tx) => {
+      // if (Object.keys(roleData).length > 0)
+      const [updatedRole] = await tx.update(roles).set(roleData).where(eq(roles.id, id)).returning();
 
+      // @TODO: Enhance this logic to check if the permissions are changed or they are the same as the previous ones.
       if (permissionValues !== undefined) {
         await tx.delete(permissions).where(eq(permissions.roleId, id));
         if (permissionValues.length > 0)
           await tx.insert(permissions).values(permissionValues.map((permission) => ({ roleId: id, permission })));
       }
+
+      return updatedRole;
     });
 
-    return this.get(id);
+    return updatedRole;
   }
 }
