@@ -23,7 +23,7 @@ interface QueryBuilderOptionsBase {
   sorting?: boolean;
   additionalConditions?: SQL[];
   withRelations?: RelationConfig;
-  /** Drizzle column selection for relational queries (e.g. `{ password: false }`). */
+  /** Drizzle column selection (e.g. `{ password: false }`) — works for both plain and relational queries. */
   columns?: Record<string, boolean>;
 }
 
@@ -151,6 +151,11 @@ export class QueryBuilderService {
         }
       });
       if (hasValidField) selectFields = selectedColumns;
+    }
+
+    // Apply column include/exclude (e.g. `{ password: false }`)
+    if (columns) {
+      selectFields = this.applyColumns(tableColumns, columns, selectFields);
     }
 
     // Build Main Query
@@ -320,6 +325,33 @@ export class QueryBuilderService {
     }
 
     return data as Partial<T>[];
+  }
+
+  /**
+   * Maps Drizzle-style `columns` (`{ password: false }` exclusion or `{ id: true }` inclusion)
+   * onto a SQL select shape for the non-relational query path.
+   */
+  private applyColumns(
+    tableColumns: Record<string, PgColumn>,
+    columns: Record<string, boolean>,
+    existingSelect?: Record<string, PgColumn>,
+  ): Record<string, PgColumn> {
+    const entries = Object.entries(columns);
+    const isExclusion = entries.length > 0 && entries.every(([, include]) => include === false);
+
+    if (isExclusion) {
+      const selected = { ...(existingSelect ?? tableColumns) };
+      for (const [key] of entries) delete selected[key];
+      return selected;
+    }
+
+    const selected: Record<string, PgColumn> = {};
+    for (const [key, include] of entries) {
+      if (!include) continue;
+      const column = (existingSelect ?? tableColumns)[key] ?? tableColumns[key];
+      if (column) selected[key] = column;
+    }
+    return selected;
   }
 }
 
