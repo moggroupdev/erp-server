@@ -1,0 +1,34 @@
+All codes are 8 digits.
+
+For the materials, it's always starts with 1 (1st digit). For the products, it's always starts with 4 (1st digit).
+
+The next 2 digits (2nd, 3rd) represent the main category of this material, the next 2 digits (4th, 5th) represent subcategory of this material, the last 3 digits represent.
+
+For example, these are materials from the main category 01 التبريد:
+
+10101001
+10101002
+10101003
+10102001
+10102002
+10102003
+10102004
+
+These are materials from the main category 02 الكهرباء:
+
+10201001
+10202002
+10202001
+10203001
+10203002
+10203003
+
+These are materials from the main category 03 الغاز:
+
+10301001
+10302002
+10302003
+10302004
+10302005
+
+(Of course, each one of theme includes subcategories)
