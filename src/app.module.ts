@@ -12,6 +12,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { VendorsModule } from './modules/vendors/vendors.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CustomersModule } from './modules/customers/customers.module';
     UsersModule,
     VendorsModule,
     CustomersModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
