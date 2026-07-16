@@ -5,7 +5,7 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 export class CategoriesService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
-  public async getCategories() {
+  public async getAllCategories() {
     const [materialCategoryMains, materialCategorySubs, productCategoryMains, productCategorySubs] = await Promise.all([
       this.getMaterialCategoryMains(),
       this.getMaterialCategorySubs(),
@@ -14,6 +14,24 @@ export class CategoriesService {
     ]);
 
     return { materialCategoryMains, materialCategorySubs, productCategoryMains, productCategorySubs };
+  }
+
+  public async getMaterialCategories() {
+    const [materialCategoryMains, materialCategorySubs] = await Promise.all([
+      this.getMaterialCategoryMains(),
+      this.getMaterialCategorySubs(),
+    ]);
+
+    return { materialCategoryMains, materialCategorySubs };
+  }
+
+  public async getProductCategories() {
+    const [productCategoryMains, productCategorySubs] = await Promise.all([
+      this.getProductCategoryMains(),
+      this.getProductCategorySubs(),
+    ]);
+
+    return { productCategoryMains, productCategorySubs };
   }
 
   public async getMaterialCategoryMains() {

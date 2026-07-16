@@ -6,8 +6,18 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  getCategories() {
-    return this.categoriesService.getCategories();
+  getAllCategories() {
+    return this.categoriesService.getAllCategories();
+  }
+
+  @Get('material-categories')
+  getMaterialCategories() {
+    return this.categoriesService.getMaterialCategories();
+  }
+
+  @Get('product-categories')
+  getProductCategories() {
+    return this.categoriesService.getProductCategories();
   }
 
   @Get('material-category-mains')
