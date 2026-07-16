@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:triggers": "ts-node -r tsconfig-paths/register src/database/apply-triggers.ts",
     "db:studio": "drizzle-kit studio",
+    "extract:materials": "ts-node -r tsconfig-paths/register scripts/extract-materials.ts",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seed-departments.ts",
@@ -34,7 +35,8 @@
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
