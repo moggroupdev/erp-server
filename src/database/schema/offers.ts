@@ -1,6 +1,14 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, check } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, percentage, offerStatusEnum, negotiationPartyEnum, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import {
+  createdAt,
+  numeric,
+  percentage,
+  offerStatusEnum,
+  negotiationPartyEnum,
+  nonNegativeQuantityCheck,
+  positiveQuantityCheck,
+} from './common';
 import { inquiries } from './inquiries';
 import { contracts } from './contracts';
 import { products, productDimensions } from './products';
@@ -82,10 +90,7 @@ export const offerNegotiations = pgTable(
     index('offer_negotiations_offer_id_idx').on(table.offerId),
     index('offer_negotiations_created_by_idx').on(table.createdBy),
     index('offer_negotiations_created_at_idx').on(table.createdAt),
-    check(
-      'offer_negotiations_discount_pct_check',
-      sql`${table.discountPct} >= 0 AND ${table.discountPct} <= 100`,
-    ),
+    check('offer_negotiations_discount_pct_check', sql`${table.discountPct} >= 0 AND ${table.discountPct} <= 100`),
   ],
 );
 

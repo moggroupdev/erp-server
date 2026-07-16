@@ -31,10 +31,7 @@ export function IsPhone(validationOptions?: PhoneValidationOptions) {
               `${args.property} must be a valid Egyptian phone number`,
               `${args.property} يجب أن يكون رقم هاتف مصريًا صالحًا`,
             );
-          return translate(
-            `${args.property} must be a valid phone number`,
-            `${args.property} يجب أن يكون رقم هاتف صالحًا`,
-          );
+          return translate(`${args.property} must be a valid phone number`, `${args.property} يجب أن يكون رقم هاتف صالحًا`);
         },
       },
     });

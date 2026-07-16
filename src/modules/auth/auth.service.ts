@@ -86,8 +86,7 @@ export class AuthService {
 
     // Step 3: Verify password
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordValid)
-      throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
+    if (!isPasswordValid) throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
 
     // Step 4: Generate tokens and set refresh token cookie
     const tokens = this.generateTokens(user.id);

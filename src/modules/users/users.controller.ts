@@ -1,16 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Put,
-  Delete,
-  Param,
-  ParseUUIDPipe,
-  UseGuards,
-  Query,
-  HttpCode,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Delete, Param, ParseUUIDPipe, UseGuards, Query, HttpCode } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';

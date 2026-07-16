@@ -1,16 +1,5 @@
 import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
-import {
-  ArrayUnique,
-  IsArray,
-  IsIn,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Matches,
-  Max,
-  Min,
-} from 'class-validator';
+import { ArrayUnique, IsArray, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PERMISSION_VALUES } from 'src/utils/constants';
 import { type Permission } from 'src/utils/types';
