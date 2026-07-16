@@ -8,7 +8,6 @@ import {
   materialTypeEnum,
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
-  positiveQuantityCheck,
 } from './common';
 import { materialCategorySubs } from './categories';
 import { users } from './users';
@@ -42,11 +41,11 @@ export const materials = pgTable(
   (table) => [
     index('materials_title_idx').on(table.title),
     index('materials_sub_category_id_idx').on(table.subCategoryId),
+    nonNegativeQuantityCheck('materials_unit_cost_non_negative', table.unitCost),
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),
     nonNegativeNullableQuantityCheck('materials_opening_unit_cost_non_negative', table.openingUnitCost),
     nonNegativeNullableQuantityCheck('materials_opening_quantity_non_negative', table.openingQuantity),
     nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
-    positiveQuantityCheck('materials_unit_cost_positive', table.unitCost),
   ],
 );
 

@@ -36,6 +36,13 @@
       "when": 1784194911852,
       "tag": "0004_puzzling_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784204609717,
+      "tag": "0005_illegal_salo",
+      "breakpoints": true
     }
   ]
 }

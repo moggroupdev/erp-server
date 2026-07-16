@@ -1,0 +1,2 @@
+ALTER TABLE "materials" DROP CONSTRAINT "materials_unit_cost_positive";--> statement-breakpoint
+ALTER TABLE "materials" ADD CONSTRAINT "materials_unit_cost_non_negative" CHECK ("materials"."unit_cost" >= 0);
