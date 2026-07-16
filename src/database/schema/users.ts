@@ -43,6 +43,7 @@ export const roles = pgTable(
     description: text('description'),
     maxDiscountPct: percentage('max_discount_pct'), // @APP_CHECKED - NULL = no discount allowed; non-null = max percentage cap
     departmentId: uuid('department_id').references(() => departments.id), // @APP_CHECKED - Optional department scope; must match user's department when assigning role
+    homeUrl: text('home_url'), // Relative path (e.g. "/production"); NULL = use app default home (NULL is for admin users)
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
@@ -55,6 +56,7 @@ export const roles = pgTable(
       'roles_max_discount_pct_check',
       sql`${table.maxDiscountPct} IS NULL OR (${table.maxDiscountPct} >= 0 AND ${table.maxDiscountPct} <= 100)`,
     ),
+    check('roles_home_url_check', sql`${table.homeUrl} IS NULL OR ${table.homeUrl} ~ '^/'`),
   ],
 );
 

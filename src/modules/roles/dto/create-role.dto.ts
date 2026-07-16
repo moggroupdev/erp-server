@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
@@ -38,6 +39,13 @@ export class CreateRoleDto {
   @IsOptional()
   @ApiPropertyOptional()
   departmentId: string | null;
+
+  @Trim()
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\/[a-zA-Z0-9\-_/]*$/, { message: 'homeUrl must be a relative path starting with "/".' })
+  @ApiProperty()
+  homeUrl: string;
 
   @IsArray()
   @ArrayUnique()
