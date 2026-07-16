@@ -38,6 +38,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_cost)` from `material_purchase_order_items`                    |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_cost)` from `product_purchase_order_items`                     |
 | `materials.quantity`                    | Net from `inventory_transaction_items` by `transaction_type` (receipt +, issue −, return +) |
+| `materials.unit_cost`                   | Derived from `inventory_transaction_items.unit_cost` per costing method                     |
 | `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
 | `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit                                      |

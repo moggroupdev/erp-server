@@ -49,6 +49,8 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`.
 
+`**materials.unit_cost`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material update DTOs.
+
 \*_PO `completed_at_`\* — set when fully fulfilled; clear if receipts reversed.
 
 `**product_units` timestamps\*\* — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only).
