@@ -43,6 +43,13 @@
       "when": 1784204609717,
       "tag": "0005_illegal_salo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784443193137,
+      "tag": "0006_naive_shocker",
+      "breakpoints": true
     }
   ]
 }
