@@ -1,0 +1,26 @@
+All codes are 8 digits.
+
+For the spare parts, they always start with 3 (1st digit).
+
+Unlike raw materials, the main category is always fixed: 50 قطع غيار الماكينات
+(it is not taken from digits 2–3 of the code).
+
+The next 2 digits after that block (4th, 5th) represent the subcategory, and the last 3 digits represent the item itself.
+
+For example, these are spare parts from subcategory 01 عدة بانش:
+
+30101001
+30101002
+30101003
+
+These are spare parts from subcategory 02 دايات بانش:
+
+30102001
+30102002
+30102003
+
+These are spare parts from subcategory 04 قطع كهربائية وهيدروليكية وحساسات:
+
+30104001
+30104002
+30104003
