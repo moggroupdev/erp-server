@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
@@ -107,8 +107,8 @@ async function confirmProceedWithExistingMaterials(existingCount: number): Promi
   const rl = readline.createInterface({ input, output });
   try {
     console.log(`\nWarning: ${existingCount} material(s) already exist in the database.`);
-    console.log('Seeding will upsert by legacyCode (update matching rows, insert new ones).');
-    console.log('Existing material codes will be kept for matches; only new rows get fresh codes.');
+    console.log('Seeding will insert only missing materials (matched by legacyCode).');
+    console.log('Existing rows will be left unchanged.');
     const answer = (await rl.question('Type "yes" to continue, anything else to abort: ')).trim();
     return answer === 'yes';
   } finally {
@@ -116,10 +116,7 @@ async function confirmProceedWithExistingMaterials(existingCount: number): Promi
   }
 }
 
-async function resolveUser(
-  db: ReturnType<typeof drizzle<typeof schema>>,
-  identifier: { email?: string; id?: string },
-) {
+async function resolveUser(db: ReturnType<typeof drizzle<typeof schema>>, identifier: { email?: string; id?: string }) {
   const user = identifier.id
     ? await db.query.users.findFirst({
         where: eq(schema.users.id, identifier.id),
@@ -199,9 +196,7 @@ async function main() {
 
     // Guard against empty/misparsed CSVs (e.g. unexpected headers)
     if (csvRows.length > 0 && !csvRows[0].legacyCode) {
-      throw new Error(
-        `CSV headers look wrong. Expected "legacyCode", got: ${Object.keys(csvRows[0]).join(', ')}`,
-      );
+      throw new Error(`CSV headers look wrong. Expected "legacyCode", got: ${Object.keys(csvRows[0]).join(', ')}`);
     }
 
     const categoryRows = await db
@@ -230,10 +225,10 @@ async function main() {
       .from(schema.materials);
 
     const usedCodes = new Set<string>();
-    const legacyToCode = new Map<string, string>();
+    const existingLegacyCodes = new Set<string>();
     for (const row of existingMaterials) {
       usedCodes.add(row.code);
-      if (row.legacyCode) legacyToCode.set(row.legacyCode, row.code);
+      if (row.legacyCode) existingLegacyCodes.add(row.legacyCode);
     }
     console.log(`Existing materials in DB: ${existingMaterials.length}`);
 
@@ -243,12 +238,11 @@ async function main() {
       return;
     }
 
-    const toUpsert: (typeof schema.materials.$inferInsert)[] = [];
+    const toInsert: (typeof schema.materials.$inferInsert)[] = [];
     const unresolved: UnresolvedRow[] = [];
     const duplicateLegacyCodes: DuplicateLegacyRow[] = [];
     const seenLegacyCodes = new Map<string, string>(); // legacyCode -> kept title
-    let wouldInsert = 0;
-    let wouldUpdate = 0;
+    let skippedExisting = 0;
     const unitCounts = new Map<string, number>();
 
     for (const row of csvRows) {
@@ -265,6 +259,11 @@ async function main() {
         continue;
       }
       seenLegacyCodes.set(legacyCode, title);
+
+      if (existingLegacyCodes.has(legacyCode)) {
+        skippedExisting++;
+        continue;
+      }
 
       const subCategoryId = categoryMap.get(`${mainLegacy}:${subLegacy}`);
       if (!subCategoryId) {
@@ -283,16 +282,8 @@ async function main() {
 
       unitCounts.set(unit, (unitCounts.get(unit) ?? 0) + 1);
 
-      const existingCode = legacyToCode.get(legacyCode);
-      const code = existingCode ?? generateUniqueCode(usedCodes);
-      if (existingCode) {
-        wouldUpdate++;
-      } else {
-        wouldInsert++;
-      }
-
-      toUpsert.push({
-        code,
+      toInsert.push({
+        code: generateUniqueCode(usedCodes),
         legacyCode,
         title,
         subCategoryId,
@@ -306,40 +297,23 @@ async function main() {
       });
     }
 
-    console.log(`\nPrepared ${toUpsert.length} materials (${wouldInsert} new, ${wouldUpdate} updates)`);
+    console.log(`\nPrepared ${toInsert.length} new materials (${skippedExisting} already exist)`);
     console.log(`Skipped unresolved categories: ${unresolved.length}`);
     console.log(`Skipped duplicate legacy codes: ${duplicateLegacyCodes.length}`);
 
-    if (toUpsert.length > 0) {
-      for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
-        const batch = toUpsert.slice(i, i + BATCH_SIZE);
-        await db
-          .insert(schema.materials)
-          .values(batch)
-          .onConflictDoUpdate({
-            target: schema.materials.legacyCode,
-            set: {
-              title: sql`excluded.title`,
-              subCategoryId: sql`excluded.sub_category_id`,
-              materialType: sql`excluded.material_type`,
-              unit: sql`excluded.unit`,
-              unitCost: sql`excluded.unit_cost`,
-              quantity: sql`excluded.quantity`,
-              openingUnitCost: sql`excluded.opening_unit_cost`,
-              openingQuantity: sql`excluded.opening_quantity`,
-              deletedAt: null,
-            },
-          });
-        process.stdout.write(`\rUpserted ${Math.min(i + BATCH_SIZE, toUpsert.length)} / ${toUpsert.length}`);
+    if (toInsert.length > 0) {
+      for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+        const batch = toInsert.slice(i, i + BATCH_SIZE);
+        await db.insert(schema.materials).values(batch).onConflictDoNothing({ target: schema.materials.legacyCode });
+        process.stdout.write(`\rInserted ${Math.min(i + BATCH_SIZE, toInsert.length)} / ${toInsert.length}`);
       }
       console.log();
     }
 
     console.log('\n========== MATERIALS SEED STATS ==========');
     console.log(`CSV rows loaded:              ${csvRows.length}`);
-    console.log(`Upserted:                     ${toUpsert.length}`);
-    console.log(`  - inserted (new):           ${wouldInsert}`);
-    console.log(`  - updated (existing):       ${wouldUpdate}`);
+    console.log(`Inserted (new):               ${toInsert.length}`);
+    console.log(`Skipped (already exist):      ${skippedExisting}`);
     console.log(`Skipped (unresolved category): ${unresolved.length}`);
     console.log(`Skipped (duplicate legacyCode): ${duplicateLegacyCodes.length}`);
     console.log(`materialType:                 ${MATERIAL_TYPES.RAW_MATERIALS} (all)`);
@@ -362,9 +336,7 @@ async function main() {
     if (unresolved.length > 0) {
       console.log('\n--- Unresolved categories (samples) ---');
       for (const row of unresolved.slice(0, 20)) {
-        console.log(
-          `  ${row.legacyCode} | ${row.mainCategoryLegacyCode}/${row.subCategoryLegacyCode} | ${row.title}`,
-        );
+        console.log(`  ${row.legacyCode} | ${row.mainCategoryLegacyCode}/${row.subCategoryLegacyCode} | ${row.title}`);
       }
       if (unresolved.length > 20) {
         console.log(`  ... and ${unresolved.length - 20} more`);
