@@ -16,15 +16,11 @@ type CodeRow = {
   subCategoryLegacyCode: string;
 };
 
-type ExcludedRow = CodeRow & { reason: string };
-
 type QuantityRow = {
   title: string;
   quantity: number;
   unitCost: number | null;
   unit: string;
-  sourceFile: string;
-  sourceSheet: string;
 };
 
 type OutputRow = {
@@ -45,10 +41,9 @@ const UNIT_MAP: Record<string, string> = {
 
 const ROOT = path.join(__dirname, '..');
 const CODES_PATH = path.join(ROOT, 'data/materials/raw-materials/codes.xls');
-const QUANTITIES_DIR = path.join(ROOT, 'data/materials/raw-materials/quantities-and-costs');
+const QUANTITIES_DIR = path.join(ROOT, 'data/materials/raw-materials/stock');
 const CATEGORIES_PATH = path.join(ROOT, 'data/categories/materials.json');
 const OUT_DIR = path.join(ROOT, 'data/materials/raw-materials/results');
-const ISSUES_DIR = path.join(OUT_DIR, 'issues');
 
 function norm(value: unknown): string {
   if (value == null) return '';
@@ -101,7 +96,8 @@ function loadCategoryIndex(data: CategoryJson[]): {
 
 function parseCodesXls(categoryIndex: Map<string, { title: string; subs: Set<string> }>): {
   valid: CodeRow[];
-  excluded: ExcludedRow[];
+  excludedCount: number;
+  excludedByReason: Map<string, number>;
   duplicateLegacyCodes: string[];
 } {
   const wb = xlsx.readFile(CODES_PATH);
@@ -112,9 +108,10 @@ function parseCodesXls(categoryIndex: Map<string, { title: string; subs: Set<str
   });
 
   const valid: CodeRow[] = [];
-  const excluded: ExcludedRow[] = [];
+  const excludedByReason = new Map<string, number>();
   const seenCodes = new Map<string, number>();
   const duplicateLegacyCodes: string[] = [];
+  let excludedCount = 0;
 
   for (let i = 4; i < rows.length; i++) {
     const row = rows[i];
@@ -133,34 +130,30 @@ function parseCodesXls(categoryIndex: Map<string, { title: string; subs: Set<str
       seenCodes.set(legacyCode, i);
     }
 
-    const base: CodeRow = {
+    const main = categoryIndex.get(mainCategoryLegacyCode);
+    if (!main) {
+      excludedCount++;
+      const reason = `invalid_main_category:${mainCategoryLegacyCode}`;
+      excludedByReason.set(reason, (excludedByReason.get(reason) ?? 0) + 1);
+      continue;
+    }
+    if (!main.subs.has(subCategoryLegacyCode)) {
+      excludedCount++;
+      const reason = `invalid_sub_category:${mainCategoryLegacyCode}/${subCategoryLegacyCode}`;
+      excludedByReason.set(reason, (excludedByReason.get(reason) ?? 0) + 1);
+      continue;
+    }
+
+    valid.push({
       legacyCode,
       title,
       unitRaw,
       mainCategoryLegacyCode,
       subCategoryLegacyCode,
-    };
-
-    const main = categoryIndex.get(mainCategoryLegacyCode);
-    if (!main) {
-      excluded.push({
-        ...base,
-        reason: `invalid_main_category:${mainCategoryLegacyCode}`,
-      });
-      continue;
-    }
-    if (!main.subs.has(subCategoryLegacyCode)) {
-      excluded.push({
-        ...base,
-        reason: `invalid_sub_category:${mainCategoryLegacyCode}/${subCategoryLegacyCode}`,
-      });
-      continue;
-    }
-
-    valid.push(base);
+    });
   }
 
-  return { valid, excluded, duplicateLegacyCodes };
+  return { valid, excludedCount, excludedByReason, duplicateLegacyCodes };
 }
 
 function findHeaderRow(rows: (string | number | null)[][]): number {
@@ -180,7 +173,7 @@ function findCol(row: (string | number | null)[] | undefined, names: string[]): 
   return -1;
 }
 
-function parseQuantitySheet(fileName: string, sheetName: string, rows: (string | number | null)[][]): QuantityRow[] {
+function parseQuantitySheet(rows: (string | number | null)[][]): QuantityRow[] {
   const headerIdx = findHeaderRow(rows);
   if (headerIdx === -1) return [];
 
@@ -232,35 +225,20 @@ function parseQuantitySheet(fileName: string, sheetName: string, rows: (string |
     const unitCost = priceCol >= 0 ? parseNumber(row[priceCol]) : null;
     const unit = unitCol >= 0 ? norm(row[unitCol]) : '';
 
-    items.push({
-      title,
-      quantity,
-      unitCost,
-      unit,
-      sourceFile: fileName,
-      sourceSheet: sheetName,
-    });
+    items.push({ title, quantity, unitCost, unit });
   }
 
   return items;
 }
 
-type DuplicateQuantityRow = QuantityRow & {
-  keptSourceFile: string;
-  keptSourceSheet: string;
-  keptQuantity: number;
-  keptUnitCost: number | null;
-  keptUnit: string;
-};
-
 function parseQuantitiesAndCosts(): {
   byTitle: Map<string, QuantityRow>;
-  duplicates: DuplicateQuantityRow[];
+  duplicateCount: number;
   totalRows: number;
   sheetsParsed: number;
 } {
   const byTitle = new Map<string, QuantityRow>();
-  const duplicates: DuplicateQuantityRow[] = [];
+  let duplicateCount = 0;
   let totalRows = 0;
   let sheetsParsed = 0;
 
@@ -276,7 +254,7 @@ function parseQuantitiesAndCosts(): {
       });
       if (!rows.length) continue;
 
-      const items = parseQuantitySheet(fileName, sheetName, rows);
+      const items = parseQuantitySheet(rows);
       if (!items.length) continue;
 
       sheetsParsed++;
@@ -284,16 +262,8 @@ function parseQuantitiesAndCosts(): {
 
       for (const item of items) {
         const key = norm(item.title);
-        const kept = byTitle.get(key);
-        if (kept) {
-          duplicates.push({
-            ...item,
-            keptSourceFile: kept.sourceFile,
-            keptSourceSheet: kept.sourceSheet,
-            keptQuantity: kept.quantity,
-            keptUnitCost: kept.unitCost,
-            keptUnit: kept.unit,
-          });
+        if (byTitle.has(key)) {
+          duplicateCount++;
           continue;
         }
         byTitle.set(key, item);
@@ -301,13 +271,14 @@ function parseQuantitiesAndCosts(): {
     }
   }
 
-  return { byTitle, duplicates, totalRows, sheetsParsed };
+  return { byTitle, duplicateCount, totalRows, sheetsParsed };
 }
 
 function printStats(opts: {
   scanned: number;
   output: OutputRow[];
-  excluded: ExcludedRow[];
+  excludedCount: number;
+  excludedByReason: Map<string, number>;
   matched: number;
   unmatched: number;
   matchedLegacyCodes: Set<string>;
@@ -322,7 +293,8 @@ function printStats(opts: {
   const {
     scanned,
     output,
-    excluded,
+    excludedCount,
+    excludedByReason,
     matched,
     unmatched,
     matchedLegacyCodes,
@@ -334,11 +306,6 @@ function printStats(opts: {
     sheetsParsed,
     mainTitles,
   } = opts;
-
-  const reasonCounts = new Map<string, number>();
-  for (const row of excluded) {
-    reasonCounts.set(row.reason, (reasonCounts.get(row.reason) ?? 0) + 1);
-  }
 
   const unitCounts = new Map<string, number>();
   for (const row of output) {
@@ -372,8 +339,8 @@ function printStats(opts: {
   console.log('\n========== MATERIALS EXTRACTION STATS ==========');
   console.log(`codes.xls item rows scanned:     ${scanned}`);
   console.log(`included in clean-materials.csv: ${output.length}`);
-  console.log(`excluded:                        ${excluded.length}`);
-  for (const [reason, count] of [...reasonCounts.entries()].sort()) {
+  console.log(`excluded:                        ${excludedCount}`);
+  for (const [reason, count] of [...excludedByReason.entries()].sort()) {
     console.log(`  - ${reason}: ${count}`);
   }
   console.log(`duplicate legacy codes:          ${duplicateLegacyCodes.length}`);
@@ -439,8 +406,13 @@ function main(): void {
   const categories = JSON.parse(fs.readFileSync(CATEGORIES_PATH, 'utf-8')) as CategoryJson[];
   const { mains: categoryIndex, mainTitles } = loadCategoryIndex(categories);
 
-  const { valid, excluded, duplicateLegacyCodes } = parseCodesXls(categoryIndex);
-  const { byTitle: quantitiesByTitle, duplicates, totalRows: quantitiesTotalRows, sheetsParsed } = parseQuantitiesAndCosts();
+  const { valid, excludedCount, excludedByReason, duplicateLegacyCodes } = parseCodesXls(categoryIndex);
+  const {
+    byTitle: quantitiesByTitle,
+    duplicateCount,
+    totalRows: quantitiesTotalRows,
+    sheetsParsed,
+  } = parseQuantitiesAndCosts();
 
   const matchedLegacyCodes = new Set<string>();
   const matchedQuantityTitles = new Set<string>();
@@ -481,16 +453,16 @@ function main(): void {
     }
   }
 
-  const orphans: QuantityRow[] = [];
-  for (const [titleKey, qty] of quantitiesByTitle) {
-    if (!matchedQuantityTitles.has(titleKey)) orphans.push(qty);
+  let orphanCount = 0;
+  for (const titleKey of quantitiesByTitle.keys()) {
+    if (!matchedQuantityTitles.has(titleKey)) orphanCount++;
   }
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  fs.mkdirSync(ISSUES_DIR, { recursive: true });
 
+  const outPath = path.join(OUT_DIR, 'clean-materials.csv');
   writeCsv(
-    path.join(OUT_DIR, 'clean-materials.csv'),
+    outPath,
     ['legacyCode', 'title', 'mainCategoryLegacyCode', 'subCategoryLegacyCode', 'unit', 'unitCost', 'quantity'],
     output.map((r) => [
       r.legacyCode,
@@ -503,82 +475,24 @@ function main(): void {
     ]),
   );
 
-  writeCsv(
-    path.join(ISSUES_DIR, 'codes-excluded-invalid-categories.csv'),
-    ['legacyCode', 'title', 'unit', 'mainCategoryLegacyCodeRaw', 'subCategoryLegacyCodeRaw', 'reason'],
-    excluded.map((r) => [
-      r.legacyCode,
-      r.title,
-      normalizeUnit(r.unitRaw),
-      r.mainCategoryLegacyCode,
-      r.subCategoryLegacyCode,
-      r.reason,
-    ]),
-  );
-
-  writeCsv(
-    path.join(ISSUES_DIR, 'quantities-duplicate-titles-skipped.csv'),
-    [
-      'title',
-      'skippedQuantity',
-      'skippedUnitCost',
-      'skippedUnit',
-      'skippedSourceFile',
-      'skippedSourceSheet',
-      'keptQuantity',
-      'keptUnitCost',
-      'keptUnit',
-      'keptSourceFile',
-      'keptSourceSheet',
-    ],
-    duplicates.map((r) => [
-      r.title,
-      String(r.quantity),
-      r.unitCost == null ? '' : String(r.unitCost),
-      normalizeUnit(r.unit) || r.unit,
-      r.sourceFile,
-      r.sourceSheet,
-      String(r.keptQuantity),
-      r.keptUnitCost == null ? '' : String(r.keptUnitCost),
-      normalizeUnit(r.keptUnit) || r.keptUnit,
-      r.keptSourceFile,
-      r.keptSourceSheet,
-    ]),
-  );
-
-  writeCsv(
-    path.join(ISSUES_DIR, 'quantities-orphan-titles-unmatched.csv'),
-    ['title', 'quantity', 'unitCost', 'unit', 'sourceFile', 'sourceSheet'],
-    orphans.map((r) => [
-      r.title,
-      String(r.quantity),
-      r.unitCost == null ? '' : String(r.unitCost),
-      normalizeUnit(r.unit) || r.unit,
-      r.sourceFile,
-      r.sourceSheet,
-    ]),
-  );
-
   printStats({
-    scanned: valid.length + excluded.length,
+    scanned: valid.length + excludedCount,
     output,
-    excluded,
+    excludedCount,
+    excludedByReason,
     matched,
     unmatched,
     matchedLegacyCodes,
     duplicateLegacyCodes,
-    duplicateCount: duplicates.length,
-    orphanCount: orphans.length,
+    duplicateCount,
+    orphanCount,
     quantitiesTotalRows,
     distinctQuantityTitles: quantitiesByTitle.size,
     sheetsParsed,
     mainTitles,
   });
 
-  console.log(`Wrote: ${path.join(OUT_DIR, 'clean-materials.csv')}`);
-  console.log(`Wrote: ${path.join(ISSUES_DIR, 'codes-excluded-invalid-categories.csv')}`);
-  console.log(`Wrote: ${path.join(ISSUES_DIR, 'quantities-duplicate-titles-skipped.csv')}`);
-  console.log(`Wrote: ${path.join(ISSUES_DIR, 'quantities-orphan-titles-unmatched.csv')}`);
+  console.log(`Wrote: ${outPath}`);
 }
 
 main();
