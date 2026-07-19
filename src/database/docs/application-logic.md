@@ -49,7 +49,7 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
-`**materials.unit_cost`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material create/update DTOs (create initializes to `0`).
+`**materials.unit_cost`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
 
 `**materials.opening_unit_cost` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 

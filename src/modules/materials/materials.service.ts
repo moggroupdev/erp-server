@@ -20,7 +20,7 @@ export class MaterialsService {
     const code = await this.generateUniqueCode();
     const [material] = await this.db
       .insert(materials)
-      .values({ ...createMaterialDto, code, unitCost: 0, createdBy: user.id })
+      .values({ ...createMaterialDto, code, createdBy: user.id })
       .returning();
     return material;
   }
