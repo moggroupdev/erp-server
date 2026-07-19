@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import * as schema from '../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
@@ -23,8 +23,10 @@ async function seedCategoryTree(
 ) {
   console.log(`Seeding ${label}...`);
 
-  let mainCount = 0;
-  let subCount = 0;
+  let mainCreated = 0;
+  let mainSkipped = 0;
+  let subCreated = 0;
+  let subSkipped = 0;
 
   for (const main of data) {
     const [insertedMain] = await db
@@ -33,38 +35,53 @@ async function seedCategoryTree(
         legacyCode: main.legacy_code,
         title: main.title,
       })
-      .onConflictDoUpdate({
-        target: mainsTable.legacyCode,
-        set: {
-          title: sql`excluded.title`,
-        },
-      })
+      .onConflictDoNothing({ target: mainsTable.legacyCode })
       .returning({ id: mainsTable.id });
 
-    mainCount++;
+    let mainId = insertedMain?.id;
 
-    const mainId = insertedMain.id;
+    if (mainId) {
+      mainCreated++;
+    } else {
+      mainSkipped++;
+      const [existing] = await db
+        .select({ id: mainsTable.id })
+        .from(mainsTable)
+        .where(eq(mainsTable.legacyCode, main.legacy_code))
+        .limit(1);
+
+      if (!existing) {
+        throw new Error(`Main ${label} category with legacy_code "${main.legacy_code}" was skipped but not found`);
+      }
+
+      mainId = existing.id;
+    }
 
     for (const sub of main.subcategories) {
-      await db
+      const [insertedSub] = await db
         .insert(subsTable)
         .values({
           legacyCode: sub.legacy_code,
           title: sub.title,
           mainCategoryId: mainId,
         })
-        .onConflictDoUpdate({
+        .onConflictDoNothing({
           target: [subsTable.mainCategoryId, subsTable.legacyCode],
-          set: {
-            title: sql`excluded.title`,
-          },
-        });
+        })
+        .returning({ id: subsTable.id });
 
-      subCount++;
+      if (insertedSub) {
+        subCreated++;
+      } else {
+        subSkipped++;
+      }
     }
   }
 
-  console.log(`Seeded ${mainCount} ${label} mains and ${subCount} subs.`);
+  console.log(
+    `Seeded ${label}: mains created=${mainCreated} skipped=${mainSkipped}, ` +
+      `subs created=${subCreated} skipped=${subSkipped}.`,
+  );
 }
 
 async function main() {
