@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import * as schema from '../src/database/schema';
-import { MATERIAL_TYPES, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
+import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,7 +16,9 @@ dotenv.config();
 
 const USAGE = `Usage: npm run seed:materials [-- --email <email> | --id <uuid>]
 
-Seeds materials from data/materials/raw-materials/results/clean-materials.csv.
+Seeds materials from:
+  - data/materials/raw-materials/results/clean-raw-materials.csv  (${MATERIAL_TYPES.RAW_MATERIALS})
+  - data/materials/spare-parts/results/clean-spare-parts.csv      (${MATERIAL_TYPES.SPARE_PARTS})
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -31,6 +33,8 @@ Examples:
   npm run seed:materials -- --email admin@example.com
   npm run seed:materials -- --id 00000000-0000-0000-0000-000000000001`;
 
+type MaterialType = (typeof MATERIAL_TYPE_VALUES)[number];
+
 type CsvRow = {
   legacyCode: string;
   title: string;
@@ -41,21 +45,44 @@ type CsvRow = {
   quantity: string;
 };
 
+type MaterialSource = {
+  label: string;
+  csvPath: string;
+  materialType: MaterialType;
+  extractHint: string;
+};
+
 type UnresolvedRow = {
   legacyCode: string;
   title: string;
   mainCategoryLegacyCode: string;
   subCategoryLegacyCode: string;
+  materialType: MaterialType;
 };
 
 type DuplicateLegacyRow = {
   legacyCode: string;
   title: string;
   keptTitle: string;
+  materialType: MaterialType;
 };
 
 const VALID_UNITS = new Set<string>(MATERIAL_UNIT_VALUES);
-const CSV_PATH = path.join(__dirname, '../data/materials/raw-materials/results/clean-materials.csv');
+const DATA_ROOT = path.join(__dirname, '../data/materials');
+const MATERIAL_SOURCES: MaterialSource[] = [
+  {
+    label: 'raw-materials',
+    csvPath: path.join(DATA_ROOT, 'raw-materials/results/clean-raw-materials.csv'),
+    materialType: MATERIAL_TYPES.RAW_MATERIALS,
+    extractHint: 'npm run extract:raw-materials',
+  },
+  {
+    label: 'spare-parts',
+    csvPath: path.join(DATA_ROOT, 'spare-parts/results/clean-spare-parts.csv'),
+    materialType: MATERIAL_TYPES.SPARE_PARTS,
+    extractHint: 'npm run extract:spare-parts',
+  },
+];
 const BATCH_SIZE = 100;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -173,6 +200,23 @@ function normalizeQuantity(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function loadCsvRows(source: MaterialSource): CsvRow[] {
+  if (!fs.existsSync(source.csvPath)) {
+    throw new Error(`CSV not found: ${source.csvPath}\nRun ${source.extractHint} first.`);
+  }
+
+  const csvData = fs.readFileSync(source.csvPath, 'utf-8').replace(/^\uFEFF/, '');
+  const csvRows = parse<CsvRow>(csvData, { columns: true, skip_empty_lines: true, trim: true });
+
+  if (csvRows.length > 0 && !csvRows[0].legacyCode) {
+    throw new Error(
+      `CSV headers look wrong in ${source.label}. Expected "legacyCode", got: ${Object.keys(csvRows[0]).join(', ')}`,
+    );
+  }
+
+  return csvRows;
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
 
@@ -186,17 +230,11 @@ async function main() {
     const user = await resolveUser(db, identifier);
     console.log(`Using createdBy: ${user.name} <${user.email ?? 'no email'}> (${user.id})`);
 
-    if (!fs.existsSync(CSV_PATH)) {
-      throw new Error(`CSV not found: ${CSV_PATH}\nRun npm run extract:materials first.`);
-    }
-
-    const csvData = fs.readFileSync(CSV_PATH, 'utf-8').replace(/^\uFEFF/, '');
-    const csvRows = parse<CsvRow>(csvData, { columns: true, skip_empty_lines: true, trim: true });
-    console.log(`Loaded ${csvRows.length} rows from clean-materials.csv`);
-
-    // Guard against empty/misparsed CSVs (e.g. unexpected headers)
-    if (csvRows.length > 0 && !csvRows[0].legacyCode) {
-      throw new Error(`CSV headers look wrong. Expected "legacyCode", got: ${Object.keys(csvRows[0]).join(', ')}`);
+    const loadedSources: { source: MaterialSource; rows: CsvRow[] }[] = [];
+    for (const source of MATERIAL_SOURCES) {
+      const rows = loadCsvRows(source);
+      console.log(`Loaded ${rows.length} rows from ${source.label} (${source.materialType})`);
+      loadedSources.push({ source, rows });
     }
 
     const categoryRows = await db
@@ -243,58 +281,80 @@ async function main() {
     const duplicateLegacyCodes: DuplicateLegacyRow[] = [];
     const seenLegacyCodes = new Map<string, string>(); // legacyCode -> kept title
     let skippedExisting = 0;
+    let totalCsvRows = 0;
     const unitCounts = new Map<string, number>();
+    const typeCounts = new Map<MaterialType, { loaded: number; inserted: number; skippedExisting: number }>();
 
-    for (const row of csvRows) {
-      const legacyCode = row.legacyCode?.trim();
-      const title = row.title?.trim();
-      const mainLegacy = row.mainCategoryLegacyCode?.trim();
-      const subLegacy = row.subCategoryLegacyCode?.trim();
+    for (const { source, rows } of loadedSources) {
+      const stats = typeCounts.get(source.materialType) ?? {
+        loaded: 0,
+        inserted: 0,
+        skippedExisting: 0,
+      };
+      stats.loaded += rows.length;
+      totalCsvRows += rows.length;
 
-      if (!legacyCode || !title || !mainLegacy || !subLegacy) continue;
+      for (const row of rows) {
+        const legacyCode = row.legacyCode?.trim();
+        const title = row.title?.trim();
+        const mainLegacy = row.mainCategoryLegacyCode?.trim();
+        const subLegacy = row.subCategoryLegacyCode?.trim();
 
-      const keptTitle = seenLegacyCodes.get(legacyCode);
-      if (keptTitle != null) {
-        duplicateLegacyCodes.push({ legacyCode, title, keptTitle });
-        continue;
-      }
-      seenLegacyCodes.set(legacyCode, title);
+        if (!legacyCode || !title || !mainLegacy || !subLegacy) continue;
 
-      if (existingLegacyCodes.has(legacyCode)) {
-        skippedExisting++;
-        continue;
-      }
+        const keptTitle = seenLegacyCodes.get(legacyCode);
+        if (keptTitle != null) {
+          duplicateLegacyCodes.push({
+            legacyCode,
+            title,
+            keptTitle,
+            materialType: source.materialType,
+          });
+          continue;
+        }
+        seenLegacyCodes.set(legacyCode, title);
 
-      const subCategoryId = categoryMap.get(`${mainLegacy}:${subLegacy}`);
-      if (!subCategoryId) {
-        unresolved.push({
+        if (existingLegacyCodes.has(legacyCode)) {
+          skippedExisting++;
+          stats.skippedExisting++;
+          continue;
+        }
+
+        const subCategoryId = categoryMap.get(`${mainLegacy}:${subLegacy}`);
+        if (!subCategoryId) {
+          unresolved.push({
+            legacyCode,
+            title,
+            mainCategoryLegacyCode: mainLegacy,
+            subCategoryLegacyCode: subLegacy,
+            materialType: source.materialType,
+          });
+          continue;
+        }
+
+        const unit = normalizeUnit(row.unit ?? '');
+        const unitCost = normalizeCost(row.unitCost ?? '');
+        const quantity = normalizeQuantity(row.quantity ?? '');
+
+        unitCounts.set(unit, (unitCounts.get(unit) ?? 0) + 1);
+        stats.inserted++;
+
+        toInsert.push({
+          code: generateUniqueCode(usedCodes),
           legacyCode,
           title,
-          mainCategoryLegacyCode: mainLegacy,
-          subCategoryLegacyCode: subLegacy,
+          subCategoryId,
+          materialType: source.materialType,
+          unit: unit as (typeof MATERIAL_UNIT_VALUES)[number],
+          unitCost,
+          quantity,
+          openingUnitCost: unitCost,
+          openingQuantity: quantity,
+          createdBy: user.id,
         });
-        continue;
       }
 
-      const unit = normalizeUnit(row.unit ?? '');
-      const unitCost = normalizeCost(row.unitCost ?? '');
-      const quantity = normalizeQuantity(row.quantity ?? '');
-
-      unitCounts.set(unit, (unitCounts.get(unit) ?? 0) + 1);
-
-      toInsert.push({
-        code: generateUniqueCode(usedCodes),
-        legacyCode,
-        title,
-        subCategoryId,
-        materialType: MATERIAL_TYPES.RAW_MATERIALS,
-        unit: unit as (typeof MATERIAL_UNIT_VALUES)[number],
-        unitCost,
-        quantity,
-        openingUnitCost: unitCost,
-        openingQuantity: quantity,
-        createdBy: user.id,
-      });
+      typeCounts.set(source.materialType, stats);
     }
 
     console.log(`\nPrepared ${toInsert.length} new materials (${skippedExisting} already exist)`);
@@ -311,12 +371,17 @@ async function main() {
     }
 
     console.log('\n========== MATERIALS SEED STATS ==========');
-    console.log(`CSV rows loaded:              ${csvRows.length}`);
+    console.log(`CSV rows loaded:              ${totalCsvRows}`);
     console.log(`Inserted (new):               ${toInsert.length}`);
     console.log(`Skipped (already exist):      ${skippedExisting}`);
     console.log(`Skipped (unresolved category): ${unresolved.length}`);
     console.log(`Skipped (duplicate legacyCode): ${duplicateLegacyCodes.length}`);
-    console.log(`materialType:                 ${MATERIAL_TYPES.RAW_MATERIALS} (all)`);
+
+    console.log('\n--- Per material type ---');
+    for (const materialType of MATERIAL_TYPE_VALUES) {
+      const s = typeCounts.get(materialType) ?? { loaded: 0, inserted: 0, skippedExisting: 0 };
+      console.log(`  ${materialType}: loaded=${s.loaded}, inserted=${s.inserted}, skippedExisting=${s.skippedExisting}`);
+    }
 
     console.log('\n--- Unit distribution ---');
     for (const [unit, count] of [...unitCounts.entries()].sort((a, b) => b[1] - a[1])) {
@@ -326,7 +391,7 @@ async function main() {
     if (duplicateLegacyCodes.length > 0) {
       console.log('\n--- Duplicate legacy codes skipped (kept first) ---');
       for (const row of duplicateLegacyCodes.slice(0, 20)) {
-        console.log(`  ${row.legacyCode} | skipped "${row.title}" | kept "${row.keptTitle}"`);
+        console.log(`  [${row.materialType}] ${row.legacyCode} | skipped "${row.title}" | kept "${row.keptTitle}"`);
       }
       if (duplicateLegacyCodes.length > 20) {
         console.log(`  ... and ${duplicateLegacyCodes.length - 20} more`);
@@ -336,7 +401,9 @@ async function main() {
     if (unresolved.length > 0) {
       console.log('\n--- Unresolved categories (samples) ---');
       for (const row of unresolved.slice(0, 20)) {
-        console.log(`  ${row.legacyCode} | ${row.mainCategoryLegacyCode}/${row.subCategoryLegacyCode} | ${row.title}`);
+        console.log(
+          `  [${row.materialType}] ${row.legacyCode} | ${row.mainCategoryLegacyCode}/${row.subCategoryLegacyCode} | ${row.title}`,
+        );
       }
       if (unresolved.length > 20) {
         console.log(`  ... and ${unresolved.length - 20} more`);
