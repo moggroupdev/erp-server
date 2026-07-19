@@ -283,7 +283,8 @@ function printStats(opts: {
   unmatched: number;
   matchedLegacyCodes: Set<string>;
   duplicateLegacyCodes: string[];
-  duplicateCount: number;
+  duplicateTitleCount: number;
+  duplicateQuantityTitleCount: number;
   orphanCount: number;
   quantitiesTotalRows: number;
   distinctQuantityTitles: number;
@@ -299,7 +300,8 @@ function printStats(opts: {
     unmatched,
     matchedLegacyCodes,
     duplicateLegacyCodes,
-    duplicateCount,
+    duplicateTitleCount,
+    duplicateQuantityTitleCount,
     orphanCount,
     quantitiesTotalRows,
     distinctQuantityTitles,
@@ -347,12 +349,13 @@ function printStats(opts: {
   if (duplicateLegacyCodes.length) {
     console.log(`  samples: ${[...new Set(duplicateLegacyCodes)].slice(0, 10).join(', ')}`);
   }
+  console.log(`duplicate titles skipped:        ${duplicateTitleCount}`);
 
   console.log('\n--- Quantities & costs ---');
   console.log(`sheets parsed:                   ${sheetsParsed}`);
   console.log(`quantity rows scanned:           ${quantitiesTotalRows}`);
   console.log(`distinct titles indexed:         ${distinctQuantityTitles}`);
-  console.log(`duplicate titles skipped:        ${duplicateCount}`);
+  console.log(`duplicate quantity titles:       ${duplicateQuantityTitleCount}`);
   console.log(`orphan quantity titles:          ${orphanCount}`);
   const matchPct = output.length ? ((matched / output.length) * 100).toFixed(1) : '0.0';
   console.log(`matched by title:                ${matched} (${matchPct}%)`);
@@ -416,12 +419,23 @@ function main(): void {
 
   const matchedLegacyCodes = new Set<string>();
   const matchedQuantityTitles = new Set<string>();
+  const seenTitles = new Set<string>();
   const output: OutputRow[] = [];
   let matched = 0;
   let unmatched = 0;
+  let duplicateTitleCount = 0;
 
   for (const item of valid) {
     const titleKey = norm(item.title);
+    if (!titleKey) continue;
+
+    // Same title with different legacy codes → keep the first occurrence only
+    if (seenTitles.has(titleKey)) {
+      duplicateTitleCount++;
+      continue;
+    }
+    seenTitles.add(titleKey);
+
     const qty = quantitiesByTitle.get(titleKey);
     let unit = normalizeUnit(item.unitRaw);
     if (!unit && qty) unit = normalizeUnit(qty.unit);
@@ -484,7 +498,8 @@ function main(): void {
     unmatched,
     matchedLegacyCodes,
     duplicateLegacyCodes,
-    duplicateCount,
+    duplicateTitleCount,
+    duplicateQuantityTitleCount: duplicateCount,
     orphanCount,
     quantitiesTotalRows,
     distinctQuantityTitles: quantitiesByTitle.size,
