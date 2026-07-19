@@ -338,9 +338,9 @@ function printStats(opts: {
     byMain.set(row.mainCategoryLegacyCode, stats);
   }
 
-  console.log('\n========== MATERIALS EXTRACTION STATS ==========');
+  console.log('\n========== RAW MATERIALS EXTRACTION STATS ==========');
   console.log(`codes.xls item rows scanned:     ${scanned}`);
-  console.log(`included in clean-materials.csv: ${output.length}`);
+  console.log(`included in clean-raw-materials.csv: ${output.length}`);
   console.log(`excluded:                        ${excludedCount}`);
   for (const [reason, count] of [...excludedByReason.entries()].sort()) {
     console.log(`  - ${reason}: ${count}`);
@@ -474,7 +474,7 @@ function main(): void {
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const outPath = path.join(OUT_DIR, 'clean-materials.csv');
+  const outPath = path.join(OUT_DIR, 'clean-raw-materials.csv');
   writeCsv(
     outPath,
     ['legacyCode', 'title', 'mainCategoryLegacyCode', 'subCategoryLegacyCode', 'unit', 'unitCost', 'quantity'],

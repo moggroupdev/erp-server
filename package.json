@@ -10,7 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:triggers": "ts-node -r tsconfig-paths/register src/database/apply-triggers.ts",
     "db:studio": "drizzle-kit studio",
-    "extract:materials": "ts-node -r tsconfig-paths/register scripts/extract-materials.ts",
+    "extract:raw-materials": "ts-node -r tsconfig-paths/register scripts/extract-raw-materials.ts",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seed-departments.ts",
