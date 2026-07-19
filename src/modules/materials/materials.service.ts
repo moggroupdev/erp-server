@@ -2,7 +2,7 @@ import { randomInt } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materials } from 'src/database/schema';
+import { materialCategorySubs, materials } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -33,6 +33,14 @@ export class MaterialsService {
       sorting: true,
       pagination: true,
       additionalConditions: [isNull(materials.deletedAt)],
+      joinFilters: {
+        mainCategoryId: {
+          localColumn: materials.subCategoryId,
+          relatedIdColumn: materialCategorySubs.id,
+          relatedTable: materialCategorySubs,
+          relatedFilterColumn: materialCategorySubs.mainCategoryId,
+        },
+      },
     });
   }
 

@@ -16,6 +16,17 @@ interface RelationConfig {
       };
 }
 
+interface JoinFilterConfig {
+  /** Column on the base table that holds the FK into `relatedTable` (e.g. materials.subCategoryId). */
+  localColumn: PgColumn;
+  /** Column on `relatedTable` matched against `localColumn` (usually its primary key, e.g. materialCategorySubs.id). */
+  relatedIdColumn: PgColumn;
+  /** The related table to query. */
+  relatedTable: PgTable;
+  /** Column on `relatedTable` compared against the incoming query param value (e.g. materialCategorySubs.mainCategoryId). */
+  relatedFilterColumn: PgColumn;
+}
+
 interface QueryBuilderOptionsBase {
   filtering?: boolean;
   searchableFields?: string[];
@@ -23,6 +34,8 @@ interface QueryBuilderOptionsBase {
   sorting?: boolean;
   additionalConditions?: SQL[];
   withRelations?: RelationConfig;
+  /** Virtual filter keys resolved via subquery on a related table (e.g. filter materials by mainCategoryId). */
+  joinFilters?: Record<string, JoinFilterConfig>;
   /** Drizzle column selection (e.g. `{ password: false }`) — works for both plain and relational queries. */
   columns?: Record<string, boolean>;
 }
@@ -59,6 +72,7 @@ export class QueryBuilderService {
       pagination = false,
       sorting = false,
       withRelations,
+      joinFilters,
       columns,
     } = options;
 
@@ -80,6 +94,23 @@ export class QueryBuilderService {
         if (match) {
           fieldName = match[1];
           operator = match[2] as keyof typeof OPERATORS_MAP;
+        }
+
+        // Join filters (virtual keys resolved via subquery on a related table)
+        const joinFilter = joinFilters?.[fieldName];
+        if (joinFilter && !operator) {
+          const { localColumn, relatedIdColumn, relatedTable, relatedFilterColumn } = joinFilter;
+          const filterCondition = Array.isArray(rawValue)
+            ? inArray(
+                relatedFilterColumn,
+                rawValue.map((v) => parseValue(relatedFilterColumn, v)),
+              )
+            : eq(relatedFilterColumn, parseValue(relatedFilterColumn, rawValue));
+
+          conditions.push(
+            inArray(localColumn, this.db.select({ id: relatedIdColumn }).from(relatedTable).where(filterCondition)),
+          );
+          continue;
         }
 
         const column = tableColumns[fieldName];
