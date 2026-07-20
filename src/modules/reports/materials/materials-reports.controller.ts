@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permission.decorator';
 import { PermissionGuard } from 'src/modules/auth/guards/permission.guard';
@@ -15,5 +15,13 @@ export class MaterialsReportsController {
   @ApiBearerAuth()
   getInventorySummary() {
     return this.materialsReportsService.getInventorySummary();
+  }
+
+  @Get('category-stats')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_REPORTS)
+  @ApiBearerAuth()
+  getCategoryStats(@Query('mainCategoryId', ParseUUIDPipe) mainCategoryId: string) {
+    return this.materialsReportsService.getCategoryStats(mainCategoryId);
   }
 }

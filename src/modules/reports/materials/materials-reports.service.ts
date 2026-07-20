@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, isNotNull, isNull, lte, sql } from 'drizzle-orm';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, count, desc, eq, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { materialCategoryMains, materialCategorySubs, materials } from 'src/database/schema';
 import { MATERIAL_TYPE_VALUES } from 'src/utils/constants';
+import { translate } from 'src/utils/i18n/translate';
 
 const STOCK_STATUS_VALUES = ['out_of_stock', 'low_stock', 'in_stock'] as const;
 
@@ -40,28 +41,70 @@ export class MaterialsReportsService {
     };
   }
 
+  public async getCategoryStats(mainCategoryId: string) {
+    const [category] = await this.db
+      .select({ id: materialCategoryMains.id, title: materialCategoryMains.title })
+      .from(materialCategoryMains)
+      .where(eq(materialCategoryMains.id, mainCategoryId))
+      .limit(1);
+
+    if (!category) {
+      throw new NotFoundException(
+        translate(
+          `Material main category with ID ${mainCategoryId} does not exist.`,
+          `لا توجد فئة مواد رئيسية بالمعرف ${mainCategoryId}.`,
+        ),
+      );
+    }
+
+    const scoped = and(isNull(materials.deletedAt), eq(materialCategorySubs.mainCategoryId, mainCategoryId))!;
+    const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitCost}, 0)`;
+    const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitCost}, 0)`;
+
+    const [overview, byMaterialType, stockStatus, bySubCategory] = await Promise.all([
+      this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
+      this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
+      this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
+      this.getBySubCategory(scoped, valueExpr),
+    ]);
+
+    return {
+      category,
+      overview,
+      byMaterialType,
+      stockStatus,
+      bySubCategory,
+    };
+  }
+
   // ============================== PRIVATE METHODS ==============================
 
   private async getOverview(
-    active: ReturnType<typeof isNull>,
+    where: SQL,
     valueExpr: ReturnType<typeof sql<number>>,
     openingValueExpr: ReturnType<typeof sql<number>>,
+    options?: { joinSubs?: boolean },
   ) {
-    const [row] = await this.db
-      .select({
-        totalMaterials: count(),
-        totalInventoryValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
-        totalOpeningValue: sql<number>`coalesce(sum(${openingValueExpr}), 0)`,
-        outOfStockCount: sql<number>`count(*) filter (where coalesce(${materials.quantity}, 0) = 0)`,
-        lowStockCount: sql<number>`count(*) filter (
+    const selectFields = {
+      totalMaterials: count(),
+      totalInventoryValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
+      totalOpeningValue: sql<number>`coalesce(sum(${openingValueExpr}), 0)`,
+      outOfStockCount: sql<number>`count(*) filter (where coalesce(${materials.quantity}, 0) = 0)`,
+      lowStockCount: sql<number>`count(*) filter (
           where ${materials.minimumStock} is not null
           and coalesce(${materials.quantity}, 0) > 0
           and coalesce(${materials.quantity}, 0) <= ${materials.minimumStock}
         )`,
-        noMinimumStockCount: sql<number>`count(*) filter (where ${materials.minimumStock} is null)`,
-      })
-      .from(materials)
-      .where(active);
+      noMinimumStockCount: sql<number>`count(*) filter (where ${materials.minimumStock} is null)`,
+    };
+
+    const [row] = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(where)
+      : await this.db.select(selectFields).from(materials).where(where);
 
     const totalInventoryValue = Number(row?.totalInventoryValue ?? 0);
     const totalOpeningValue = Number(row?.totalOpeningValue ?? 0);
@@ -80,17 +123,22 @@ export class MaterialsReportsService {
     };
   }
 
-  private async getByMaterialType(active: ReturnType<typeof isNull>, valueExpr: ReturnType<typeof sql<number>>) {
-    const rows = await this.db
-      .select({
-        materialType: materials.materialType,
-        count: count(),
-        totalQuantity: sql<number>`coalesce(sum(coalesce(${materials.quantity}, 0)), 0)`,
-        totalValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
-      })
-      .from(materials)
-      .where(active)
-      .groupBy(materials.materialType);
+  private async getByMaterialType(where: SQL, valueExpr: ReturnType<typeof sql<number>>, options?: { joinSubs?: boolean }) {
+    const selectFields = {
+      materialType: materials.materialType,
+      count: count(),
+      totalQuantity: sql<number>`coalesce(sum(coalesce(${materials.quantity}, 0)), 0)`,
+      totalValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
+    };
+
+    const rows = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(where)
+          .groupBy(materials.materialType)
+      : await this.db.select(selectFields).from(materials).where(where).groupBy(materials.materialType);
 
     const byKey = new Map(rows.map((r) => [r.materialType, r]));
 
@@ -105,7 +153,7 @@ export class MaterialsReportsService {
     });
   }
 
-  private async getByMainCategory(active: ReturnType<typeof isNull>, valueExpr: ReturnType<typeof sql<number>>) {
+  private async getByMainCategory(where: SQL, valueExpr: ReturnType<typeof sql<number>>) {
     const rows = await this.db
       .select({
         mainCategoryId: materialCategoryMains.id,
@@ -116,7 +164,7 @@ export class MaterialsReportsService {
       .from(materials)
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
       .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
-      .where(active)
+      .where(where)
       .groupBy(materialCategoryMains.id, materialCategoryMains.title)
       .orderBy(desc(sql`coalesce(sum(${valueExpr}), 0)`));
 
@@ -128,7 +176,29 @@ export class MaterialsReportsService {
     }));
   }
 
-  private async getStockStatus(active: ReturnType<typeof isNull>, valueExpr: ReturnType<typeof sql<number>>) {
+  private async getBySubCategory(where: SQL, valueExpr: ReturnType<typeof sql<number>>) {
+    const rows = await this.db
+      .select({
+        subCategoryId: materialCategorySubs.id,
+        subCategoryTitle: materialCategorySubs.title,
+        count: count(),
+        totalValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
+      })
+      .from(materials)
+      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .where(where)
+      .groupBy(materialCategorySubs.id, materialCategorySubs.title)
+      .orderBy(desc(sql`coalesce(sum(${valueExpr}), 0)`));
+
+    return rows.map((row) => ({
+      subCategoryId: row.subCategoryId,
+      subCategoryTitle: row.subCategoryTitle,
+      count: Number(row.count),
+      totalValue: Number(row.totalValue),
+    }));
+  }
+
+  private async getStockStatus(where: SQL, valueExpr: ReturnType<typeof sql<number>>, options?: { joinSubs?: boolean }) {
     const statusExpr = sql<StockStatus>`
       case
         when coalesce(${materials.quantity}, 0) = 0 then 'out_of_stock'
@@ -138,15 +208,20 @@ export class MaterialsReportsService {
       end
     `;
 
-    const rows = await this.db
-      .select({
-        status: statusExpr,
-        count: count(),
-        totalValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
-      })
-      .from(materials)
-      .where(active)
-      .groupBy(statusExpr);
+    const selectFields = {
+      status: statusExpr,
+      count: count(),
+      totalValue: sql<number>`coalesce(sum(${valueExpr}), 0)`,
+    };
+
+    const rows = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(where)
+          .groupBy(statusExpr)
+      : await this.db.select(selectFields).from(materials).where(where).groupBy(statusExpr);
 
     const byKey = new Map(rows.map((r) => [r.status, r]));
 
@@ -160,11 +235,7 @@ export class MaterialsReportsService {
     });
   }
 
-  private async getTopMaterialsByValue(
-    active: ReturnType<typeof isNull>,
-    valueExpr: ReturnType<typeof sql<number>>,
-    topLimit: number,
-  ) {
+  private async getTopMaterialsByValue(where: SQL, valueExpr: ReturnType<typeof sql<number>>, topLimit: number) {
     const rows = await this.db
       .select({
         code: materials.code,
@@ -175,7 +246,7 @@ export class MaterialsReportsService {
         value: valueExpr,
       })
       .from(materials)
-      .where(active)
+      .where(where)
       .orderBy(desc(valueExpr))
       .limit(topLimit);
 
@@ -189,7 +260,7 @@ export class MaterialsReportsService {
     }));
   }
 
-  private async getLowStockMaterials(active: ReturnType<typeof isNull>, lowStockLimit: number) {
+  private async getLowStockMaterials(where: SQL, lowStockLimit: number) {
     const deficitExpr = sql<number>`coalesce(${materials.minimumStock}, 0) - coalesce(${materials.quantity}, 0)`;
 
     const rows = await this.db
@@ -201,7 +272,7 @@ export class MaterialsReportsService {
         deficit: deficitExpr,
       })
       .from(materials)
-      .where(and(active, isNotNull(materials.minimumStock), lte(materials.quantity, materials.minimumStock)))
+      .where(and(where, isNotNull(materials.minimumStock), lte(materials.quantity, materials.minimumStock)))
       .orderBy(desc(deficitExpr), asc(materials.title))
       .limit(lowStockLimit);
 
