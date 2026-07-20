@@ -61,12 +61,16 @@ export class MaterialsReportsService {
     const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitCost}, 0)`;
     const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitCost}, 0)`;
 
-    const [overview, byMaterialType, stockStatus, bySubCategory] = await Promise.all([
-      this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
-      this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
-      this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
-      this.getBySubCategory(scoped, valueExpr),
-    ]);
+    const [overview, byMaterialType, stockStatus, bySubCategory, topMaterialsByValue, lowStockMaterials] = await Promise.all(
+      [
+        this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
+        this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
+        this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
+        this.getBySubCategory(scoped, valueExpr),
+        this.getTopMaterialsByValue(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
+        this.getLowStockMaterials(scoped, LOW_STOCK_LIMIT, { joinSubs: true }),
+      ],
+    );
 
     return {
       category,
@@ -74,6 +78,8 @@ export class MaterialsReportsService {
       byMaterialType,
       stockStatus,
       bySubCategory,
+      topMaterialsByValue,
+      lowStockMaterials,
     };
   }
 
@@ -235,20 +241,30 @@ export class MaterialsReportsService {
     });
   }
 
-  private async getTopMaterialsByValue(where: SQL, valueExpr: ReturnType<typeof sql<number>>, topLimit: number) {
-    const rows = await this.db
-      .select({
-        code: materials.code,
-        title: materials.title,
-        unit: materials.unit,
-        quantity: materials.quantity,
-        unitCost: materials.unitCost,
-        value: valueExpr,
-      })
-      .from(materials)
-      .where(where)
-      .orderBy(desc(valueExpr))
-      .limit(topLimit);
+  private async getTopMaterialsByValue(
+    where: SQL,
+    valueExpr: ReturnType<typeof sql<number>>,
+    topLimit: number,
+    options?: { joinSubs?: boolean },
+  ) {
+    const selectFields = {
+      code: materials.code,
+      title: materials.title,
+      unit: materials.unit,
+      quantity: materials.quantity,
+      unitCost: materials.unitCost,
+      value: valueExpr,
+    };
+
+    const rows = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(where)
+          .orderBy(desc(valueExpr))
+          .limit(topLimit)
+      : await this.db.select(selectFields).from(materials).where(where).orderBy(desc(valueExpr)).limit(topLimit);
 
     return rows.map((row) => ({
       code: row.code,
@@ -260,21 +276,31 @@ export class MaterialsReportsService {
     }));
   }
 
-  private async getLowStockMaterials(where: SQL, lowStockLimit: number) {
+  private async getLowStockMaterials(where: SQL, lowStockLimit: number, options?: { joinSubs?: boolean }) {
     const deficitExpr = sql<number>`coalesce(${materials.minimumStock}, 0) - coalesce(${materials.quantity}, 0)`;
+    const selectFields = {
+      code: materials.code,
+      title: materials.title,
+      quantity: materials.quantity,
+      minimumStock: materials.minimumStock,
+      deficit: deficitExpr,
+    };
+    const lowStockWhere = and(where, isNotNull(materials.minimumStock), lte(materials.quantity, materials.minimumStock));
 
-    const rows = await this.db
-      .select({
-        code: materials.code,
-        title: materials.title,
-        quantity: materials.quantity,
-        minimumStock: materials.minimumStock,
-        deficit: deficitExpr,
-      })
-      .from(materials)
-      .where(and(where, isNotNull(materials.minimumStock), lte(materials.quantity, materials.minimumStock)))
-      .orderBy(desc(deficitExpr), asc(materials.title))
-      .limit(lowStockLimit);
+    const rows = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(lowStockWhere)
+          .orderBy(desc(deficitExpr), asc(materials.title))
+          .limit(lowStockLimit)
+      : await this.db
+          .select(selectFields)
+          .from(materials)
+          .where(lowStockWhere)
+          .orderBy(desc(deficitExpr), asc(materials.title))
+          .limit(lowStockLimit);
 
     return rows.map((row) => ({
       code: row.code,
