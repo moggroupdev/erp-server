@@ -4,7 +4,7 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { materialCategoryMains, materialCategorySubs, materials } from 'src/database/schema';
 import { MATERIAL_TYPE_VALUES } from 'src/utils/constants';
 
-const STOCK_STATUS_VALUES = ['out_of_stock', 'low_stock', 'in_stock', 'no_minimum_set'] as const;
+const STOCK_STATUS_VALUES = ['out_of_stock', 'low_stock', 'in_stock'] as const;
 
 type StockStatus = (typeof STOCK_STATUS_VALUES)[number];
 
@@ -132,8 +132,8 @@ export class MaterialsReportsService {
     const statusExpr = sql<StockStatus>`
       case
         when coalesce(${materials.quantity}, 0) = 0 then 'out_of_stock'
-        when ${materials.minimumStock} is null then 'no_minimum_set'
-        when coalesce(${materials.quantity}, 0) <= ${materials.minimumStock} then 'low_stock'
+        when ${materials.minimumStock} is not null
+          and coalesce(${materials.quantity}, 0) <= ${materials.minimumStock} then 'low_stock'
         else 'in_stock'
       end
     `;
