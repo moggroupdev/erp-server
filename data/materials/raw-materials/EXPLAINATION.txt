@@ -1,6 +1,6 @@
-All codes are 8 digits.
+Legacy codes are 8 digits.
 
-For the materials, it's always starts with 1 (1st digit). For the products, it's always starts with 4 (1st digit).
+For the materials, it's always starts with 1 (1st digit).
 
 The next 2 digits (2nd, 3rd) represent the main category of this material, the next 2 digits (4th, 5th) represent subcategory of this material, the last 3 digits represent the item itself.
 

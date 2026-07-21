@@ -1,0 +1,30 @@
+Legacy codes are 8 digits.
+
+For the products, it's always starts with 4 (1st digit).
+
+The next 2 digits (2nd, 3rd) represent the main category of this product, the next 2 digits (4th, 5th) represent subcategory of this product, the last 3 digits represent the item itself.
+
+For example, these are products from the main category 01 البوتاجازات:
+
+40101001
+40101002
+40101003
+40101004
+40101005
+
+These are products from the main category 02 بوتجازات كهرباء:
+
+40201001
+40201002
+40201003
+
+These are products from the main category 03 القلايات:
+
+40301001
+40301002
+40301003
+40302001
+40302002
+40302003
+
+(Of course, each one of them includes subcategories)

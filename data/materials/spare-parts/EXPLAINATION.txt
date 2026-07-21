@@ -1,4 +1,4 @@
-All codes are 8 digits.
+Legacy codes are 8 digits.
 
 For the spare parts, they always start with 3 (1st digit).
 
