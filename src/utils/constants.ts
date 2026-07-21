@@ -34,6 +34,9 @@ export const PERMISSION_VALUES = [
   'read_materials',
   'update_material',
   'read_material_reports',
+  'add_product',
+  'read_products',
+  'update_product',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(

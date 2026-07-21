@@ -14,6 +14,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { MaterialsModule } from './modules/materials/materials.module';
+import { ProductsModule } from './modules/products/products.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     CustomersModule,
     CategoriesModule,
     MaterialsModule,
+    ProductsModule,
     ReportsModule,
   ],
   controllers: [AppController],

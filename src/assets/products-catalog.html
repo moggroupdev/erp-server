@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>كتالوج المنتجات | MOG ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f1ec;
+      --bg-soft: #ebe6df;
+      --surface: #ffffff;
+      --surface-muted: #faf8f5;
+      --text: #2a322e;
+      --text-soft: #4a5650;
+      --muted: #7a8a83;
+      --accent: #5b8f7a;
+      --accent-deep: #467a66;
+      --accent-soft: #e4f0ea;
+      --accent-border: #c5ddd2;
+      --gold: #b8955a;
+      --gold-soft: #f5efe3;
+      --border: #e2e8e4;
+      --shadow: 0 10px 40px rgba(42, 50, 46, 0.06);
+      --shadow-sm: 0 2px 12px rgba(42, 50, 46, 0.04);
+      --radius: 16px;
+      --radius-sm: 15px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Alexandria", system-ui, sans-serif;
+      background: linear-gradient(165deg, var(--bg) 0%, #eef3f0 45%, var(--bg-soft) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.65;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 2.75rem;
+      padding: 2rem 1rem 0;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      border: 1px solid var(--accent-border);
+    }
+
+    .hero h1 {
+      font-size: clamp(1.75rem, 4vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding: 1.25rem 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent-deep);
+    }
+
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 220px;
+      max-width: 360px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: var(--surface-muted);
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrap input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91, 143, 122, 0.15);
+    }
+
+    .search-wrap input::placeholder { color: #a8b5af; }
+
+    .category-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+      border-inline-start: 4px solid var(--accent);
+    }
+
+    .category-header h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .category-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .product-card {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product-card.hidden { display: none; }
+
+    .product-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 1rem;
+      background: linear-gradient(to left, var(--surface-muted), var(--surface));
+      border-bottom: 1px solid var(--border);
+    }
+
+    .product-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.45;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .source-badge {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+
+    .source-manufactured {
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      border: 1px solid var(--accent-border);
+    }
+
+    .source-imported {
+      background: #eef2f8;
+      color: #4a6080;
+      border: 1px solid #d4dce8;
+    }
+
+    .product-body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    .product-meta {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.35rem 0.75rem;
+      font-size: 0.74rem;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .meta-value {
+      color: var(--text-soft);
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .meta-value.code {
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      text-align: right;
+      color: var(--text);
+    }
+
+    .product-desc {
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.5;
+      padding: 0.5rem 0.65rem;
+      background: var(--surface-muted);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .dimensions-block {
+      margin-top: auto;
+    }
+
+    .dimensions-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent-deep);
+      margin-bottom: 0.45rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .dimensions-title .count {
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    .dimensions-table-wrap {
+      border-radius: 7.5px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .dim-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 0.68rem;
+    }
+
+    .dim-table th {
+      background: var(--surface-muted);
+      color: var(--muted);
+      font-weight: 600;
+      text-align: center;
+      padding: 0.3rem 0.2rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.64rem;
+      white-space: nowrap;
+    }
+
+    .dim-table td {
+      padding: 0.32rem 0.2rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-soft);
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .dim-table tr:last-child td { border-bottom: none; }
+
+    .dim-table td.dim-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 0.7rem;
+    }
+
+    .dim-table th.col-status,
+    .dim-table td.col-status {
+      width: 2.65rem;
+      padding: 0.2rem 0.08rem;
+    }
+
+    .dim-table td.dim-unit {
+      font-size: 0.64rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .dim-table tr.default-row td {
+      background: var(--gold-soft);
+    }
+
+    .dim-table tr.default-row td.dim-value {
+      color: var(--text);
+    }
+
+    .default-pill {
+      display: block;
+      font-size: 0.5rem;
+      font-weight: 700;
+      padding: 0.25rem 0.15rem;
+      border-radius: 5px;
+      background: var(--gold);
+      color: #fff;
+      line-height: 1.15;
+      text-align: center;
+      transform: scale(0.88);
+      transform-origin: center;
+    }
+
+    .catalog-hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: -1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .no-dims {
+      font-size: 0.74rem;
+      color: var(--muted);
+      padding: 0.55rem;
+      background: var(--surface-muted);
+      border-radius: 6px;
+      border: 1px dashed var(--border);
+      text-align: center;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px dashed var(--border);
+      color: var(--muted);
+    }
+
+    .empty-state h2 {
+      font-size: 1.25rem;
+      color: var(--text-soft);
+      margin-bottom: 0.5rem;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .no-results {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+
+    .no-results.visible { display: block; }
+
+    @media (max-width: 640px) {
+      .page { padding: 1.5rem 1rem 3rem; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .search-wrap { max-width: none; }
+      .products-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-badge">MOG ERP</div>
+      <h1>كتالوج المنتجات</h1>
+      <p>عرض شامل لجميع المنتجات ومقاساتها المتاحة في النظام</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-value">{{PRODUCT_COUNT}}</span>
+          <span class="stat-label">منتج</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{{DIMENSION_COUNT}}</span>
+          <span class="stat-label">مقاس</span>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input type="search" id="search" placeholder="ابحث بالاسم أو الكود..." autocomplete="off" />
+      </div>
+    </div>
+
+    <p class="catalog-hint">الصف المميز باللون الذهبي يمثل المقاس الافتراضي</p>
+
+    <div id="no-results" class="no-results">لا توجد نتائج مطابقة للبحث</div>
+
+    {{CONTENT}}
+
+    <footer class="footer">
+      تم التحديث في {{GENERATED_AT}} · MOG ERP
+    </footer>
+  </div>
+
+  <script>
+    const search = document.getElementById('search');
+    const noResults = document.getElementById('no-results');
+    const cards = Array.from(document.querySelectorAll('.product-card'));
+    const sections = Array.from(document.querySelectorAll('.category-section'));
+
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const text = card.dataset.search || '';
+        const show = !q || text.includes(q);
+        card.classList.toggle('hidden', !show);
+        if (show) visible++;
+      });
+
+      sections.forEach((section) => {
+        const sectionCards = section.querySelectorAll('.product-card:not(.hidden)');
+        section.style.display = sectionCards.length ? '' : 'none';
+      });
+
+      noResults.classList.toggle('visible', q.length > 0 && visible === 0);
+    });
+  </script>
+</body>
+</html>
