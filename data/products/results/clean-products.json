@@ -16,29 +16,18 @@
         "isDefault": true
       },
       {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
         "length": 80,
         "width": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
-      }
-    ]
-  },
-  {
-    "title": "بوتاجاز 4 شعلة بفرن كبير",
-    "description": null,
-    "mainCategoryLegacyCode": "01",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": [
-      {
-        "length": 120,
-        "width": 90,
-        "height": 85,
-        "dimensionUnit": "cm",
-        "isDefault": true
       }
     ]
   },
