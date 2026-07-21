@@ -50,10 +50,7 @@ export class ProductsService {
   public async get(code: string) {
     const product = await this.db.query.products.findFirst({
       where: eq(products.code, code),
-      with: {
-        createdBy: { columns: { id: true, name: true } },
-        dimensions: true,
-      },
+      with: { createdBy: { columns: { id: true, name: true } } },
     });
     if (!product)
       throw new NotFoundException(translate(`Product with code ${code} does not exist.`, `لا يوجد منتج بالكود ${code}.`));
