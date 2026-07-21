@@ -1,6 +1,5 @@
 [
   {
-    "legacyCode": "40101001",
     "title": "بوتاجاز 4 شعلة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -8,15 +7,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40101002",
     "title": "بوتاجاز 4 شعلة بفرن كبير",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -24,15 +32,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101003",
     "title": "بوتاجاز 4 شعلة بدون فرن محمل على دولاب مفتوح",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -40,31 +50,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101004",
-    "title": "بوتاجاز 4 شعلة بالفرن",
-    "description": null,
-    "mainCategoryLegacyCode": "01",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40101005",
     "title": "بوتاجاز 6 شعلة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -72,15 +68,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40101006",
     "title": "بوتاجاز 6 شعلة بدون فرن محمل على دولاب مفتوح",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -88,31 +93,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101007",
-    "title": "بوتاجاز 6 شعلة بالفرن",
-    "description": null,
-    "mainCategoryLegacyCode": "01",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40101008",
     "title": "بوتاجاز 1 شعلة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -120,15 +111,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 40,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 40,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101009",
     "title": "بوتاجاز 2 شعلة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -136,15 +129,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101010",
     "title": "بوتاجاز 2 شعلة محمل على دولاب",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -152,15 +147,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101011",
     "title": "بوتاجاز 4 شعلة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -168,15 +165,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101012",
     "title": "بوتاجاز 6 شعلة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -184,15 +183,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101013",
     "title": "بوتاجاز أرضى 1 شعلة مصنع من شاسيه زوايا حديد",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -200,15 +201,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 60,
-      "height": 60,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 60,
+        "height": 60,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101014",
     "title": "بوتاجاز أرضى 2 شعلة مصنع من شاسيه زوايا حديد",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -216,15 +219,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 60,
-      "height": 60,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 60,
+        "height": 60,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40101015",
     "title": "بوتاجاز أرضى 3 شعلة مصنع من شاسيه زوايا حديد",
     "description": null,
     "mainCategoryLegacyCode": "01",
@@ -232,31 +237,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 60,
-      "height": 60,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 180,
+        "width": 60,
+        "height": 60,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 210,
+        "width": 60,
+        "height": 60,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40101016",
-    "title": "بوتاجاز أرضى 3 شعلة مصنع من شاسيه زوايا حديد",
-    "description": null,
-    "mainCategoryLegacyCode": "01",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 210,
-      "width": 60,
-      "height": 60,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40201001",
     "title": "طاهى مزود بعدد 2 بلاطة مربعة تركى و جريل 1 بلاطة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -264,15 +262,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201002",
     "title": "طاهى مزود بعدد 2 بلاطة مربعة ألمانى و جريل 1 بلاطة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -280,15 +280,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201003",
     "title": "طاهى 4 بلاطة مربعة بالفرن بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -296,15 +298,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201004",
     "title": "طاهى 4 بلاطة مربعة بالفرن بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -312,15 +316,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201005",
     "title": "طاهى 6 بلاطة مربعة بالفرن بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -328,15 +334,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201006",
     "title": "طاهى 6 بلاطة مربعة بالفرن بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -344,15 +352,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201007",
     "title": "طاهى 4 بلاطة مربعة بدون فرن بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -360,15 +370,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201008",
     "title": "طاهى 4 بلاطة مربعة بدون فرن بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -376,15 +388,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201009",
     "title": "طاهى 6 بلاطة مستديرة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -392,15 +406,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201010",
     "title": "طاهى 6 بلاطة مستديرة بدون الفرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -408,15 +424,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201011",
     "title": "طاهى 4 بلاطة مستديرة بالفرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -424,15 +442,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201012",
     "title": "طاهى 4 بلاطة مستديرة بدون فرن",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -440,15 +460,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201013",
     "title": "طاهى 1 بلاطة مربعة كاونتر بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -456,15 +478,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 40,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 40,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201014",
     "title": "طاهى 1 بلاطة مربعة كاونتر بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -472,15 +496,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 40,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 40,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201015",
     "title": "طاهى 2 بلاطة مربعة كاونتر بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -488,15 +514,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201016",
     "title": "طاهى 2 بلاطة مربعة كاونتر بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -504,15 +532,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201017",
     "title": "طاهى 4 بلاطة مربعة كاونتر بلاطة تركى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -520,15 +550,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201018",
     "title": "طاهى 4 بلاطة مربعة كاونتر بلاطة ألمانى",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -536,15 +568,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201019",
     "title": "طاهى 1 بلاطة مستديرة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -552,15 +586,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 40,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 40,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201020",
     "title": "طاهى 2 بلاطة مستديرة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -568,15 +604,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201021",
     "title": "طاهى 4 بلاطة مستديرة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -584,15 +622,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40201022",
     "title": "طاهى 6 بلاطة مستديرة كاونتر",
     "description": null,
     "mainCategoryLegacyCode": "02",
@@ -600,15 +640,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40301001",
     "title": "قلاية 2 عين غاز",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -616,15 +658,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40301002",
     "title": "قلاية 1 عين غاز",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -632,31 +676,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 40,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40301003",
-    "title": "قلاية 1 عين غاز",
-    "description": null,
-    "mainCategoryLegacyCode": "03",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40302001",
     "title": "قلاية 2 عين كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -664,15 +701,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40302002",
     "title": "قلاية 1 عين كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -680,15 +719,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40302003",
     "title": "قلاية 2 عين كاونتر كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -696,15 +737,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40302004",
     "title": "قلاية 1 عين كاونتر كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "03",
@@ -712,15 +755,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40401001",
     "title": "باستاكوكر 1 عين كاونتر تعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "04",
@@ -728,15 +773,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 40,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 40,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40401002",
     "title": "باستاكوكر 2 عين تعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "04",
@@ -744,31 +791,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40401003",
-    "title": "باستاكوكر 2 عين تعمل بالغاز",
-    "description": null,
-    "mainCategoryLegacyCode": "04",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40401004",
     "title": "باستاكوكر 2 عين تعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "04",
@@ -776,63 +816,94 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40401005",
-    "title": "باستاكوكر 2 عين تعمل بالكهرباء",
+    "title": "غلاية مياه 10 لتر إمداد يدوى",
     "description": null,
-    "mainCategoryLegacyCode": "04",
+    "mainCategoryLegacyCode": "24",
     "subCategoryLegacyCode": "01",
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "40401006",
+    "title": "غلاية مياه 20 لتر إمداد يدوى",
+    "description": null,
+    "mainCategoryLegacyCode": "24",
+    "subCategoryLegacyCode": "01",
+    "sourceType": "manufactured",
+    "estimatedProductionTime": null,
+    "pricingFactor": 1.5,
+    "dimensions": []
+  },
+  {
+    "title": "غلاية مياه 20 لتر إمداد ذاتى",
+    "description": null,
+    "mainCategoryLegacyCode": "24",
+    "subCategoryLegacyCode": "01",
+    "sourceType": "manufactured",
+    "estimatedProductionTime": null,
+    "pricingFactor": 1.5,
+    "dimensions": []
+  },
+  {
+    "title": "غلاية مياه 30 لتر إمداد يدوى",
+    "description": null,
+    "mainCategoryLegacyCode": "24",
+    "subCategoryLegacyCode": "01",
+    "sourceType": "manufactured",
+    "estimatedProductionTime": null,
+    "pricingFactor": 1.5,
+    "dimensions": []
+  },
+  {
+    "title": "غلاية مياه 30 لتر إمداد ذاتى",
+    "description": null,
+    "mainCategoryLegacyCode": "24",
+    "subCategoryLegacyCode": "01",
+    "sourceType": "manufactured",
+    "estimatedProductionTime": null,
+    "pricingFactor": 1.5,
+    "dimensions": []
+  },
+  {
     "title": "غلاية مياه 60 لتر إمداد يدوى",
     "description": null,
-    "mainCategoryLegacyCode": "04",
+    "mainCategoryLegacyCode": "24",
     "subCategoryLegacyCode": "01",
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "40401007",
     "title": "غلاية مياه 60 لتر إمداد ذاتى",
     "description": null,
-    "mainCategoryLegacyCode": "04",
+    "mainCategoryLegacyCode": "24",
     "subCategoryLegacyCode": "01",
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "40501001",
     "title": "سلمندر",
     "description": null,
     "mainCategoryLegacyCode": "05",
@@ -840,31 +911,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 55,
-      "width": 40,
-      "height": 45,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 55,
+        "width": 40,
+        "height": 45,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 88,
+        "width": 40,
+        "height": 45,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40501002",
-    "title": "سلمندر",
-    "description": null,
-    "mainCategoryLegacyCode": "05",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 88,
-      "width": 40,
-      "height": 45,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40601001",
     "title": "بان مارى بدولاب سعة 2 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -872,15 +936,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601002",
     "title": "بان مارى كاونتر سعة 2 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -888,15 +954,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601003",
     "title": "بان مارى كاونتر سعة 1 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -904,15 +972,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601004",
     "title": "بان مارى بدولاب سعة 3 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -920,15 +990,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601005",
     "title": "بان مارى بدولاب سعة 4 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -936,15 +1008,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601006",
     "title": "بان مارى كاونتر سعة 4 حلة GN1/1 (غير شامل الحلل) محمل على شاسيه",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -952,15 +1026,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601007",
     "title": "بان مارى بدولاب سعة 5 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -968,15 +1044,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 180,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40601008",
     "title": "بان مارى بدولاب سعة 6 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "06",
@@ -984,15 +1062,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 230,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 230,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40701001",
     "title": "حلة تلتينج بان 80 لتر غاز",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1000,15 +1080,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40701002",
     "title": "حلة تلتينج بان 80 لتر كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1016,15 +1098,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40701003",
     "title": "حلة تلتينج بان 120 لتر غاز",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1032,15 +1116,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40701004",
     "title": "حلة تلتينج بان 120 لتر كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1048,15 +1134,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40702001",
     "title": "حلة بويلينج بان 150 لتر غاز",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1064,15 +1152,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40702002",
     "title": "حلة بويلينج بان 150 لتر كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "07",
@@ -1080,15 +1170,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40801001",
     "title": "جريل 1 بلاطة يعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "08",
@@ -1096,15 +1188,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 40,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40801002",
     "title": "جريل 1 بلاطة بالفرن يعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "08",
@@ -1112,47 +1220,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40801003",
-    "title": "جريل 1 بلاطة يعمل بالغاز",
-    "description": null,
-    "mainCategoryLegacyCode": "08",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40801004",
-    "title": "جريل 1 بلاطة يعمل بالغاز",
-    "description": null,
-    "mainCategoryLegacyCode": "08",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40801005",
     "title": "جريل 1 بلاطة كاونتر يعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "08",
@@ -1160,15 +1238,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40802001",
     "title": "جريل 1 بلاطة يعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "08",
@@ -1176,31 +1256,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40802002",
-    "title": "جريل 1 بلاطة يعمل بالكهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "08",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40802003",
     "title": "جريل 1 بلاطة كاونتر يعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "08",
@@ -1208,47 +1281,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 80,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 40,
+        "width": 70,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40802004",
-    "title": "جريل 1 بلاطة كاونتر يعمل بالكهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "08",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40802005",
-    "title": "جريل 1 بلاطة كاونتر يعمل بالكهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "08",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 70,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40901001",
     "title": "فرن 1 طابق غاز",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1256,15 +1313,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40901002",
     "title": "فرن 2 طابق غاز",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1272,15 +1331,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 120,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40901003",
     "title": "فرن 3 طابق غاز",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1288,47 +1356,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 120,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40901004",
-    "title": "فرن 2 طابق غاز",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40901005",
-    "title": "فرن 3 طابق غاز",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40902001",
     "title": "فرن 1 طابق كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1336,15 +1381,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "40902002",
     "title": "فرن 2 طابق كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1352,15 +1399,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 120,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40902003",
     "title": "فرن 3 طابق كهرباء",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1368,47 +1424,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 120,
+        "width": 90,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40902004",
-    "title": "فرن 2 طابق كهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40902005",
-    "title": "فرن 3 طابق كهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 90,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40903001",
     "title": "فرن بيتزا 1 طابق يعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1416,15 +1449,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 95,
-      "width": 105,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 95,
+        "width": 105,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 125,
+        "width": 150,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40903002",
     "title": "فرن بيتزا 2 طابق يعمل بالغاز",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1432,47 +1474,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 95,
-      "width": 105,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 95,
+        "width": 105,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 125,
+        "width": 150,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40903003",
-    "title": "فرن بيتزا 1 طابق يعمل بالغاز",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "03",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 125,
-      "width": 150,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40903004",
-    "title": "فرن بيتزا 2 طابق يعمل بالغاز",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "03",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 125,
-      "width": 150,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40904001",
     "title": "فرن بيتزا 1 طابق يعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1480,15 +1499,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 95,
-      "width": 105,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 95,
+        "width": 105,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 125,
+        "width": 150,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40904002",
     "title": "فرن بيتزا 2 طابق يعمل بالكهرباء",
     "description": null,
     "mainCategoryLegacyCode": "09",
@@ -1496,47 +1524,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 95,
-      "width": 105,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 95,
+        "width": 105,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 125,
+        "width": 150,
+        "height": 170,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "40904003",
-    "title": "فرن بيتزا 1 طابق يعمل بالكهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "04",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 125,
-      "width": 150,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "40904004",
-    "title": "فرن بيتزا 2 طابق يعمل بالكهرباء",
-    "description": null,
-    "mainCategoryLegacyCode": "09",
-    "subCategoryLegacyCode": "04",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 125,
-      "width": 150,
-      "height": 170,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41001001",
     "title": "ثلاجة رأسية 1 باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1544,15 +1549,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 80,
-      "height": 210,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 80,
+        "height": 210,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41001002",
     "title": "ثلاجة رأسية 1 باب تجميد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1560,15 +1567,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 80,
-      "height": 210,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 80,
+        "height": 210,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41001003",
     "title": "ثلاجة رأسية 2 باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1576,15 +1585,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 136,
-      "width": 80,
-      "height": 210,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 136,
+        "width": 80,
+        "height": 210,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41001004",
     "title": "ثلاجة رأسية 2 باب تجميد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1592,15 +1603,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 136,
-      "width": 80,
-      "height": 210,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 136,
+        "width": 80,
+        "height": 210,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002001",
     "title": "ثلاجة أفقية 1 باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1608,15 +1621,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002002",
     "title": "ثلاجة أفقية 2باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1624,15 +1639,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002003",
     "title": "ثلاجة أفقية 3 باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1640,15 +1657,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 185,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 185,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002004",
     "title": "ثلاجة أفقية 4 باب تبريد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1656,15 +1675,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 235,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 235,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002005",
     "title": "ثلاجة أفقية 2 باب تجميد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1672,15 +1693,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41002006",
     "title": "ثلاجة أفقية 3 باب تجميد",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1688,15 +1711,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 180,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41003001",
     "title": "ثلاجة سلاطات سعة 3 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1704,15 +1729,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41003002",
     "title": "ثلاجة سلاطات سعة 4 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1720,15 +1747,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41003003",
     "title": "ثلاجة سلاطات سعة 5 حلة GN1/1 (غير شامل الحلل)",
     "description": null,
     "mainCategoryLegacyCode": "10",
@@ -1736,15 +1765,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 185,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 185,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41101001",
     "title": "مبرد مياه سعة 70 لتر",
     "description": null,
     "mainCategoryLegacyCode": "11",
@@ -1752,15 +1783,9 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "41101002",
     "title": "مبرد مياه سعة 150 لتر",
     "description": null,
     "mainCategoryLegacyCode": "11",
@@ -1768,15 +1793,9 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "41101003",
     "title": "مبرد مياه سعة 240 لتر",
     "description": null,
     "mainCategoryLegacyCode": "11",
@@ -1784,15 +1803,9 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": []
   },
   {
-    "legacyCode": "41201001",
     "title": "تروللى حفظ طعام 1 باب ساخن",
     "description": null,
     "mainCategoryLegacyCode": "12",
@@ -1800,15 +1813,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 80,
-      "height": 150,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 80,
+        "height": 150,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41201002",
     "title": "تروللى حفظ طعام 2 باب ساخن",
     "description": null,
     "mainCategoryLegacyCode": "12",
@@ -1816,15 +1831,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 140,
-      "width": 80,
-      "height": 150,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 140,
+        "width": 80,
+        "height": 150,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41202001",
     "title": "تروللى نقل طعام 1 باب متعادل",
     "description": null,
     "mainCategoryLegacyCode": "12",
@@ -1832,15 +1849,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 80,
-      "height": 150,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 80,
+        "height": 150,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41202002",
     "title": "تروللى نقل طعام 2 باب متعادل",
     "description": null,
     "mainCategoryLegacyCode": "12",
@@ -1848,15 +1867,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 140,
-      "width": 80,
-      "height": 150,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 140,
+        "width": 80,
+        "height": 150,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41302001",
     "title": "تروللى نقع فضيات",
     "description": null,
     "mainCategoryLegacyCode": "13",
@@ -1864,31 +1885,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 50,
-      "height": 50,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 50,
+        "height": 50,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 100,
+        "width": 100,
+        "height": 100,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41302002",
-    "title": "تروللى نقع فضيات",
-    "description": null,
-    "mainCategoryLegacyCode": "13",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 100,
-      "height": 100,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41401001",
     "title": "مائدة خدمة بمرايا خلفية ورف سفلى مصمت",
     "description": null,
     "mainCategoryLegacyCode": "14",
@@ -1896,63 +1910,38 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 230,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41401002",
-    "title": "مائدة خدمة بمرايا خلفية ورف سفلى مصمت",
-    "description": null,
-    "mainCategoryLegacyCode": "14",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41401003",
-    "title": "مائدة خدمة بمرايا خلفية ورف سفلى مصمت",
-    "description": null,
-    "mainCategoryLegacyCode": "14",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41401004",
-    "title": "مائدة خدمة بمرايا خلفية ورف سفلى مصمت",
-    "description": null,
-    "mainCategoryLegacyCode": "14",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 230,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41401005",
     "title": "مائدة إستقبال مخلفات",
     "description": null,
     "mainCategoryLegacyCode": "14",
@@ -1960,31 +1949,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 75,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 75,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 160,
+        "width": 75,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41401006",
-    "title": "مائدة إستقبال مخلفات",
-    "description": null,
-    "mainCategoryLegacyCode": "14",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 160,
-      "width": 75,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41401007",
     "title": "مائدة خروج غسالة",
     "description": null,
     "mainCategoryLegacyCode": "14",
@@ -1992,15 +1974,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 75,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 75,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41401008",
     "title": "مائدة مكملة",
     "description": null,
     "mainCategoryLegacyCode": "14",
@@ -2008,15 +1992,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 40,
-      "width": 90,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 40,
+        "width": 90,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41401009",
     "title": "قورمة جزارة بقرصة أرتيلون 4 سم",
     "description": null,
     "mainCategoryLegacyCode": "14",
@@ -2024,15 +2010,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 50,
-      "width": 50,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 50,
+        "width": 50,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501001",
     "title": "تروللى نقل بضائع (تمساح)",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2040,15 +2028,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 60,
-      "width": 90,
-      "height": 90,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 60,
+        "width": 90,
+        "height": 90,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501002",
     "title": "تروللى نقل مخلفات قطر 50سم إرتفاع 65 سم",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2056,15 +2046,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": null,
-      "width": null,
-      "height": 65,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": null,
+        "width": null,
+        "height": 65,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501003",
     "title": "تروللى نقل صوانى مفتوح",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2072,31 +2064,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 85,
-      "height": 120,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 85,
+        "height": 120,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 68,
+        "width": 46,
+        "height": 181,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41501004",
-    "title": "تروللى نقل صوانى مفتوح",
-    "description": null,
-    "mainCategoryLegacyCode": "15",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 68,
-      "width": 46,
-      "height": 181,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41501005",
     "title": "تروللى نقع (تسييح لحوم) بالغطاء والصفاية",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2104,15 +2089,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 60,
-      "width": 90,
-      "height": 90,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 60,
+        "width": 90,
+        "height": 90,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501006",
     "title": "علاقة لحوم",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2120,15 +2107,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 70,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 70,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501007",
     "title": "تروللى نقل غسيل بالغطاء",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2136,15 +2125,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 90,
-      "width": 60,
-      "height": 90,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 90,
+        "width": 60,
+        "height": 90,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41501008",
     "title": "تروللى خدمة 3 رف",
     "description": null,
     "mainCategoryLegacyCode": "15",
@@ -2152,15 +2143,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 60,
-      "height": 90,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 60,
+        "height": 90,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41601001",
     "title": "وحدة أرفف 4 رف مثقب القوائم زوايا 2 مم",
     "description": null,
     "mainCategoryLegacyCode": "16",
@@ -2168,15 +2161,38 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 45,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 45,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 115,
+        "width": 50,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 150,
+        "width": 45,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 50,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41601002",
     "title": "وحدة أرفف 4 رف مثقب القوائم مواسير مربعة",
     "description": null,
     "mainCategoryLegacyCode": "16",
@@ -2184,111 +2200,38 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 45,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 45,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 115,
+        "width": 50,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 150,
+        "width": 50,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 50,
+        "height": 180,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41601003",
-    "title": "وحدة أرفف 4 رف مثقب القوائم مواسير مربعة",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 115,
-      "width": 50,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41601004",
-    "title": "وحدة أرفف 4 رف مثقب القوائم زوايا 2 مم",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 115,
-      "width": 50,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41601005",
-    "title": "وحدة أرفف 4 رف مثقب القوائم مواسير مربعة",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 50,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41601006",
-    "title": "وحدة أرفف 4 رف مثقب القوائم زوايا 2 مم",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 45,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41601007",
-    "title": "وحدة أرفف 4 رف مثقب القوائم مواسير مربعة",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 50,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41601008",
-    "title": "وحدة أرفف 4 رف مثقب القوائم زوايا 2 مم",
-    "description": null,
-    "mainCategoryLegacyCode": "16",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 50,
-      "height": 180,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41701001",
     "title": "رف حائطى بكابولى",
     "description": null,
     "mainCategoryLegacyCode": "17",
@@ -2296,47 +2239,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 35,
-      "height": 5,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 35,
+        "height": 5,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 150,
+        "width": 35,
+        "height": 5,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 35,
+        "height": 5,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41701002",
-    "title": "رف حائطى بكابولى",
-    "description": null,
-    "mainCategoryLegacyCode": "17",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 35,
-      "height": 5,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41701003",
-    "title": "رف حائطى بكابولى",
-    "description": null,
-    "mainCategoryLegacyCode": "17",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 35,
-      "height": 5,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41801001",
     "title": "حوض واحد عين بدون الخلاط والصرف (العين 50×50×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2344,15 +2271,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 70,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 70,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801002",
     "title": "حوض 2 عين بدون الخلاط والصرف (العين 50×50×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2360,15 +2289,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801003",
     "title": "حوض 1 عين بدون الخلاط والصرف (العين 50×50×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2376,15 +2307,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 120,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 120,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801004",
     "title": "حوض 1عين كبيرة بدون الخلاط والصرف (العين 100×50×50سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2392,15 +2325,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 160,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 160,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801005",
     "title": "حوض 3 عين بدون الخلاط والصرف (العين 40×40×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2408,15 +2343,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 160,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 160,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801006",
     "title": "حوض 3 عين بدون الخلاط والصرف (العين 50×50×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2424,15 +2361,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 210,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 210,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801007",
     "title": "حوض 2 عين بدون الخلاط والصرف (العين 40×40×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2440,15 +2379,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 110,
-      "width": 60,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 110,
+        "width": 60,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801008",
     "title": "حوض دخول غسالة 1 عين كبيرة (40×40×30سم)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2456,15 +2397,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 200,
-      "width": 75,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 200,
+        "width": 75,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801009",
     "title": "حوض تعقيم (غير شامل الخلاط والصرف)",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2472,15 +2415,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 60,
-      "width": 60,
-      "height": 90,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 60,
+        "width": 60,
+        "height": 90,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41801010",
     "title": "حوض يعمل بالركبة",
     "description": null,
     "mainCategoryLegacyCode": "18",
@@ -2488,15 +2433,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 50,
-      "width": 45,
-      "height": 30,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 50,
+        "width": 45,
+        "height": 30,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "41901001",
     "title": "دولاب حائطى بضلف جرارة و رف أوسط",
     "description": null,
     "mainCategoryLegacyCode": "19",
@@ -2504,47 +2451,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 35,
-      "height": 70,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 35,
+        "height": 70,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 150,
+        "width": 35,
+        "height": 70,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 35,
+        "height": 70,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41901002",
-    "title": "دولاب حائطى بضلف جرارة و رف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 35,
-      "height": 70,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41901003",
-    "title": "دولاب حائطى بضلف جرارة و رف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 35,
-      "height": 70,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41902001",
     "title": "دولاب خدمة سفلى بضلف جرارة و رف أوسط",
     "description": null,
     "mainCategoryLegacyCode": "19",
@@ -2552,47 +2483,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41902002",
-    "title": "دولاب خدمة سفلى بضلف جرارة و رف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41902003",
-    "title": "دولاب خدمة سفلى بضلف جرارة و رف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41902004",
     "title": "دولاب خدمة سفلى مفتوح برف أوسط",
     "description": null,
     "mainCategoryLegacyCode": "19",
@@ -2600,47 +2515,31 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 150,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      },
+      {
+        "length": 180,
+        "width": 70,
+        "height": 85,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "41902005",
-    "title": "دولاب خدمة سفلى مفتوح برف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "41902006",
-    "title": "دولاب خدمة سفلى مفتوح برف أوسط",
-    "description": null,
-    "mainCategoryLegacyCode": "19",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 180,
-      "width": 70,
-      "height": 85,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "42001001",
     "title": "هود حائطى سحب فقط",
     "description": null,
     "mainCategoryLegacyCode": "20",
@@ -2648,15 +2547,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 100,
-      "height": 50,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 100,
+        "height": 50,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42001002",
     "title": "هود حائطى سحب وتغذية",
     "description": null,
     "mainCategoryLegacyCode": "20",
@@ -2664,15 +2565,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 120,
-      "height": 50,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 120,
+        "height": 50,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42001003",
     "title": "هود جزيرة سحب فقط",
     "description": null,
     "mainCategoryLegacyCode": "20",
@@ -2680,15 +2583,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 230,
-      "height": 50,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 230,
+        "height": 50,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42001004",
     "title": "هود جزيرة سحب وتغذية",
     "description": null,
     "mainCategoryLegacyCode": "20",
@@ -2696,15 +2601,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 250,
-      "height": 50,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 250,
+        "height": 50,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42101001",
     "title": "جريلة صرف أرضية",
     "description": null,
     "mainCategoryLegacyCode": "21",
@@ -2712,15 +2619,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 30,
-      "height": 20,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 30,
+        "height": 20,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42101002",
     "title": "جريللة صرف أرضية",
     "description": null,
     "mainCategoryLegacyCode": "21",
@@ -2728,31 +2637,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 80,
-      "width": 30,
-      "height": 20,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 80,
+        "width": 30,
+        "height": 20,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 50,
+        "width": 30,
+        "height": 20,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "42101003",
-    "title": "جريللة صرف أرضية",
-    "description": null,
-    "mainCategoryLegacyCode": "21",
-    "subCategoryLegacyCode": "01",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 50,
-      "width": 30,
-      "height": 20,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "42201001",
     "title": "باب مفصلى 1 دلفة",
     "description": null,
     "mainCategoryLegacyCode": "22",
@@ -2760,15 +2662,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 20,
-      "height": 220,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 20,
+        "height": 220,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42201002",
     "title": "باب مفصلى 2 دلفة",
     "description": null,
     "mainCategoryLegacyCode": "22",
@@ -2776,15 +2680,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 20,
-      "height": 220,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 20,
+        "height": 220,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42202001",
     "title": "باب مروحى 1 دلفة",
     "description": null,
     "mainCategoryLegacyCode": "22",
@@ -2792,31 +2698,24 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 20,
-      "height": 220,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 20,
+        "height": 220,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      },
+      {
+        "length": 84,
+        "width": 20,
+        "height": 220,
+        "dimensionUnit": "cm",
+        "isDefault": false
+      }
+    ]
   },
   {
-    "legacyCode": "42202002",
-    "title": "باب مروحى 1 دلفة",
-    "description": null,
-    "mainCategoryLegacyCode": "22",
-    "subCategoryLegacyCode": "02",
-    "sourceType": "manufactured",
-    "estimatedProductionTime": null,
-    "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 84,
-      "width": 20,
-      "height": 220,
-      "dimensionUnit": "cm"
-    }
-  },
-  {
-    "legacyCode": "42202003",
     "title": "باب مروحى 2 دلفة",
     "description": null,
     "mainCategoryLegacyCode": "22",
@@ -2824,15 +2723,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 150,
-      "width": 20,
-      "height": 220,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 150,
+        "width": 20,
+        "height": 220,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42302001",
     "title": "فانوس علوى متعادل",
     "description": null,
     "mainCategoryLegacyCode": "23",
@@ -2840,15 +2741,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 30,
-      "height": 45,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 30,
+        "height": 45,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42302002",
     "title": "فانوس علوى مزود بهيتر",
     "description": null,
     "mainCategoryLegacyCode": "23",
@@ -2856,15 +2759,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 30,
-      "height": 45,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 30,
+        "height": 45,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42302003",
     "title": "فانوس علوى كامل بالإضاءة",
     "description": null,
     "mainCategoryLegacyCode": "23",
@@ -2872,15 +2777,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 30,
-      "height": 45,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 30,
+        "height": 45,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42302004",
     "title": "فانوس علوى شجرة كامل بالإضاءة والزجاج",
     "description": null,
     "mainCategoryLegacyCode": "23",
@@ -2888,15 +2795,17 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 40,
-      "height": 55,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 40,
+        "height": 55,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   },
   {
-    "legacyCode": "42302005",
     "title": "منزلق صوانى",
     "description": null,
     "mainCategoryLegacyCode": "23",
@@ -2904,11 +2813,14 @@
     "sourceType": "manufactured",
     "estimatedProductionTime": null,
     "pricingFactor": 1.5,
-    "dimensions": {
-      "length": 100,
-      "width": 35,
-      "height": null,
-      "dimensionUnit": "cm"
-    }
+    "dimensions": [
+      {
+        "length": 100,
+        "width": 35,
+        "height": null,
+        "dimensionUnit": "cm",
+        "isDefault": true
+      }
+    ]
   }
 ]

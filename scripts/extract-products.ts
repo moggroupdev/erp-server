@@ -9,8 +9,15 @@ type CategoryJson = {
   subcategories: { legacy_code: string; title: string }[];
 };
 
+type ProductDimensionJson = {
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  dimensionUnit: string;
+  isDefault: boolean;
+};
+
 type ProductJson = {
-  legacyCode: string;
   title: string;
   description: string | null;
   mainCategoryLegacyCode: string;
@@ -18,12 +25,7 @@ type ProductJson = {
   sourceType: string;
   estimatedProductionTime: number | null;
   pricingFactor: number;
-  dimensions: {
-    length: number | null;
-    width: number | null;
-    height: number | null;
-    dimensionUnit: string;
-  };
+  dimensions: ProductDimensionJson[];
 };
 
 type ParsedItem = {
@@ -52,6 +54,10 @@ function norm(value: unknown): string {
   if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim();
   if (typeof value === 'number' || typeof value === 'boolean') return String(value).replace(/\s+/g, ' ').trim();
   return '';
+}
+
+function normalizeTitle(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 function parseNumber(value: unknown): number | null {
@@ -171,6 +177,52 @@ function parseCodesXlsx(categoryIndex: Map<string, { title: string; subs: Set<st
   return { valid, excludedCount, excludedByReason, duplicateLegacyCodes };
 }
 
+function groupByName(valid: ParsedItem[]): ProductJson[] {
+  const groups = new Map<string, ProductJson>();
+
+  for (const item of valid) {
+    const normalizedTitle = normalizeTitle(item.title);
+    if (!normalizedTitle) continue;
+
+    const key = `${item.mainCategoryLegacyCode}:${item.subCategoryLegacyCode}:${normalizedTitle}`;
+
+    let product = groups.get(key);
+    if (!product) {
+      product = {
+        title: item.title,
+        description: item.description,
+        mainCategoryLegacyCode: item.mainCategoryLegacyCode,
+        subCategoryLegacyCode: item.subCategoryLegacyCode,
+        sourceType: DEFAULT_SOURCE_TYPE,
+        estimatedProductionTime: null,
+        pricingFactor: DEFAULT_PRICING_FACTOR,
+        dimensions: [],
+      };
+      groups.set(key, product);
+    }
+
+    const dimension: ProductDimensionJson = {
+      length: item.length,
+      width: item.width,
+      height: item.height,
+      dimensionUnit: DEFAULT_DIMENSION_UNIT,
+      isDefault: false,
+    };
+
+    if (dimension.length != null || dimension.width != null || dimension.height != null) {
+      product.dimensions.push(dimension);
+    }
+  }
+
+  for (const product of groups.values()) {
+    if (product.dimensions.length > 0) {
+      product.dimensions[0].isDefault = true;
+    }
+  }
+
+  return [...groups.values()];
+}
+
 function printStats(opts: {
   output: ProductJson[];
   excludedCount: number;
@@ -181,27 +233,38 @@ function printStats(opts: {
   const { output, excludedCount, excludedByReason, duplicateLegacyCodes, mainTitles } = opts;
 
   type CatStats = {
-    items: number;
-    withDimensions: number;
+    products: number;
+    dimensions: number;
+    productsWithMultipleDimensions: number;
   };
+
   const byMain = new Map<string, CatStats>();
-  for (const row of output) {
-    const stats = byMain.get(row.mainCategoryLegacyCode) ?? { items: 0, withDimensions: 0 };
-    stats.items++;
-    const dim = row.dimensions;
-    if (dim.length != null || dim.width != null || dim.height != null) {
-      stats.withDimensions++;
+  let totalDimensions = 0;
+  let productsWithMultipleDimensions = 0;
+
+  for (const product of output) {
+    const stats = byMain.get(product.mainCategoryLegacyCode) ?? {
+      products: 0,
+      dimensions: 0,
+      productsWithMultipleDimensions: 0,
+    };
+    stats.products++;
+    stats.dimensions += product.dimensions.length;
+    if (product.dimensions.length > 1) {
+      stats.productsWithMultipleDimensions++;
+      productsWithMultipleDimensions++;
     }
-    byMain.set(row.mainCategoryLegacyCode, stats);
+    byMain.set(product.mainCategoryLegacyCode, stats);
+    totalDimensions += product.dimensions.length;
   }
 
-  let totalDimensions = 0;
-  for (const s of byMain.values()) {
-    totalDimensions += s.withDimensions;
-  }
+  const productsWithNoDimensions = output.filter((p) => p.dimensions.length === 0).length;
 
   console.log('\n========== PRODUCTS EXTRACTION STATS ==========');
-  console.log(`codes.xlsx item rows included:     ${output.length}`);
+  console.log(`unique products:                   ${output.length}`);
+  console.log(`total dimension variants:          ${totalDimensions}`);
+  console.log(`products with multiple dimensions: ${productsWithMultipleDimensions}`);
+  console.log(`products with no dimensions:       ${productsWithNoDimensions}`);
   console.log(`excluded:                          ${excludedCount}`);
   for (const [reason, count] of [...excludedByReason.entries()].sort()) {
     console.log(`  - ${reason}: ${count}`);
@@ -212,16 +275,28 @@ function printStats(opts: {
   }
 
   console.log('\n--- Per main category ---');
-  const header = 'code'.padEnd(6) + 'title'.padEnd(34) + 'items'.padStart(7) + 'dims'.padStart(7);
+  const header = 'code'.padEnd(6) + 'title'.padEnd(34) + 'products'.padStart(9) + 'dims'.padStart(7) + 'multi'.padStart(7);
   console.log(header);
   console.log('-'.repeat(header.length));
   for (const code of [...byMain.keys()].sort()) {
     const s = byMain.get(code)!;
     const title = (mainTitles.get(code) ?? code).slice(0, 32);
-    console.log(code.padEnd(6) + title.padEnd(34) + String(s.items).padStart(7) + String(s.withDimensions).padStart(7));
+    console.log(
+      code.padEnd(6) +
+        title.padEnd(34) +
+        String(s.products).padStart(9) +
+        String(s.dimensions).padStart(7) +
+        String(s.productsWithMultipleDimensions).padStart(7),
+    );
   }
   console.log('-'.repeat(header.length));
-  console.log('TOTAL'.padEnd(6) + ''.padEnd(34) + String(output.length).padStart(7) + String(totalDimensions).padStart(7));
+  console.log(
+    'TOTAL'.padEnd(6) +
+      ''.padEnd(34) +
+      String(output.length).padStart(9) +
+      String(totalDimensions).padStart(7) +
+      String(productsWithMultipleDimensions).padStart(7),
+  );
   console.log('===============================================\n');
 }
 
@@ -231,28 +306,7 @@ function main(): void {
 
   const { valid, excludedCount, excludedByReason, duplicateLegacyCodes } = parseCodesXlsx(categoryIndex);
 
-  const output: ProductJson[] = [];
-
-  for (const item of valid) {
-    if (!norm(item.title)) continue;
-
-    output.push({
-      legacyCode: item.legacyCode,
-      title: item.title,
-      description: item.description,
-      mainCategoryLegacyCode: item.mainCategoryLegacyCode,
-      subCategoryLegacyCode: item.subCategoryLegacyCode,
-      sourceType: DEFAULT_SOURCE_TYPE,
-      estimatedProductionTime: null,
-      pricingFactor: DEFAULT_PRICING_FACTOR,
-      dimensions: {
-        length: item.length,
-        width: item.width,
-        height: item.height,
-        dimensionUnit: DEFAULT_DIMENSION_UNIT,
-      },
-    });
-  }
+  const output = groupByName(valid);
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify(output, null, 2) + '\n', 'utf-8');
