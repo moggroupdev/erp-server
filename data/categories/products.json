@@ -35,11 +35,11 @@
   },
   {
     "legacy_code": "04",
-    "title": "غلايات مياه / باستا كوكر",
+    "title": "باستا كوكر",
     "subcategories": [
       {
         "legacy_code": "01",
-        "title": "غلايات مياه / باستا كوكر"
+        "title": "باستا كوكر"
       }
     ]
   },
@@ -270,6 +270,16 @@
       {
         "legacy_code": "02",
         "title": "فوانيس علوية"
+      }
+    ]
+  },
+  {
+    "legacy_code": "24",
+    "title": "غلايات مياه",
+    "subcategories": [
+      {
+        "legacy_code": "01",
+        "title": "غلايات مياه"
       }
     ]
   }
