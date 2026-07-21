@@ -12,6 +12,7 @@
     "db:studio": "drizzle-kit studio",
     "extract:raw-materials": "ts-node -r tsconfig-paths/register scripts/extract-raw-materials.ts",
     "extract:spare-parts": "ts-node -r tsconfig-paths/register scripts/extract-spare-parts.ts",
+    "extract:products": "ts-node -r tsconfig-paths/register scripts/extract-products.ts",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seed-departments.ts",
