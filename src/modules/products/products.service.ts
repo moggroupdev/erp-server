@@ -29,7 +29,7 @@ export class ProductsService {
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(products, queryParams, {
       filtering: true,
-      searchableFields: ['code', 'legacyCode', 'title', 'description'],
+      searchableFields: ['code', 'title', 'description'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,

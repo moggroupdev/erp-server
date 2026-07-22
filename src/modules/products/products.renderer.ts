@@ -93,7 +93,6 @@ export class ProductsRenderer {
   private buildProductCard(product: CatalogProduct): string {
     const searchText = [
       product.code,
-      product.legacyCode,
       product.title,
       product.description,
       product.subCategory?.title,
@@ -105,10 +104,6 @@ export class ProductsRenderer {
 
     const sourceClass = product.sourceType === PRODUCT_SOURCE_TYPES.MANUFACTURED ? 'source-manufactured' : 'source-imported';
     const sourceLabel = SOURCE_TYPE_LABELS[product.sourceType] ?? product.sourceType;
-
-    const legacyRow = product.legacyCode
-      ? `<span class="meta-label">الكود القديم</span><span class="meta-value code">${escapeHtml(product.legacyCode)}</span>`
-      : '';
 
     const productionRow =
       product.estimatedProductionTime != null
@@ -129,7 +124,6 @@ export class ProductsRenderer {
       <div class="product-body">
         <div class="product-meta">
           <span class="meta-label">الكود</span><span class="meta-value code">${escapeHtml(product.code)}</span>
-          ${legacyRow}
           ${subCategoryRow}
           ${productionRow}
           <span class="meta-label">معامل التسعير</span><span class="meta-value">${escapeHtml(String(product.pricingFactor))}</span>
