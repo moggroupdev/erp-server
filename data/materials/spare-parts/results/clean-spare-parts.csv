@@ -1,4 +1,4 @@
-legacyCode,title,mainCategoryLegacyCode,subCategoryLegacyCode,unit,unitCost,quantity
+legacyCode,title,mainCategoryLegacyCode,subCategoryLegacyCode,unitOfMeasurement,unitPrice,quantity
 30101001,بانش مربع 20×20,50,01,count,735,1
 30101002,بانش مسدس 15مم,50,01,count,530,1
 30101003,بانش 80×5مم,50,01,count,1440,1

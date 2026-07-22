@@ -26,10 +26,10 @@ export const materials = pgTable(
       .notNull()
       .references(() => materialCategorySubs.id),
     materialType: materialTypeEnum('material_type').notNull(),
-    unit: materialUnitEnum('unit').notNull(),
-    unitCost: numeric('unit_cost').notNull().default(0), // @CACHING_APP_SYNCED - Cached unit cost derived from inventory_transaction_items per costing method
+    unitOfMeasurement: materialUnitEnum('unit_of_measurement').notNull(),
+    unitPrice: numeric('unit_price').notNull().default(0), // @CACHING_APP_SYNCED - Cached unit price derived from inventory_transaction_items per costing method
     quantity: numeric('quantity').notNull().default(0), // @CACHING_APP_SYNCED - Cached net quantity from inventory_transaction_items (receipt/issue/return)
-    openingUnitCost: numeric('opening_unit_cost').default(0), // Unit cost at the start of the project
+    openingUnitPrice: numeric('opening_unit_price').default(0), // Unit price at the start of the project
     openingQuantity: numeric('opening_quantity').default(0), // Quantity on hand at the start of the project
     minimumStock: numeric('minimum_stock'),
     deletedAt,
@@ -41,9 +41,9 @@ export const materials = pgTable(
   (table) => [
     index('materials_title_idx').on(table.title),
     index('materials_sub_category_id_idx').on(table.subCategoryId),
-    nonNegativeQuantityCheck('materials_unit_cost_non_negative', table.unitCost),
+    nonNegativeQuantityCheck('materials_unit_price_non_negative', table.unitPrice),
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),
-    nonNegativeNullableQuantityCheck('materials_opening_unit_cost_non_negative', table.openingUnitCost),
+    nonNegativeNullableQuantityCheck('materials_opening_unit_price_non_negative', table.openingUnitPrice),
     nonNegativeNullableQuantityCheck('materials_opening_quantity_non_negative', table.openingQuantity),
     nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
   ],

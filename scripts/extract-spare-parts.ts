@@ -20,8 +20,8 @@ type CodeRow = {
 type QuantityRow = {
   title: string;
   quantity: number;
-  unitCost: number | null;
-  unit: string;
+  unitPrice: number | null;
+  unitOfMeasurement: string;
 };
 
 type OutputRow = {
@@ -29,8 +29,8 @@ type OutputRow = {
   title: string;
   mainCategoryLegacyCode: string;
   subCategoryLegacyCode: string;
-  unit: string;
-  unitCost: string;
+  unitOfMeasurement: string;
+  unitPrice: string;
   quantity: string;
 };
 
@@ -233,10 +233,10 @@ function parseQuantitySheet(rows: (string | number | null)[][]): QuantityRow[] {
     if (!title) continue;
 
     const quantity = parseNumber(row[qtyCol]) ?? 0;
-    const unitCost = priceCol >= 0 ? parseNumber(row[priceCol]) : null;
-    const unit = unitCol >= 0 ? norm(row[unitCol]) : '';
+    const unitPrice = priceCol >= 0 ? parseNumber(row[priceCol]) : null;
+    const unitOfMeasurement = unitCol >= 0 ? norm(row[unitCol]) : '';
 
-    items.push({ title, quantity, unitCost, unit });
+    items.push({ title, quantity, unitPrice, unitOfMeasurement });
   }
 
   return items;
@@ -322,7 +322,7 @@ function printStats(opts: {
 
   const unitCounts = new Map<string, number>();
   for (const row of output) {
-    const key = row.unit || '(blank)';
+    const key = row.unitOfMeasurement || '(blank)';
     unitCounts.set(key, (unitCounts.get(key) ?? 0) + 1);
   }
 
@@ -343,7 +343,7 @@ function printStats(opts: {
     stats.items++;
     if (matchedLegacyCodes.has(row.legacyCode)) stats.matched++;
     const qty = Number(row.quantity) || 0;
-    const cost = row.unitCost === '' ? null : Number(row.unitCost);
+    const cost = row.unitPrice === '' ? null : Number(row.unitPrice);
     stats.totalQty += qty;
     if (cost != null) stats.totalValue += qty * cost;
     bySub.set(row.subCategoryLegacyCode, stats);
@@ -442,8 +442,8 @@ function main(): void {
     seenTitles.add(titleKey);
 
     const qty = quantitiesByTitle.get(titleKey);
-    let unit = normalizeUnit(item.unitRaw);
-    if (!unit && qty) unit = normalizeUnit(qty.unit);
+    let unitOfMeasurement = normalizeUnit(item.unitRaw);
+    if (!unitOfMeasurement && qty) unitOfMeasurement = normalizeUnit(qty.unitOfMeasurement);
 
     if (qty) {
       matched++;
@@ -454,8 +454,8 @@ function main(): void {
         title: item.title,
         mainCategoryLegacyCode: item.mainCategoryLegacyCode,
         subCategoryLegacyCode: item.subCategoryLegacyCode,
-        unit,
-        unitCost: qty.unitCost == null ? '' : String(qty.unitCost),
+        unitOfMeasurement,
+        unitPrice: qty.unitPrice == null ? '' : String(qty.unitPrice),
         quantity: String(qty.quantity),
       });
     } else {
@@ -465,8 +465,8 @@ function main(): void {
         title: item.title,
         mainCategoryLegacyCode: item.mainCategoryLegacyCode,
         subCategoryLegacyCode: item.subCategoryLegacyCode,
-        unit,
-        unitCost: '',
+        unitOfMeasurement,
+        unitPrice: '',
         quantity: '0',
       });
     }
@@ -482,14 +482,22 @@ function main(): void {
   const outPath = path.join(OUT_DIR, 'clean-spare-parts.csv');
   writeCsv(
     outPath,
-    ['legacyCode', 'title', 'mainCategoryLegacyCode', 'subCategoryLegacyCode', 'unit', 'unitCost', 'quantity'],
+    [
+      'legacyCode',
+      'title',
+      'mainCategoryLegacyCode',
+      'subCategoryLegacyCode',
+      'unitOfMeasurement',
+      'unitPrice',
+      'quantity',
+    ],
     output.map((r) => [
       r.legacyCode,
       r.title,
       r.mainCategoryLegacyCode,
       r.subCategoryLegacyCode,
-      r.unit,
-      r.unitCost,
+      r.unitOfMeasurement,
+      r.unitPrice,
       r.quantity,
     ]),
   );

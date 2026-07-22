@@ -40,8 +40,8 @@ type CsvRow = {
   title: string;
   mainCategoryLegacyCode: string;
   subCategoryLegacyCode: string;
-  unit: string;
-  unitCost: string;
+  unitOfMeasurement: string;
+  unitPrice: string;
   quantity: string;
 };
 
@@ -332,11 +332,11 @@ async function main() {
           continue;
         }
 
-        const unit = normalizeUnit(row.unit ?? '');
-        const unitCost = normalizeCost(row.unitCost ?? '');
+        const unitOfMeasurement = normalizeUnit(row.unitOfMeasurement ?? '');
+        const unitPrice = normalizeCost(row.unitPrice ?? '');
         const quantity = normalizeQuantity(row.quantity ?? '');
 
-        unitCounts.set(unit, (unitCounts.get(unit) ?? 0) + 1);
+        unitCounts.set(unitOfMeasurement, (unitCounts.get(unitOfMeasurement) ?? 0) + 1);
         stats.inserted++;
 
         toInsert.push({
@@ -345,10 +345,10 @@ async function main() {
           title,
           subCategoryId,
           materialType: source.materialType,
-          unit: unit as (typeof MATERIAL_UNIT_VALUES)[number],
-          unitCost,
+          unitOfMeasurement: unitOfMeasurement as (typeof MATERIAL_UNIT_VALUES)[number],
+          unitPrice,
           quantity,
-          openingUnitCost: unitCost,
+          openingUnitPrice: unitPrice,
           openingQuantity: quantity,
           createdBy: user.id,
         });

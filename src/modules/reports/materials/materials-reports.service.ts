@@ -18,8 +18,8 @@ export class MaterialsReportsService {
 
   public async getInventorySummary() {
     const active = isNull(materials.deletedAt);
-    const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitCost}, 0)`;
-    const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitCost}, 0)`;
+    const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
+    const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitPrice}, 0)`;
 
     const [overviewRow, byMaterialTypeRows, byMainCategoryRows, stockStatusRows, topMaterialsByValue, lowStockMaterials] =
       await Promise.all([
@@ -58,8 +58,8 @@ export class MaterialsReportsService {
     }
 
     const scoped = and(isNull(materials.deletedAt), eq(materialCategorySubs.mainCategoryId, mainCategoryId))!;
-    const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitCost}, 0)`;
-    const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitCost}, 0)`;
+    const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
+    const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitPrice}, 0)`;
 
     const [overview, byMaterialType, stockStatus, bySubCategory, topMaterialsByValue, lowStockMaterials] = await Promise.all(
       [
@@ -250,9 +250,9 @@ export class MaterialsReportsService {
     const selectFields = {
       code: materials.code,
       title: materials.title,
-      unit: materials.unit,
+      unitOfMeasurement: materials.unitOfMeasurement,
       quantity: materials.quantity,
-      unitCost: materials.unitCost,
+      unitPrice: materials.unitPrice,
       value: valueExpr,
     };
 
@@ -269,9 +269,9 @@ export class MaterialsReportsService {
     return rows.map((row) => ({
       code: row.code,
       title: row.title,
-      unit: row.unit,
+      unitOfMeasurement: row.unitOfMeasurement,
       quantity: Number(row.quantity),
-      unitCost: Number(row.unitCost),
+      unitPrice: Number(row.unitPrice),
       value: Number(row.value),
     }));
   }

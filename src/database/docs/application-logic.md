@@ -49,9 +49,9 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
-`**materials.unit_cost`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
+`**materials.unit_price`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
 
-`**materials.opening_unit_cost` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
+`**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
 \*_PO `completed_at_`\* — set when fully fulfilled; clear if receipts reversed.
 
@@ -112,13 +112,13 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 ### Catalog pricing
 
-- Suggested price = `SUM(bom.quantity_required × materials.unit_cost) × products.pricing_factor` for selected dimension
+- Suggested price = `SUM(bom.quantity_required × materials.unit_price) × products.pricing_factor` for selected dimension
 
 ### Materials
 
 - `materials.code` — random unique 6-digit string (`100000`–`999999`) generated on create; omit from create/update DTOs; immutable
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
-- `unit_cost`, `quantity`, `opening_unit_cost`, `opening_quantity` — not accepted on create/update DTOs
+- `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
 
 ### Vendor addresses
 

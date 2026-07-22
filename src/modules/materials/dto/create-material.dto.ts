@@ -28,7 +28,7 @@ export class CreateMaterialDto {
 
   @IsIn(MATERIAL_UNIT_VALUES)
   @ApiProperty({ enum: MATERIAL_UNIT_VALUES })
-  unit: MaterialUnit;
+  unitOfMeasurement: MaterialUnit;
 
   @TrimToNull()
   @IsString()

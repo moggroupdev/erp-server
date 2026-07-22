@@ -1,4 +1,4 @@
-legacyCode,title,mainCategoryLegacyCode,subCategoryLegacyCode,unit,unitCost,quantity
+legacyCode,title,mainCategoryLegacyCode,subCategoryLegacyCode,unitOfMeasurement,unitPrice,quantity
 10101001,وحدة تبريد 8/5ح - R134 امريكى,01,01,count,628.6,2
 10101002,وحدة تبريد 2/1ح - R134 - تكموسيد,01,01,count,0,3
 10101003,وحدة تبريد 4/3 - R134 - تكموسيد,01,01,count,18720,2
