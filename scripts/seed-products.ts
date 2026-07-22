@@ -46,7 +46,7 @@ type CleanProduct = {
 
 type CleanDimension = {
   length: number | null;
-  width: number | null;
+  depth: number | null;
   height: number | null;
   dimensionUnit: string;
   isDefault: boolean;
@@ -54,7 +54,7 @@ type CleanDimension = {
 
 type ValidDimension = {
   length: number;
-  width: number;
+  depth: number;
   height: number;
   dimensionUnit: string;
   isDefault: boolean;
@@ -135,8 +135,8 @@ function normalizeTitle(value: string): string {
 
 function isValidDimension(
   d: CleanDimension,
-): d is { length: number; width: number; height: number; dimensionUnit: string; isDefault: boolean } {
-  return d.length != null && d.width != null && d.height != null;
+): d is { length: number; depth: number; height: number; dimensionUnit: string; isDefault: boolean } {
+  return d.length != null && d.depth != null && d.height != null;
 }
 
 function normalizeDimensions(dims: CleanDimension[]): ValidDimension[] {
@@ -279,7 +279,7 @@ async function main() {
         dimensionsToInsert.push({
           productCode: code,
           length: dim.length,
-          width: dim.width,
+          depth: dim.depth,
           height: dim.height,
           dimensionUnit: dim.dimensionUnit as (typeof DIMENSION_UNIT_VALUES)[number],
           isDefault: dim.isDefault,

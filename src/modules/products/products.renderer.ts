@@ -161,7 +161,7 @@ export class ProductsRenderer {
         return `<tr class="${rowClass}">
           ${statusCell}
           <td class="dim-value">${escapeHtml(String(dim.length))}</td>
-          <td class="dim-value">${escapeHtml(String(dim.width))}</td>
+          <td class="dim-value">${escapeHtml(String(dim.depth))}</td>
           <td class="dim-value">${escapeHtml(String(dim.height))}</td>
           <td class="dim-unit">${escapeHtml(unit)}</td>
         </tr>`;
@@ -174,7 +174,7 @@ export class ProductsRenderer {
           <tr>
             <th class="col-status" aria-label="الحالة"></th>
             <th>طول</th>
-            <th>عرض</th>
+            <th>عمق</th>
             <th>ارتفاع</th>
             <th>وحدة</th>
           </tr>

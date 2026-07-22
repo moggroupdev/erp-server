@@ -57,7 +57,7 @@ export const productDimensions = pgTable(
       .notNull()
       .references(() => products.code),
     length: numeric('length').notNull(),
-    width: numeric('width').notNull(),
+    depth: numeric('depth').notNull(),
     height: numeric('height').notNull(),
     dimensionUnit: dimensionUnitEnum('dimension_unit').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
@@ -72,7 +72,7 @@ export const productDimensions = pgTable(
       .on(table.productCode)
       .where(sql`${table.isDefault} = true`),
     nonNegativeQuantityCheck('product_dimensions_length_non_negative', table.length),
-    nonNegativeQuantityCheck('product_dimensions_width_non_negative', table.width),
+    nonNegativeQuantityCheck('product_dimensions_depth_non_negative', table.depth),
     nonNegativeQuantityCheck('product_dimensions_height_non_negative', table.height),
   ],
 );

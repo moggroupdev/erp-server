@@ -11,7 +11,7 @@ type CategoryJson = {
 
 type ProductDimensionJson = {
   length: number | null;
-  width: number | null;
+  depth: number | null;
   height: number | null;
   dimensionUnit: string;
   isDefault: boolean;
@@ -35,7 +35,7 @@ type ParsedItem = {
   mainCategoryLegacyCode: string;
   subCategoryLegacyCode: string;
   length: number | null;
-  width: number | null;
+  depth: number | null;
   height: number | null;
 };
 
@@ -158,7 +158,7 @@ function parseCodesXlsx(categoryIndex: Map<string, { title: string; subs: Set<st
     }
 
     const length = parseNumber(row[3]);
-    const width = parseNumber(row[4]);
+    const depth = parseNumber(row[4]);
     const height = parseNumber(row[5]);
     const description = norm(row[6] ?? '') || null;
 
@@ -169,7 +169,7 @@ function parseCodesXlsx(categoryIndex: Map<string, { title: string; subs: Set<st
       mainCategoryLegacyCode,
       subCategoryLegacyCode,
       length,
-      width,
+      depth,
       height,
     });
   }
@@ -203,13 +203,13 @@ function groupByName(valid: ParsedItem[]): ProductJson[] {
 
     const dimension: ProductDimensionJson = {
       length: item.length,
-      width: item.width,
+      depth: item.depth,
       height: item.height,
       dimensionUnit: DEFAULT_DIMENSION_UNIT,
       isDefault: false,
     };
 
-    if (dimension.length != null || dimension.width != null || dimension.height != null) {
+    if (dimension.length != null || dimension.depth != null || dimension.height != null) {
       product.dimensions.push(dimension);
     }
   }

@@ -12,7 +12,7 @@ export class CreateProductDimensionDto {
   @IsNumber()
   @Min(0)
   @ApiProperty()
-  width: number;
+  depth: number;
 
   @IsNumber()
   @Min(0)

@@ -25,7 +25,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Products & Engineering
 
 - Product catalog organized by category; each product is either manufactured in-house or imported from a supplier
-- Multiple dimension variants per product (length, width, height, unit), with one marked as default; estimated production time and a pricing factor (multiplier on standard BOM cost) are set at the product level
+- Multiple dimension variants per product (length, depth, height, unit), with one marked as default; estimated production time and a pricing factor (multiplier on standard BOM cost) are set at the product level
 - Customer-specific sizes are added as new rows in `product_dimensions` and get their own standard material recipe prepared when needed by the Technical Office
 - Individual product units created for each contract line, each with its own serial number
 

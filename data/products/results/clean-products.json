@@ -10,21 +10,21 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -42,7 +42,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -60,14 +60,14 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -85,7 +85,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -103,7 +103,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 40,
+        "depth": 40,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -121,7 +121,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -139,7 +139,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -157,7 +157,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -175,7 +175,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -193,7 +193,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 60,
+        "depth": 60,
         "height": 60,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -211,7 +211,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 60,
+        "depth": 60,
         "height": 60,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -229,14 +229,14 @@
     "dimensions": [
       {
         "length": 180,
-        "width": 60,
+        "depth": 60,
         "height": 60,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 210,
-        "width": 60,
+        "depth": 60,
         "height": 60,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -254,7 +254,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -272,7 +272,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -290,7 +290,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -308,7 +308,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -326,7 +326,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -344,7 +344,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -362,7 +362,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -380,7 +380,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -398,7 +398,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -416,7 +416,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -434,7 +434,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -452,7 +452,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -470,7 +470,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 40,
+        "depth": 40,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -488,7 +488,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 40,
+        "depth": 40,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -506,7 +506,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -524,7 +524,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -542,7 +542,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -560,7 +560,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -578,7 +578,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 40,
+        "depth": 40,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -596,7 +596,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -614,7 +614,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -632,7 +632,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -650,7 +650,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -668,14 +668,14 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -693,7 +693,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -711,7 +711,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -729,7 +729,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -747,7 +747,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -765,7 +765,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 40,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -783,14 +783,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -808,14 +808,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -903,14 +903,14 @@
     "dimensions": [
       {
         "length": 55,
-        "width": 40,
+        "depth": 40,
         "height": 45,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 88,
-        "width": 40,
+        "depth": 40,
         "height": 45,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -928,7 +928,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -946,7 +946,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -964,7 +964,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -982,7 +982,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1000,7 +1000,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1018,7 +1018,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1036,7 +1036,7 @@
     "dimensions": [
       {
         "length": 180,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1054,7 +1054,7 @@
     "dimensions": [
       {
         "length": 230,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1072,7 +1072,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1090,7 +1090,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1108,7 +1108,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1126,7 +1126,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1144,7 +1144,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1162,7 +1162,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1180,21 +1180,21 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1212,7 +1212,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1230,7 +1230,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1248,14 +1248,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1273,21 +1273,21 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 80,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 40,
-        "width": 70,
+        "depth": 70,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1305,7 +1305,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1323,14 +1323,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1348,14 +1348,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1373,7 +1373,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1391,14 +1391,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1416,14 +1416,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 120,
-        "width": 90,
+        "depth": 90,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1441,14 +1441,14 @@
     "dimensions": [
       {
         "length": 95,
-        "width": 105,
+        "depth": 105,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 125,
-        "width": 150,
+        "depth": 150,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1466,14 +1466,14 @@
     "dimensions": [
       {
         "length": 95,
-        "width": 105,
+        "depth": 105,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 125,
-        "width": 150,
+        "depth": 150,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1491,14 +1491,14 @@
     "dimensions": [
       {
         "length": 95,
-        "width": 105,
+        "depth": 105,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 125,
-        "width": 150,
+        "depth": 150,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1516,14 +1516,14 @@
     "dimensions": [
       {
         "length": 95,
-        "width": 105,
+        "depth": 105,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 125,
-        "width": 150,
+        "depth": 150,
         "height": 170,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1541,7 +1541,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 80,
+        "depth": 80,
         "height": 210,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1559,7 +1559,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 80,
+        "depth": 80,
         "height": 210,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1577,7 +1577,7 @@
     "dimensions": [
       {
         "length": 136,
-        "width": 80,
+        "depth": 80,
         "height": 210,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1595,7 +1595,7 @@
     "dimensions": [
       {
         "length": 136,
-        "width": 80,
+        "depth": 80,
         "height": 210,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1613,7 +1613,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1631,7 +1631,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1649,7 +1649,7 @@
     "dimensions": [
       {
         "length": 185,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1667,7 +1667,7 @@
     "dimensions": [
       {
         "length": 235,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1685,7 +1685,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1703,7 +1703,7 @@
     "dimensions": [
       {
         "length": 180,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1721,7 +1721,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1739,7 +1739,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1757,7 +1757,7 @@
     "dimensions": [
       {
         "length": 185,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1805,7 +1805,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 80,
+        "depth": 80,
         "height": 150,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1823,7 +1823,7 @@
     "dimensions": [
       {
         "length": 140,
-        "width": 80,
+        "depth": 80,
         "height": 150,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1841,7 +1841,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 80,
+        "depth": 80,
         "height": 150,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1859,7 +1859,7 @@
     "dimensions": [
       {
         "length": 140,
-        "width": 80,
+        "depth": 80,
         "height": 150,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1877,14 +1877,14 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 50,
+        "depth": 50,
         "height": 50,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 100,
-        "width": 100,
+        "depth": 100,
         "height": 100,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1902,28 +1902,28 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 230,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1941,14 +1941,14 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 75,
+        "depth": 75,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 160,
-        "width": 75,
+        "depth": 75,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -1966,7 +1966,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 75,
+        "depth": 75,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -1984,7 +1984,7 @@
     "dimensions": [
       {
         "length": 40,
-        "width": 90,
+        "depth": 90,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2002,7 +2002,7 @@
     "dimensions": [
       {
         "length": 50,
-        "width": 50,
+        "depth": 50,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2020,7 +2020,7 @@
     "dimensions": [
       {
         "length": 60,
-        "width": 90,
+        "depth": 90,
         "height": 90,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2038,7 +2038,7 @@
     "dimensions": [
       {
         "length": null,
-        "width": null,
+        "depth": null,
         "height": 65,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2056,14 +2056,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 85,
+        "depth": 85,
         "height": 120,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 68,
-        "width": 46,
+        "depth": 46,
         "height": 181,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2081,7 +2081,7 @@
     "dimensions": [
       {
         "length": 60,
-        "width": 90,
+        "depth": 90,
         "height": 90,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2099,7 +2099,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 70,
+        "depth": 70,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2117,7 +2117,7 @@
     "dimensions": [
       {
         "length": 90,
-        "width": 60,
+        "depth": 60,
         "height": 90,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2135,7 +2135,7 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 60,
+        "depth": 60,
         "height": 90,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2153,28 +2153,28 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 45,
+        "depth": 45,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 115,
-        "width": 50,
+        "depth": 50,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 150,
-        "width": 45,
+        "depth": 45,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 50,
+        "depth": 50,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2192,28 +2192,28 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 45,
+        "depth": 45,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 115,
-        "width": 50,
+        "depth": 50,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 150,
-        "width": 50,
+        "depth": 50,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 50,
+        "depth": 50,
         "height": 180,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2231,21 +2231,21 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 35,
+        "depth": 35,
         "height": 5,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 150,
-        "width": 35,
+        "depth": 35,
         "height": 5,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 35,
+        "depth": 35,
         "height": 5,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2263,7 +2263,7 @@
     "dimensions": [
       {
         "length": 70,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2281,7 +2281,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2299,7 +2299,7 @@
     "dimensions": [
       {
         "length": 120,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2317,7 +2317,7 @@
     "dimensions": [
       {
         "length": 160,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2335,7 +2335,7 @@
     "dimensions": [
       {
         "length": 160,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2353,7 +2353,7 @@
     "dimensions": [
       {
         "length": 210,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2371,7 +2371,7 @@
     "dimensions": [
       {
         "length": 110,
-        "width": 60,
+        "depth": 60,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2389,7 +2389,7 @@
     "dimensions": [
       {
         "length": 200,
-        "width": 75,
+        "depth": 75,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2407,7 +2407,7 @@
     "dimensions": [
       {
         "length": 60,
-        "width": 60,
+        "depth": 60,
         "height": 90,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2425,7 +2425,7 @@
     "dimensions": [
       {
         "length": 50,
-        "width": 45,
+        "depth": 45,
         "height": 30,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2443,21 +2443,21 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 35,
+        "depth": 35,
         "height": 70,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 150,
-        "width": 35,
+        "depth": 35,
         "height": 70,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 35,
+        "depth": 35,
         "height": 70,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2475,21 +2475,21 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2507,21 +2507,21 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 150,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
       },
       {
         "length": 180,
-        "width": 70,
+        "depth": 70,
         "height": 85,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2539,7 +2539,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 100,
+        "depth": 100,
         "height": 50,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2557,7 +2557,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 120,
+        "depth": 120,
         "height": 50,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2575,7 +2575,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 230,
+        "depth": 230,
         "height": 50,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2593,7 +2593,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 250,
+        "depth": 250,
         "height": 50,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2611,7 +2611,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 30,
+        "depth": 30,
         "height": 20,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2629,14 +2629,14 @@
     "dimensions": [
       {
         "length": 80,
-        "width": 30,
+        "depth": 30,
         "height": 20,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 50,
-        "width": 30,
+        "depth": 30,
         "height": 20,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2654,7 +2654,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 20,
+        "depth": 20,
         "height": 220,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2672,7 +2672,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 20,
+        "depth": 20,
         "height": 220,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2690,14 +2690,14 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 20,
+        "depth": 20,
         "height": 220,
         "dimensionUnit": "cm",
         "isDefault": true
       },
       {
         "length": 84,
-        "width": 20,
+        "depth": 20,
         "height": 220,
         "dimensionUnit": "cm",
         "isDefault": false
@@ -2715,7 +2715,7 @@
     "dimensions": [
       {
         "length": 150,
-        "width": 20,
+        "depth": 20,
         "height": 220,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2733,7 +2733,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 30,
+        "depth": 30,
         "height": 45,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2751,7 +2751,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 30,
+        "depth": 30,
         "height": 45,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2769,7 +2769,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 30,
+        "depth": 30,
         "height": 45,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2787,7 +2787,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 40,
+        "depth": 40,
         "height": 55,
         "dimensionUnit": "cm",
         "isDefault": true
@@ -2805,7 +2805,7 @@
     "dimensions": [
       {
         "length": 100,
-        "width": 35,
+        "depth": 35,
         "height": null,
         "dimensionUnit": "cm",
         "isDefault": true
