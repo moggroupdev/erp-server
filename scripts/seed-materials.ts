@@ -17,8 +17,9 @@ dotenv.config();
 const USAGE = `Usage: npm run seed:materials [-- --email <email> | --id <uuid>]
 
 Seeds materials from:
-  - data/materials/raw-materials/results/clean-raw-materials.csv  (${MATERIAL_TYPES.RAW_MATERIALS})
-  - data/materials/spare-parts/results/clean-spare-parts.csv      (${MATERIAL_TYPES.SPARE_PARTS})
+  - data/materials/raw-materials/results/clean-raw-materials.csv      (${MATERIAL_TYPES.RAW_MATERIALS})
+  - data/materials/raw-materials/results/clean-stagnant-glass.csv     (${MATERIAL_TYPES.RAW_MATERIALS}, no legacyCode)
+  - data/materials/spare-parts/results/clean-spare-parts.csv          (${MATERIAL_TYPES.SPARE_PARTS})
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -75,6 +76,12 @@ const MATERIAL_SOURCES: MaterialSource[] = [
     csvPath: path.join(DATA_ROOT, 'raw-materials/results/clean-raw-materials.csv'),
     materialType: MATERIAL_TYPES.RAW_MATERIALS,
     extractHint: 'npm run extract:raw-materials',
+  },
+  {
+    label: 'stagnant-glass',
+    csvPath: path.join(DATA_ROOT, 'raw-materials/results/clean-stagnant-glass.csv'),
+    materialType: MATERIAL_TYPES.RAW_MATERIALS,
+    extractHint: 'npm run extract:stagnant-glass',
   },
   {
     label: 'spare-parts',
@@ -134,7 +141,7 @@ async function confirmProceedWithExistingMaterials(existingCount: number): Promi
   const rl = readline.createInterface({ input, output });
   try {
     console.log(`\nWarning: ${existingCount} material(s) already exist in the database.`);
-    console.log('Seeding will insert only missing materials (matched by legacyCode).');
+    console.log('Seeding will insert only missing materials (matched by legacyCode, or by title when legacyCode is absent).');
     console.log('Existing rows will be left unchanged.');
     const answer = (await rl.question('Type "yes" to continue, anything else to abort: ')).trim();
     return answer === 'yes';
@@ -208,7 +215,7 @@ function loadCsvRows(source: MaterialSource): CsvRow[] {
   const csvData = fs.readFileSync(source.csvPath, 'utf-8').replace(/^\uFEFF/, '');
   const csvRows = parse<CsvRow>(csvData, { columns: true, skip_empty_lines: true, trim: true });
 
-  if (csvRows.length > 0 && !csvRows[0].legacyCode) {
+  if (csvRows.length > 0 && !('legacyCode' in csvRows[0])) {
     throw new Error(
       `CSV headers look wrong in ${source.label}. Expected "legacyCode", got: ${Object.keys(csvRows[0]).join(', ')}`,
     );
@@ -259,14 +266,20 @@ async function main() {
       .select({
         code: schema.materials.code,
         legacyCode: schema.materials.legacyCode,
+        title: schema.materials.title,
       })
       .from(schema.materials);
 
     const usedCodes = new Set<string>();
     const existingLegacyCodes = new Set<string>();
+    const existingTitlesWithoutLegacyCode = new Set<string>();
     for (const row of existingMaterials) {
       usedCodes.add(row.code);
-      if (row.legacyCode) existingLegacyCodes.add(row.legacyCode);
+      if (row.legacyCode) {
+        existingLegacyCodes.add(row.legacyCode);
+      } else {
+        existingTitlesWithoutLegacyCode.add(row.title);
+      }
     }
     console.log(`Existing materials in DB: ${existingMaterials.length}`);
 
@@ -279,7 +292,7 @@ async function main() {
     const toInsert: (typeof schema.materials.$inferInsert)[] = [];
     const unresolved: UnresolvedRow[] = [];
     const duplicateLegacyCodes: DuplicateLegacyRow[] = [];
-    const seenLegacyCodes = new Map<string, string>(); // legacyCode -> kept title
+    const seenRowKeys = new Map<string, string>(); // dedupe key -> kept title
     let skippedExisting = 0;
     let totalCsvRows = 0;
     const unitCounts = new Map<string, number>();
@@ -295,26 +308,33 @@ async function main() {
       totalCsvRows += rows.length;
 
       for (const row of rows) {
-        const legacyCode = row.legacyCode?.trim();
+        const legacyCode = row.legacyCode?.trim() || undefined;
         const title = row.title?.trim();
         const mainLegacy = row.mainCategoryLegacyCode?.trim();
         const subLegacy = row.subCategoryLegacyCode?.trim();
 
-        if (!legacyCode || !title || !mainLegacy || !subLegacy) continue;
+        if (!title || !mainLegacy || !subLegacy) continue;
 
-        const keptTitle = seenLegacyCodes.get(legacyCode);
+        const dedupeKey = legacyCode ?? `title:${title}`;
+        const keptTitle = seenRowKeys.get(dedupeKey);
         if (keptTitle != null) {
           duplicateLegacyCodes.push({
-            legacyCode,
+            legacyCode: legacyCode ?? '',
             title,
             keptTitle,
             materialType: source.materialType,
           });
           continue;
         }
-        seenLegacyCodes.set(legacyCode, title);
+        seenRowKeys.set(dedupeKey, title);
 
-        if (existingLegacyCodes.has(legacyCode)) {
+        if (legacyCode) {
+          if (existingLegacyCodes.has(legacyCode)) {
+            skippedExisting++;
+            stats.skippedExisting++;
+            continue;
+          }
+        } else if (existingTitlesWithoutLegacyCode.has(title)) {
           skippedExisting++;
           stats.skippedExisting++;
           continue;
@@ -323,7 +343,7 @@ async function main() {
         const subCategoryId = categoryMap.get(`${mainLegacy}:${subLegacy}`);
         if (!subCategoryId) {
           unresolved.push({
-            legacyCode,
+            legacyCode: legacyCode ?? '',
             title,
             mainCategoryLegacyCode: mainLegacy,
             subCategoryLegacyCode: subLegacy,
@@ -341,7 +361,7 @@ async function main() {
 
         toInsert.push({
           code: generateUniqueCode(usedCodes),
-          legacyCode,
+          legacyCode: legacyCode ?? null,
           title,
           subCategoryId,
           materialType: source.materialType,

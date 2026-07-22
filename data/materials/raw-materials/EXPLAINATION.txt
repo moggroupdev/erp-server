@@ -32,3 +32,19 @@ These are materials from the main category 03 الغاز:
 10302005
 
 (Of course, each one of theme includes subcategories)
+
+---
+
+Special-case stock files (stock/special-case/)
+
+Files placed under data/materials/raw-materials/stock/special-case/ are excluded from the normal
+extract-raw-materials.ts stock scan (which only reads the flat stock/ directory). Each file there
+must be handled by a dedicated extract script.
+
+Subcategory 12/02 ("زجاج راكد") has no legacy codes in codes.xls. Its materials are extracted
+directly from stock/special-case/راكد الزجاج.xls via:
+
+  npm run extract:stagnant-glass
+
+Output: data/materials/raw-materials/results/clean-stagnant-glass.csv
+Seeded with legacyCode = null (no official 8-digit legacy code exists for these items).
