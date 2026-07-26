@@ -125,6 +125,7 @@ export class BomsService {
               columns: {
                 code: true,
                 title: true,
+                subCategoryId: true,
                 unitOfMeasurement: true,
                 unitPrice: true,
               },
