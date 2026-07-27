@@ -21,15 +21,23 @@ export class MaterialsReportsService {
     const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
     const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitPrice}, 0)`;
 
-    const [overviewRow, byMaterialTypeRows, byMainCategoryRows, stockStatusRows, topMaterialsByValue, lowStockMaterials] =
-      await Promise.all([
-        this.getOverview(active, valueExpr, openingValueExpr),
-        this.getByMaterialType(active, valueExpr),
-        this.getByMainCategory(active, valueExpr),
-        this.getStockStatus(active, valueExpr),
-        this.getTopMaterialsByValue(active, valueExpr, TOP_MATERIALS_LIMIT),
-        this.getLowStockMaterials(active, LOW_STOCK_LIMIT),
-      ]);
+    const [
+      overviewRow,
+      byMaterialTypeRows,
+      byMainCategoryRows,
+      stockStatusRows,
+      topMaterialsByValue,
+      topMaterialsByQuantity,
+      lowStockMaterials,
+    ] = await Promise.all([
+      this.getOverview(active, valueExpr, openingValueExpr),
+      this.getByMaterialType(active, valueExpr),
+      this.getByMainCategory(active, valueExpr),
+      this.getStockStatus(active, valueExpr),
+      this.getTopMaterialsByValue(active, valueExpr, TOP_MATERIALS_LIMIT),
+      this.getTopMaterialsByQuantity(active, valueExpr, TOP_MATERIALS_LIMIT),
+      this.getLowStockMaterials(active, LOW_STOCK_LIMIT),
+    ]);
 
     return {
       overview: overviewRow,
@@ -37,6 +45,7 @@ export class MaterialsReportsService {
       byMainCategory: byMainCategoryRows,
       stockStatus: stockStatusRows,
       topMaterialsByValue,
+      topMaterialsByQuantity,
       lowStockMaterials,
     };
   }
@@ -61,16 +70,16 @@ export class MaterialsReportsService {
     const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
     const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitPrice}, 0)`;
 
-    const [overview, byMaterialType, stockStatus, bySubCategory, topMaterialsByValue, lowStockMaterials] = await Promise.all(
-      [
+    const [overview, byMaterialType, stockStatus, bySubCategory, topMaterialsByValue, topMaterialsByQuantity, lowStockMaterials] =
+      await Promise.all([
         this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
         this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
         this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
         this.getBySubCategory(scoped, valueExpr),
         this.getTopMaterialsByValue(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
+        this.getTopMaterialsByQuantity(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
         this.getLowStockMaterials(scoped, LOW_STOCK_LIMIT, { joinSubs: true }),
-      ],
-    );
+      ]);
 
     return {
       category,
@@ -79,6 +88,7 @@ export class MaterialsReportsService {
       stockStatus,
       bySubCategory,
       topMaterialsByValue,
+      topMaterialsByQuantity,
       lowStockMaterials,
     };
   }
@@ -265,6 +275,47 @@ export class MaterialsReportsService {
           .orderBy(desc(valueExpr))
           .limit(topLimit)
       : await this.db.select(selectFields).from(materials).where(where).orderBy(desc(valueExpr)).limit(topLimit);
+
+    return rows.map((row) => ({
+      code: row.code,
+      title: row.title,
+      unitOfMeasurement: row.unitOfMeasurement,
+      quantity: Number(row.quantity),
+      unitPrice: Number(row.unitPrice),
+      value: Number(row.value),
+    }));
+  }
+
+  private async getTopMaterialsByQuantity(
+    where: SQL,
+    valueExpr: ReturnType<typeof sql<number>>,
+    topLimit: number,
+    options?: { joinSubs?: boolean },
+  ) {
+    const quantityExpr = sql<number>`coalesce(${materials.quantity}, 0)`;
+    const selectFields = {
+      code: materials.code,
+      title: materials.title,
+      unitOfMeasurement: materials.unitOfMeasurement,
+      quantity: materials.quantity,
+      unitPrice: materials.unitPrice,
+      value: valueExpr,
+    };
+
+    const rows = options?.joinSubs
+      ? await this.db
+          .select(selectFields)
+          .from(materials)
+          .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+          .where(where)
+          .orderBy(desc(quantityExpr), asc(materials.title))
+          .limit(topLimit)
+      : await this.db
+          .select(selectFields)
+          .from(materials)
+          .where(where)
+          .orderBy(desc(quantityExpr), asc(materials.title))
+          .limit(topLimit);
 
     return rows.map((row) => ({
       code: row.code,
