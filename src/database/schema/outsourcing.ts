@@ -43,7 +43,7 @@ export const outsourcingOrderItems = pgTable(
       .notNull()
       .references(() => materials.code), // @APP_CHECKED - materials.code with material_type = 'manufactured_material'
     quantityOrdered: numeric('quantity_ordered').notNull(),
-    unitManufacturingCost: numeric('unit_manufacturing_cost').notNull(), // @HISTORICAL_SNAPSHOT - Agreed manufacturing fee on order line creation
+    unitManufacturingCost: numeric('unit_manufacturing_cost').notNull(),
     notes: text('notes'),
   },
   (table) => [

@@ -50,7 +50,7 @@ export const materialPurchaseOrderItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityOrdered: numeric('quantity_ordered').notNull(),
-    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
+    unitPrice: numeric('unit_price').notNull(),
     notes: text('notes'),
   },
   (table) => [

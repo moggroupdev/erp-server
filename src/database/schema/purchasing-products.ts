@@ -41,7 +41,7 @@ export const productPurchaseOrderItems = pgTable(
     productPurchaseOrderId: uuid('product_purchase_order_id').notNull(),
     contractItemId: uuid('contract_item_id').notNull(),
     quantityOrdered: integer('quantity_ordered').notNull(),
-    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
+    unitPrice: numeric('unit_price').notNull(),
     notes: text('notes'),
   },
   (table) => [

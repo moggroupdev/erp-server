@@ -56,15 +56,12 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 ## @HISTORICAL_SNAPSHOT
 
-| Column                                            | Set on insert from                                             |
-| ------------------------------------------------- | -------------------------------------------------------------- |
-| `offer_items.unit_price`                          | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
-| `contract_items.unit_price`                       | Pre-discount quoted price; changes via cancel-and-replace only |
-| `material_purchase_order_items.unit_price`        | Agreed purchase price on the PO line                           |
-| `product_purchase_order_items.unit_price`         | Agreed purchase price on the PO line                           |
-| `outsourcing_order_items.unit_manufacturing_cost` | Agreed manufacturing fee on the outsourcing order line         |
-| `inventory_transaction_items.unit_price`          | User-provided actual price at transaction time                 |
-| `maintenance_order_spare_parts.unit_price`        | Selling price at time of use                                   |
+| Column                                     | Set on insert from                                             |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `offer_items.unit_price`                   | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
+| `contract_items.unit_price`                | Pre-discount quoted price; changes via cancel-and-replace only |
+| `inventory_transaction_items.unit_price`   | User-provided actual price at transaction time                 |
+| `maintenance_order_spare_parts.unit_price` | Selling price at time of use                                   |
 
 **Rules:** set once on INSERT; omit from update DTOs. Not the same as live catalog (`materials.unit_price`).
 
