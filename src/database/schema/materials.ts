@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, text, uuid, index } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, text, uuid, index, foreignKey, unique, check } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   deletedAt,
@@ -8,12 +8,14 @@ import {
   materialTypeEnum,
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
+  positiveQuantityCheck,
 } from './common';
 import { materialCategorySubs } from './categories';
 import { users } from './users';
 import { materialPurchaseOrderItems } from './purchasing-materials';
 import { inventoryTransactionItems } from './inventory-transactions';
 import { productStandardBoms } from './products';
+import { outsourcingOrderItems } from './outsourcing';
 
 export const materials = pgTable(
   'materials',
@@ -49,6 +51,42 @@ export const materials = pgTable(
   ],
 );
 
+// Standard BOM template for a manufactured material (material with material_type = 'manufactured_material').
+export const manufacturedMaterialBoms = pgTable(
+  'manufactured_material_boms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    manufacturedMaterialCode: text('manufactured_material_code').notNull(), // @APP_CHECKED - materials.code with material_type = 'manufactured_material'
+    materialCode: text('material_code').notNull(), // Component material (may itself be a manufactured_material)
+    quantityRequired: numeric('quantity_required').notNull(),
+    notes: text('notes'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    foreignKey({
+      name: 'mmb_manufactured_material_code_fk',
+      columns: [table.manufacturedMaterialCode],
+      foreignColumns: [materials.code],
+    }),
+    foreignKey({
+      name: 'mmb_material_code_fk',
+      columns: [table.materialCode],
+      foreignColumns: [materials.code],
+    }),
+    unique('manufactured_material_boms_manufactured_material_material_unique').on(
+      table.manufacturedMaterialCode,
+      table.materialCode,
+    ),
+    index('manufactured_material_boms_manufactured_material_code_idx').on(table.manufacturedMaterialCode),
+    index('manufactured_material_boms_material_code_idx').on(table.materialCode),
+    check('manufactured_material_boms_no_self_reference', sql`${table.manufacturedMaterialCode} <> ${table.materialCode}`),
+    positiveQuantityCheck('manufactured_material_boms_quantity_required_positive', table.quantityRequired),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
 export const materialsRelations = relations(materials, ({ one, many }) => ({
@@ -63,4 +101,28 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
   purchaseOrderItems: many(materialPurchaseOrderItems),
   inventoryTransactionItems: many(inventoryTransactionItems),
   productStandardBoms: many(productStandardBoms),
+  manufacturedMaterialBoms: many(manufacturedMaterialBoms, {
+    relationName: 'manufacturedMaterialBomManufacturedMaterial',
+  }),
+  componentOfManufacturedMaterialBoms: many(manufacturedMaterialBoms, {
+    relationName: 'manufacturedMaterialBomMaterial',
+  }),
+  outsourcingOrderItems: many(outsourcingOrderItems),
+}));
+
+export const manufacturedMaterialBomsRelations = relations(manufacturedMaterialBoms, ({ one }) => ({
+  manufacturedMaterial: one(materials, {
+    fields: [manufacturedMaterialBoms.manufacturedMaterialCode],
+    references: [materials.code],
+    relationName: 'manufacturedMaterialBomManufacturedMaterial',
+  }),
+  material: one(materials, {
+    fields: [manufacturedMaterialBoms.materialCode],
+    references: [materials.code],
+    relationName: 'manufacturedMaterialBomMaterial',
+  }),
+  createdBy: one(users, {
+    fields: [manufacturedMaterialBoms.createdBy],
+    references: [users.id],
+  }),
 }));

@@ -6,6 +6,7 @@ import { materialPurchaseReceiptItems } from './purchasing-materials';
 import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
 import { maintenanceOrderSpareParts } from './maintenance-orders';
+import { outsourcingOrderItems, outsourcingReceiptItems } from './outsourcing';
 
 export const inventoryTransactions = pgTable(
   'inventory_transactions',
@@ -36,9 +37,11 @@ export const inventoryTransactionItems = pgTable(
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
     unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual cost at transaction time
-    materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type
-    productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type
-    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // @APP_CHECKED - Source must match parent transaction_type
+    productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
+    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
+    outsourcingOrderItemId: uuid('outsourcing_order_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue'); materials sent to the vendor for this order line
+    outsourcingReceiptItemId: uuid('outsourcing_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
+    materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
   },
   (table) => [
     foreignKey({
@@ -46,11 +49,7 @@ export const inventoryTransactionItems = pgTable(
       columns: [table.transactionId],
       foreignColumns: [inventoryTransactions.id],
     }),
-    foreignKey({
-      name: 'inv_tx_items_mpri_id_fk',
-      columns: [table.materialPurchaseReceiptItemId],
-      foreignColumns: [materialPurchaseReceiptItems.id],
-    }),
+
     foreignKey({
       name: 'inv_tx_items_pp_item_id_fk',
       columns: [table.productionPlanItemId],
@@ -61,20 +60,34 @@ export const inventoryTransactionItems = pgTable(
       columns: [table.maintenanceOrderSparePartId],
       foreignColumns: [maintenanceOrderSpareParts.id],
     }),
+    foreignKey({
+      name: 'inv_tx_items_osoi_id_fk',
+      columns: [table.outsourcingOrderItemId],
+      foreignColumns: [outsourcingOrderItems.id],
+    }),
+    foreignKey({
+      name: 'inv_tx_items_osri_id_fk',
+      columns: [table.outsourcingReceiptItemId],
+      foreignColumns: [outsourcingReceiptItems.id],
+    }),
+    foreignKey({
+      name: 'inv_tx_items_mpri_id_fk',
+      columns: [table.materialPurchaseReceiptItemId],
+      foreignColumns: [materialPurchaseReceiptItems.id],
+    }),
     index('inv_tx_items_transaction_id_idx').on(table.transactionId),
     index('inv_tx_items_material_code_idx').on(table.materialCode),
-    index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
     index('inv_tx_items_pp_item_id_idx').on(table.productionPlanItemId),
     index('inv_tx_items_mosp_id_idx').on(table.maintenanceOrderSparePartId),
+    index('inv_tx_items_osoi_id_idx').on(table.outsourcingOrderItemId),
+    index('inv_tx_items_osri_id_idx').on(table.outsourcingReceiptItemId),
+    index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
     positiveQuantityCheck('inv_tx_items_quantity_positive', table.quantity),
     positiveQuantityCheck('inv_tx_items_unit_cost_positive', table.unitCost),
     check(
       'inv_tx_items_source_non_conflicting',
-      sql`(
-        (${table.materialPurchaseReceiptItemId} IS NULL OR ${table.productionPlanItemId} IS NULL)
-        AND (${table.materialPurchaseReceiptItemId} IS NULL OR ${table.maintenanceOrderSparePartId} IS NULL)
-        AND (${table.productionPlanItemId} IS NULL OR ${table.maintenanceOrderSparePartId} IS NULL)
-      )`,
+      // This check ensures that only one source is specified for the inventory transaction item
+      sql`num_nonnulls(${table.materialPurchaseReceiptItemId}, ${table.productionPlanItemId}, ${table.maintenanceOrderSparePartId}, ${table.outsourcingOrderItemId}, ${table.outsourcingReceiptItemId}) <= 1`,
     ),
   ],
 );
@@ -110,5 +123,13 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
   maintenanceOrderSparePart: one(maintenanceOrderSpareParts, {
     fields: [inventoryTransactionItems.maintenanceOrderSparePartId],
     references: [maintenanceOrderSpareParts.id],
+  }),
+  outsourcingOrderItem: one(outsourcingOrderItems, {
+    fields: [inventoryTransactionItems.outsourcingOrderItemId],
+    references: [outsourcingOrderItems.id],
+  }),
+  outsourcingReceiptItem: one(outsourcingReceiptItems, {
+    fields: [inventoryTransactionItems.outsourcingReceiptItemId],
+    references: [outsourcingReceiptItems.id],
   }),
 }));

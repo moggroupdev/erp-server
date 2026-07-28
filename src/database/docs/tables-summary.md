@@ -42,6 +42,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | product_dimensions                          | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_standard_boms                       | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | materials                                   | text        | —    | deletedAt field   | YES       | YES (NOT NULL) |
+| manufactured_material_boms                  | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | inquiries                                   | uuid        | —    | cancelled status  | YES       | YES (NOT NULL) |
 | inquiry_items                               | uuid        | —    | NO                | NO        | NO             |
 | previews                                    | uuid        | —    | cancelledAt field | YES       | YES (NOT NULL) |
@@ -56,6 +57,10 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | material_purchase_order_item_contract_items | uuid        | —    | NO                | NO        | NO             |
 | material_purchase_receipts                  | uuid        | MPR  | NO                | YES       | YES (NOT NULL) |
 | material_purchase_receipt_items             | uuid        | —    | NO                | NO        | NO             |
+| outsourcing_orders                          | uuid        | OSO  | cancelledAt field | YES       | YES (NOT NULL) |
+| outsourcing_order_items                     | uuid        | —    | NO                | NO        | NO             |
+| outsourcing_receipts                        | uuid        | OSR  | NO                | YES       | YES (NOT NULL) |
+| outsourcing_receipt_items                   | uuid        | —    | NO                | NO        | NO             |
 | vendor_quotation_emails                     | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | deliveries                                  | uuid        | DEL  | cancelledAt field | YES       | YES (NOT NULL) |
 | delivery_items                              | uuid        | —    | NO                | NO        | NO             |

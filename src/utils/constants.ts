@@ -76,7 +76,7 @@ export const DIMENSION_UNITS = Object.fromEntries(DIMENSION_UNIT_VALUES.map((uni
 
 // ==================== MATERIAL_TYPES ====================
 
-export const MATERIAL_TYPE_VALUES = ['raw_materials', 'spare_parts'] as const;
+export const MATERIAL_TYPE_VALUES = ['raw_materials', 'spare_parts', 'manufactured_material'] as const;
 
 export const MATERIAL_TYPES = Object.fromEntries(
   MATERIAL_TYPE_VALUES.map((materialType) => [materialType.toUpperCase(), materialType]),

@@ -18,6 +18,7 @@ export * from './inventory-transactions';
 export * from './vendor-quotation-emails';
 export * from './purchasing-materials';
 export * from './purchasing-products';
+export * from './outsourcing';
 export * from './trips';
 export * from './deliveries';
 export * from './installations';

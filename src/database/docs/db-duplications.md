@@ -37,10 +37,12 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `contracts.total_amount`                | `SUM(quantity × unit_price)` from `contract_items` where `cancelled_at IS NULL`             |
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_cost)` from `material_purchase_order_items`                    |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_cost)` from `product_purchase_order_items`                     |
+| `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)` from `outsourcing_order_items`            |
 | `materials.quantity`                    | Net from `inventory_transaction_items` by `transaction_type` (receipt +, issue −, return +) |
 | `materials.unit_price`                  | Derived from `inventory_transaction_items.unit_cost` per costing method                     |
 | `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
+| `outsourcing_orders.completed_at`       | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit                                      |
 | `product_units.received_at`             | Parent `product_purchase_receipts.received_at` via receipt item                             |
 | `product_units.delivered_at`            | Parent `deliveries.completed_at` via `delivery_items`                                       |
@@ -54,14 +56,15 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 ## @HISTORICAL_SNAPSHOT
 
-| Column                                     | Set on insert from                                             |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| `offer_items.unit_price`                   | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
-| `contract_items.unit_price`                | Pre-discount quoted price; changes via cancel-and-replace only |
-| `material_purchase_order_items.unit_cost`  | Agreed purchase price on the PO line                           |
-| `product_purchase_order_items.unit_cost`   | Agreed purchase price on the PO line                           |
-| `inventory_transaction_items.unit_cost`    | User-provided actual cost at transaction time                  |
-| `maintenance_order_spare_parts.unit_price` | Selling price at time of use                                   |
+| Column                                            | Set on insert from                                             |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| `offer_items.unit_price`                          | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
+| `contract_items.unit_price`                       | Pre-discount quoted price; changes via cancel-and-replace only |
+| `material_purchase_order_items.unit_cost`         | Agreed purchase price on the PO line                           |
+| `product_purchase_order_items.unit_cost`          | Agreed purchase price on the PO line                           |
+| `outsourcing_order_items.unit_manufacturing_cost` | Agreed manufacturing fee on the outsourcing order line         |
+| `inventory_transaction_items.unit_cost`           | User-provided actual cost at transaction time                  |
+| `maintenance_order_spare_parts.unit_price`        | Selling price at time of use                                   |
 
 **Rules:** set once on INSERT; omit from update DTOs. Not the same as live catalog (`materials.unit_price`).
 

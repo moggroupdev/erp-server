@@ -39,9 +39,10 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Inventory & Warehouse
 
-- Raw materials and spare parts with stock levels and minimum thresholds
-- Inventory movements: receipts from purchase inspection, issues to production or maintenance, and returns
-- Material issues linked to the production work or maintenance spare-part lines consuming them
+- Raw materials, spare parts, and manufactured materials with stock levels and minimum thresholds
+- Manufactured materials have their own bill of materials (BOM) listing the component materials required to produce them; components may themselves be manufactured materials
+- Inventory movements: receipts from purchase inspection or outsourcing returns, issues to production, maintenance, or outsourcing vendors, and returns
+- Material issues linked to the production work, maintenance spare-part lines, or outsourcing order lines consuming them
 
 ### Procurement
 
@@ -49,6 +50,13 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with vendor serial numbers where applicable
 - Quotation request emails sent to vendors when sourcing materials
+
+### Outsourcing
+
+- External manufacturing of manufactured materials: send component materials from stock to a vendor, pay a manufacturing fee, and receive the finished manufactured material back into inventory
+- Outsourcing orders track the agreed manufactured material quantities and unit manufacturing costs
+- Materials are issued from stock to the vendor via inventory transactions linked to the outsourcing order line (quantities suggested from the manufactured material BOM, adjustable before confirm); multiple partial issues per order are supported
+- Outsourcing receipts inspect and accept/reject returned manufactured materials; accepted quantities enter stock via inventory transactions; multiple partial receipts per order are supported
 
 ### Delivery & Installation
 
@@ -96,7 +104,9 @@ Production then builds a plan that schedules each unit across the product's conf
 
 ### Materials and Warehouse
 
-Before and during production, the Warehouse checks whether the required raw materials are in stock. When stock is short, Purchasing raises material purchase orders with approved suppliers. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
+Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, Purchasing raises material purchase orders with approved suppliers. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
+
+When a manufactured material is manufactured externally, Purchasing (or Operations) raises an outsourcing order with a vendor. Component materials are issued from stock to the vendor based on the manufactured material's BOM (quantities suggested from the BOM, adjustable before confirm). When the vendor returns the finished manufactured material, it is inspected and accepted quantities are received into inventory; the manufacturing fee is tracked on the outsourcing order.
 
 Materials are then issued from the warehouse to the production floor, linked to the specific production work consuming them.
 

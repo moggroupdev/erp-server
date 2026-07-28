@@ -46,6 +46,7 @@ Recalculate inside a transaction when source rows change.
 | `contracts.total_amount`                | `SUM(quantity × unit_price)` where `cancelled_at IS NULL` |
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_cost)`                       |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_cost)`                       |
+| `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)`         |
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
@@ -53,9 +54,11 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
-\*_PO `completed_at_`\* — set when fully fulfilled; clear if receipts reversed.
+**PO `completed_at`** — set when fully fulfilled; clear if receipts reversed.
 
-`**product_units` timestamps\*\* — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only).
+**`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
+
+**`product_units` timestamps** — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only).
 
 **Serial numbers** — auto-generate on unit creation; unique; omit from update DTOs.
 
@@ -70,6 +73,8 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - `material_purchase_receipt_item_id` only when `transaction_type = 'receipt'`
 - `production_plan_item_id` only when `transaction_type = 'issue'`
 - `maintenance_order_spare_part_id` only when `transaction_type = 'issue'`
+- `outsourcing_order_item_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing vendor)
+- `outsourcing_receipt_item_id` only when `transaction_type = 'receipt'`
 - At most one source FK (DB check enforces non-conflict; validate type match)
 
 ### Purchasing
@@ -77,6 +82,16 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered`
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
+
+### Outsourcing
+
+- `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
+- `manufactured_material_boms` — reject inserts/updates that would create a circular BOM chain (nested manufactured materials allowed; direct self-reference is DB-checked)
+- `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
+- Materials issued to the vendor are recorded as `inventory_transaction_items` (`transaction_type = 'issue'`) linked via `outsourcing_order_item_id` — no separate issue header table (mirrors `production_plan_items` / `maintenance_order_spare_parts`)
+- `inventory_transaction_items.material_code` — when `outsourcing_order_item_id` is set, must exist in the order item's manufactured material `manufactured_material_boms`
+- Issue quantities — pre-fill from `manufactured_material_boms.quantity_required ×` remaining ordered qty; user may adjust before confirming
+- Outsourcing receipt: sum of `quantity_received + quantity_rejected` per order line ≤ `quantity_ordered`
 
 ### Production
 
@@ -138,14 +153,14 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 ### Status from timestamps (derive in API)
 
-| Entity                                                                   | Active                           | Completed                 | Cancelled      |
-| ------------------------------------------------------------------------ | -------------------------------- | ------------------------- | -------------- |
-| `contracts`                                                              | no `completed_at`/`cancelled_at` | `completed_at`            | `cancelled_at` |
-| `contract_items`                                                         | no `cancelled_at`                | —                         | `cancelled_at` |
-| `product_units`                                                          | no `cancelled_at`                | `warranty_started_at`     | `cancelled_at` |
-| `previews`, `deliveries`, `installations`, `trips`, `maintenance_orders` | scheduled, not done/cancelled    | `completed_at` (trips: —) | `cancelled_at` |
-| `material_purchase_orders`, `product_purchase_orders`                    | open                             | `completed_at`            | `cancelled_at` |
-| Receipts                                                                 | —                                | `received_at`             | —              |
+| Entity                                                                                       | Active                           | Completed                 | Cancelled      |
+| -------------------------------------------------------------------------------------------- | -------------------------------- | ------------------------- | -------------- |
+| `contracts`                                                                                  | no `completed_at`/`cancelled_at` | `completed_at`            | `cancelled_at` |
+| `contract_items`                                                                             | no `cancelled_at`                | —                         | `cancelled_at` |
+| `product_units`                                                                              | no `cancelled_at`                | `warranty_started_at`     | `cancelled_at` |
+| `previews`, `deliveries`, `installations`, `trips`, `maintenance_orders`                     | scheduled, not done/cancelled    | `completed_at` (trips: —) | `cancelled_at` |
+| `material_purchase_orders`, `product_purchase_orders`, `outsourcing_orders`                  | open                             | `completed_at`            | `cancelled_at` |
+| Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
 Mutually exclusive `completed_at` and `cancelled_at` where both exist.
 

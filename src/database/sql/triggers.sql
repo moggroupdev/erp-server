@@ -134,6 +134,46 @@ FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_receipts_code();
 
 -- ---------------------------------------------------------------------------
 
+-- OUTSOURCING ORDERS: OSO
+CREATE SEQUENCE IF NOT EXISTS outsourcing_orders_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_outsourcing_orders_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'OSO-' || LPAD(nextval('outsourcing_orders_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS outsourcing_orders_generate_code ON outsourcing_orders;
+CREATE TRIGGER outsourcing_orders_generate_code
+BEFORE INSERT ON outsourcing_orders
+FOR EACH ROW EXECUTE PROCEDURE generate_outsourcing_orders_code();
+
+-- ---------------------------------------------------------------------------
+
+-- OUTSOURCING RECEIPTS: OSR
+CREATE SEQUENCE IF NOT EXISTS outsourcing_receipts_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_outsourcing_receipts_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'OSR-' || LPAD(nextval('outsourcing_receipts_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS outsourcing_receipts_generate_code ON outsourcing_receipts;
+CREATE TRIGGER outsourcing_receipts_generate_code
+BEFORE INSERT ON outsourcing_receipts
+FOR EACH ROW EXECUTE PROCEDURE generate_outsourcing_receipts_code();
+
+-- ---------------------------------------------------------------------------
+
 -- DELIVERIES: DEL
 CREATE SEQUENCE IF NOT EXISTS deliveries_code_seq START 1 INCREMENT 1;
 
