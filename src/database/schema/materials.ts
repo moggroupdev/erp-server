@@ -57,7 +57,7 @@ export const manufacturedMaterialBoms = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     manufacturedMaterialCode: text('manufactured_material_code').notNull(), // @APP_CHECKED - materials.code with material_type = 'manufactured_material'
-    materialCode: text('material_code').notNull(), // Component material (may itself be a manufactured_material)
+    materialCode: text('material_code').notNull(), // Component material
     quantityRequired: numeric('quantity_required').notNull(),
     notes: text('notes'),
     createdAt,
