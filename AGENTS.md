@@ -91,6 +91,15 @@ Review generated SQL for duplicate indexes. Greenfield reset: drop DB/schema, th
 - Nest HTTP exceptions with clear messages; omit immutable fields (`code`, `createdAt`, `createdBy`) from update DTOs.
 - Permissions from `PERMISSION_VALUES` in constants.
 
+### Module naming abbreviations
+
+| Abbrev / module      | Means                                                     | Table                        |
+| -------------------- | --------------------------------------------------------- | ---------------------------- |
+| `boms`               | Product standard BOMs (bill of materials)                 | `product_standard_boms`      |
+| `mm-boms` / `MmBoms` | Manufactured-material BOMs (`mm` = manufactured material) | `manufactured_material_boms` |
+
+Same `mm` / `mmb` shorthand appears on DB constraint names (e.g. `mmb_manufactured_material_code_fk`). Prefer these short module/route names over spelling out `manufactured-material-boms`. Permission strings stay fully spelled (`add_manufactured_material_bom`, …).
+
 ---
 
 ## Comments

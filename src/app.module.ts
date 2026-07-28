@@ -14,6 +14,7 @@ import { VendorsModule } from './modules/vendors/vendors.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { MaterialsModule } from './modules/materials/materials.module';
+import { MmBomsModule } from './modules/mm-boms/mm-boms.module';
 import { ProductsModule } from './modules/products/products.module';
 import { BomsModule } from './modules/boms/boms.module';
 import { ReportsModule } from './modules/reports/reports.module';
@@ -31,6 +32,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     CustomersModule,
     CategoriesModule,
     MaterialsModule,
+    MmBomsModule,
     ProductsModule,
     BomsModule,
     ReportsModule,
