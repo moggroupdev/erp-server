@@ -36,7 +36,7 @@ export const inventoryTransactionItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantity: numeric('quantity').notNull(),
-    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual cost at transaction time
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual price at transaction time
     productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
     maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
     outsourcingOrderItemId: uuid('outsourcing_order_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue'); materials sent to the vendor for this order line
@@ -83,7 +83,7 @@ export const inventoryTransactionItems = pgTable(
     index('inv_tx_items_osri_id_idx').on(table.outsourcingReceiptItemId),
     index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
     positiveQuantityCheck('inv_tx_items_quantity_positive', table.quantity),
-    positiveQuantityCheck('inv_tx_items_unit_cost_positive', table.unitCost),
+    positiveQuantityCheck('inv_tx_items_unit_price_positive', table.unitPrice),
     check(
       'inv_tx_items_source_non_conflicting',
       // This check ensures that only one source is specified for the inventory transaction item

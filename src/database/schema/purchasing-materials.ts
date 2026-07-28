@@ -21,7 +21,7 @@ export const materialPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_cost) from material_purchase_order_items
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_price) from material_purchase_order_items
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when all order lines are fully received across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
@@ -50,7 +50,7 @@ export const materialPurchaseOrderItems = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityOrdered: numeric('quantity_ordered').notNull(),
-    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
     notes: text('notes'),
   },
   (table) => [
@@ -63,7 +63,7 @@ export const materialPurchaseOrderItems = pgTable(
     index('mpoi_material_code_idx').on(table.materialCode),
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
     positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
-    positiveQuantityCheck('mpoi_unit_cost_positive', table.unitCost),
+    positiveQuantityCheck('mpoi_unit_price_positive', table.unitPrice),
   ],
 );
 

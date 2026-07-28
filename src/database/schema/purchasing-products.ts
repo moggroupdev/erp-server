@@ -14,7 +14,7 @@ export const productPurchaseOrders = pgTable(
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
-    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_cost) from product_purchase_order_items
+    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_price) from product_purchase_order_items
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when every ordered unit has a linked product_purchase_receipt_items row
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
@@ -41,7 +41,7 @@ export const productPurchaseOrderItems = pgTable(
     productPurchaseOrderId: uuid('product_purchase_order_id').notNull(),
     contractItemId: uuid('contract_item_id').notNull(),
     quantityOrdered: integer('quantity_ordered').notNull(),
-    unitCost: numeric('unit_cost').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Agreed purchase price on PO line creation
     notes: text('notes'),
   },
   (table) => [
@@ -59,7 +59,7 @@ export const productPurchaseOrderItems = pgTable(
     index('ppoi_contract_item_id_idx').on(table.contractItemId),
     unique('ppoi_ppo_contract_item_unique').on(table.productPurchaseOrderId, table.contractItemId),
     check('ppoi_quantity_ordered_positive', sql`${table.quantityOrdered} > 0`),
-    positiveQuantityCheck('ppoi_unit_cost_positive', table.unitCost),
+    positiveQuantityCheck('ppoi_unit_price_positive', table.unitPrice),
   ],
 );
 

@@ -44,13 +44,13 @@ Recalculate inside a transaction when source rows change.
 | --------------------------------------- | --------------------------------------------------------- |
 | `offers.total_amount`                   | `SUM(quantity × unit_price)`                              |
 | `contracts.total_amount`                | `SUM(quantity × unit_price)` where `cancelled_at IS NULL` |
-| `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_cost)`                       |
-| `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_cost)`                       |
+| `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_price)`                      |
+| `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_price)`                      |
 | `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)`         |
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
-`**materials.unit_price`\*\* — recalculate from `inventory_transaction_items` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
+`**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
