@@ -211,11 +211,15 @@ export class QueryBuilderService {
     // 5. Pagination
     let page = 1;
     let limit = 10;
+    let isUnlimited = false;
     if (pagination) {
       page = Number(queryParams.page) || 1;
-      limit = Number(queryParams.limit) || 10;
-      const offset = (page - 1) * limit;
-      query.limit(limit).offset(offset);
+      isUnlimited = String(queryParams.limit).toLowerCase() === 'infinity';
+      limit = isUnlimited ? 0 : Number(queryParams.limit) || 10;
+      if (!isUnlimited) {
+        const offset = (page - 1) * limit;
+        query.limit(limit).offset(offset);
+      }
     }
 
     // Execute query
@@ -223,14 +227,14 @@ export class QueryBuilderService {
 
     if (pagination) {
       const numericTotalRecords = Number(totalRecords);
-      const totalPages = Math.ceil(numericTotalRecords / limit);
+      const totalPages = isUnlimited ? 1 : Math.ceil(numericTotalRecords / limit);
       const paginationData: Pagination = {
-        page,
-        limit,
+        page: isUnlimited ? 1 : page,
+        limit: isUnlimited ? numericTotalRecords : limit,
         totalRecords: numericTotalRecords,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+        hasNextPage: isUnlimited ? false : page < totalPages,
+        hasPreviousPage: isUnlimited ? false : page > 1,
       };
 
       return {
@@ -286,10 +290,12 @@ export class QueryBuilderService {
     let page = 1;
     let limit = 10;
     let offset = 0;
+    let isUnlimited = false;
     if (pagination) {
       page = Number(queryParams.page) || 1;
-      limit = Number(queryParams.limit) || 10;
-      offset = (page - 1) * limit;
+      isUnlimited = String(queryParams.limit).toLowerCase() === 'infinity';
+      limit = isUnlimited ? 0 : Number(queryParams.limit) || 10;
+      offset = isUnlimited ? 0 : (page - 1) * limit;
     }
 
     // Execute relational query
@@ -310,7 +316,7 @@ export class QueryBuilderService {
     if (columns) queryOptions.columns = columns;
     if (orderByClause) queryOptions.orderBy = orderByClause;
 
-    if (pagination) {
+    if (pagination && !isUnlimited) {
       queryOptions.limit = limit;
       queryOptions.offset = offset;
     }
@@ -338,14 +344,14 @@ export class QueryBuilderService {
 
     if (pagination) {
       const numericTotalRecords = Number(totalRecords);
-      const totalPages = Math.ceil(numericTotalRecords / limit);
+      const totalPages = isUnlimited ? 1 : Math.ceil(numericTotalRecords / limit);
       const paginationData: Pagination = {
-        page,
-        limit,
+        page: isUnlimited ? 1 : page,
+        limit: isUnlimited ? numericTotalRecords : limit,
         totalRecords: numericTotalRecords,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPreviousPage: page > 1,
+        hasNextPage: isUnlimited ? false : page < totalPages,
+        hasPreviousPage: isUnlimited ? false : page > 1,
       };
 
       return {
