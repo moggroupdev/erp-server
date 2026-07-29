@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { productDimensions, productStandardBoms } from 'src/database/schema';
+import { PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { CreateBomDto } from './dto/create-bom.dto';
@@ -15,26 +16,14 @@ export class BomsService {
   public async create(createBomDto: CreateBomDto, user: User) {
     const { productDimensionId, items } = createBomDto;
 
-    const dimension = await this.db.query.productDimensions.findFirst({
-      where: eq(productDimensions.id, productDimensionId),
-      columns: { id: true },
-    });
+    await this.assertIsManufacturedProduct(productDimensionId);
 
-    if (!dimension) {
-      throw new NotFoundException(
-        translate(
-          `Product dimension with ID ${productDimensionId} does not exist.`,
-          `لا يوجد مقاس منتج بالمعرف ${productDimensionId}.`,
-        ),
-      );
-    }
-
-    const existingBomItem = await this.db.query.productStandardBoms.findFirst({
-      where: eq(productStandardBoms.productDimensionId, productDimensionId),
-      columns: { id: true },
-    });
-
-    if (existingBomItem) {
+    if (
+      await this.db.query.productStandardBoms.findFirst({
+        where: eq(productStandardBoms.productDimensionId, productDimensionId),
+        columns: { id: true },
+      })
+    ) {
       throw new ConflictException(
         translate(
           `A BOM already exists for dimension ${productDimensionId}.`,
@@ -43,7 +32,15 @@ export class BomsService {
       );
     }
 
-    this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
+    // Check for duplicate material codes in the BOM items
+    const seen = new Set<string>();
+    for (const code of items.map((item) => item.materialCode)) {
+      if (seen.has(code))
+        throw new ConflictException(
+          translate(`Duplicate material code ${code} in BOM items.`, `كود المادة ${code} مكرر في بنود قائمة المواد.`),
+        );
+      seen.add(code);
+    }
 
     return await this.db.transaction(async (tx) => {
       return await tx
@@ -54,23 +51,14 @@ export class BomsService {
   }
 
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {
-    const dimension = await this.db.query.productDimensions.findFirst({
-      where: eq(productDimensions.id, dimensionId),
-      columns: { id: true },
-    });
+    await this.assertIsManufacturedProduct(dimensionId);
 
-    if (!dimension) {
-      throw new NotFoundException(
-        translate(`Product dimension with ID ${dimensionId} does not exist.`, `لا يوجد مقاس منتج بالمعرف ${dimensionId}.`),
-      );
-    }
-
-    const existingBomItem = await this.db.query.productStandardBoms.findFirst({
-      where: eq(productStandardBoms.productDimensionId, dimensionId),
-      columns: { id: true },
-    });
-
-    if (!existingBomItem) {
+    if (
+      !(await this.db.query.productStandardBoms.findFirst({
+        where: eq(productStandardBoms.productDimensionId, dimensionId),
+        columns: { id: true },
+      }))
+    ) {
       throw new NotFoundException(
         translate(
           `No BOM exists for dimension ${dimensionId}. Create the BOM first.`,
@@ -79,7 +67,22 @@ export class BomsService {
       );
     }
 
-    await this.assertMaterialNotInBom(dimensionId, createBomItemDto.materialCode); // We can depend on the database constraint here, but we use it here for a more readable error message.
+    // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
+    if (
+      await this.db.query.productStandardBoms.findFirst({
+        where: and(
+          eq(productStandardBoms.productDimensionId, dimensionId),
+          eq(productStandardBoms.materialCode, createBomItemDto.materialCode),
+        ),
+        columns: { id: true },
+      })
+    )
+      throw new ConflictException(
+        translate(
+          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension.`,
+          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس.`,
+        ),
+      );
 
     const [item] = await this.db
       .insert(productStandardBoms)
@@ -160,32 +163,31 @@ export class BomsService {
 
   // ============================== PRIVATE METHODS ==============================
 
-  private assertNoDuplicateMaterials(materialCodes: string[]) {
-    const seen = new Set<string>();
-    for (const code of materialCodes) {
-      if (seen.has(code))
-        throw new ConflictException(
-          translate(`Duplicate material code ${code} in BOM items.`, `كود المادة ${code} مكرر في بنود قائمة المواد.`),
-        );
-
-      seen.add(code);
-    }
-  }
-
-  private async assertMaterialNotInBom(dimensionId: string, materialCode: string) {
-    const existing = await this.db.query.productStandardBoms.findFirst({
-      where: and(
-        eq(productStandardBoms.productDimensionId, dimensionId),
-        eq(productStandardBoms.materialCode, materialCode),
-      ),
+  private async assertIsManufacturedProduct(productDimensionId: string) {
+    const dimension = await this.db.query.productDimensions.findFirst({
+      where: eq(productDimensions.id, productDimensionId),
       columns: { id: true },
+      with: {
+        product: {
+          columns: { code: true, sourceType: true },
+        },
+      },
     });
 
-    if (existing) {
+    if (!dimension) {
+      throw new NotFoundException(
+        translate(
+          `Product dimension with ID ${productDimensionId} does not exist.`,
+          `لا يوجد مقاس منتج بالمعرف ${productDimensionId}.`,
+        ),
+      );
+    }
+
+    if (dimension.product.sourceType !== PRODUCT_SOURCE_TYPES.MANUFACTURED) {
       throw new ConflictException(
         translate(
-          `Material ${materialCode} is already in the BOM for this dimension.`,
-          `المادة ${materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس.`,
+          `Product ${dimension.product.code} is not a manufactured product.`,
+          `المنتج ${dimension.product.code} ليس منتجاً مصنعاً.`,
         ),
       );
     }

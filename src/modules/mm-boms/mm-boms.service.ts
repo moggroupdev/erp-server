@@ -18,12 +18,21 @@ export class MmBomsService {
 
     await this.assertIsManufacturedMaterial(manufacturedMaterialCode);
 
+<<<<<<< HEAD
     if (
       await this.db.query.manufacturedMaterialBoms.findFirst({
         where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
         columns: { id: true },
       })
     ) {
+=======
+    const existingBomItem = await this.db.query.manufacturedMaterialBoms.findFirst({
+      where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
+      columns: { id: true },
+    });
+
+    if (existingBomItem) {
+>>>>>>> f406102a192a0fc158f523cf4de681fb463c4d0c
       throw new ConflictException(
         translate(
           `A BOM already exists for manufactured material ${manufacturedMaterialCode}.`,
@@ -55,12 +64,21 @@ export class MmBomsService {
   public async appendItem(manufacturedMaterialCode: string, createBomItemDto: CreateMmBomItemDto, user: User) {
     await this.assertIsManufacturedMaterial(manufacturedMaterialCode);
 
+<<<<<<< HEAD
     if (
       !(await this.db.query.manufacturedMaterialBoms.findFirst({
         where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
         columns: { id: true },
       }))
     ) {
+=======
+    const existingBom = await this.db.query.manufacturedMaterialBoms.findFirst({
+      where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
+      columns: { id: true },
+    });
+
+    if (!existingBom) {
+>>>>>>> f406102a192a0fc158f523cf4de681fb463c4d0c
       throw new NotFoundException(
         translate(
           `No BOM exists for manufactured material ${manufacturedMaterialCode}. Create the BOM first.`,
@@ -69,7 +87,11 @@ export class MmBomsService {
       );
     }
 
+<<<<<<< HEAD
     // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
+=======
+    // For the following check, we can depend on the database constraint here, but we use it here for a more readable error message.
+>>>>>>> f406102a192a0fc158f523cf4de681fb463c4d0c
     const sameItemExistsInBom = await this.db.query.manufacturedMaterialBoms.findFirst({
       where: and(
         eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),

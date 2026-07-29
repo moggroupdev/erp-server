@@ -96,6 +96,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 ### Production
 
+- `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
 - `production_plan_items.production_stage` — must exist in unit's product routing; complete only after prior `sequence_order` step
 - `product_production_routes.sequence_order` — must be in a step order
 - `product_production_routes.completion_percentage` — routes for a product must sum to 100%; validate on route create/update/delete
