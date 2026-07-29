@@ -33,6 +33,7 @@ export const PERMISSION_VALUES = [
   'add_material',
   'read_materials',
   'update_material',
+  'print_materials_list',
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
