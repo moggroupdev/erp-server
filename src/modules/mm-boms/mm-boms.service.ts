@@ -124,6 +124,7 @@ export class MmBomsService {
               columns: {
                 code: true,
                 title: true,
+                subCategoryId: true,
                 materialType: true,
                 unitOfMeasurement: true,
                 unitPrice: true,
