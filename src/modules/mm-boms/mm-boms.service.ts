@@ -5,7 +5,6 @@ import { manufacturedMaterialBoms, materials } from 'src/database/schema';
 import { MATERIAL_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
-import { CreateMmBomDto } from './dto/create-mm-bom.dto';
 import { CreateMmBomItemDto } from './dto/create-mm-bom-item.dto';
 import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 
@@ -13,61 +12,8 @@ import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 export class MmBomsService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
-  public async create(manufacturedMaterialCode: string, createBomDto: CreateMmBomDto, user: User) {
-    const { items } = createBomDto;
-
-    await this.assertIsManufacturedMaterial(manufacturedMaterialCode);
-
-    if (
-      await this.db.query.manufacturedMaterialBoms.findFirst({
-        where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
-        columns: { id: true },
-      })
-    ) {
-      throw new ConflictException(
-        translate(
-          `A BOM already exists for manufactured material ${manufacturedMaterialCode}.`,
-          `توجد بالفعل قائمة مواد للمادة المصنعة ${manufacturedMaterialCode}.`,
-        ),
-      );
-    }
-
-    // Check for duplicate material codes in the BOM items
-    const seen = new Set<string>();
-    for (const code of items.map((item) => item.materialCode)) {
-      if (seen.has(code))
-        throw new ConflictException(
-          translate(`Duplicate material code ${code} in BOM items.`, `كود المادة ${code} مكرر في بنود قائمة المواد.`),
-        );
-      seen.add(code);
-    }
-
-    for (const item of items) await this.assertNoCircularReference(manufacturedMaterialCode, item.materialCode);
-
-    return await this.db.transaction(async (tx) => {
-      return await tx
-        .insert(manufacturedMaterialBoms)
-        .values(items.map((item) => ({ ...item, manufacturedMaterialCode, createdBy: user.id })))
-        .returning();
-    });
-  }
-
   public async appendItem(manufacturedMaterialCode: string, createBomItemDto: CreateMmBomItemDto, user: User) {
     await this.assertIsManufacturedMaterial(manufacturedMaterialCode);
-
-    if (
-      !(await this.db.query.manufacturedMaterialBoms.findFirst({
-        where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, manufacturedMaterialCode),
-        columns: { id: true },
-      }))
-    ) {
-      throw new NotFoundException(
-        translate(
-          `No BOM exists for manufactured material ${manufacturedMaterialCode}. Create the BOM first.`,
-          `لا توجد قائمة مواد للمادة المصنعة ${manufacturedMaterialCode}. أنشئ قائمة المواد أولاً.`,
-        ),
-      );
-    }
 
     // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
     const sameItemExistsInBom = await this.db.query.manufacturedMaterialBoms.findFirst({

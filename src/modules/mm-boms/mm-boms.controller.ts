@@ -6,7 +6,6 @@ import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permissio
 import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator';
 import { PERMISSIONS } from 'src/utils/constants';
 import { MmBomsService } from './mm-boms.service';
-import { CreateMmBomDto } from './dto/create-mm-bom.dto';
 import { CreateMmBomItemDto } from './dto/create-mm-bom-item.dto';
 import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 
@@ -24,18 +23,6 @@ export class MmBomsController {
     @RequestUser() user: User,
   ) {
     return this.mmBomsService.appendItem(manufacturedMaterialCode, createBomItemDto, user);
-  }
-
-  @Post(':manufacturedMaterialCode')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.ADD_MANUFACTURED_MATERIAL_BOM)
-  @ApiBearerAuth()
-  create(
-    @Param('manufacturedMaterialCode') manufacturedMaterialCode: string,
-    @Body() createBomDto: CreateMmBomDto,
-    @RequestUser() user: User,
-  ) {
-    return this.mmBomsService.create(manufacturedMaterialCode, createBomDto, user);
   }
 
   @Get(':manufacturedMaterialCode')
