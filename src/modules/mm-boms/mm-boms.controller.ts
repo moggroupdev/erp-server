@@ -14,15 +14,7 @@ import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 export class MmBomsController {
   constructor(private readonly mmBomsService: MmBomsService) {}
 
-  @Post()
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.ADD_MANUFACTURED_MATERIAL_BOM)
-  @ApiBearerAuth()
-  create(@Body() createBomDto: CreateMmBomDto, @RequestUser() user: User) {
-    return this.mmBomsService.create(createBomDto, user);
-  }
-
-  @Post(':manufacturedMaterialCode/items')
+  @Post(':manufacturedMaterialCode/append')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.ADD_MANUFACTURED_MATERIAL_BOM)
   @ApiBearerAuth()
@@ -34,6 +26,18 @@ export class MmBomsController {
     return this.mmBomsService.appendItem(manufacturedMaterialCode, createBomItemDto, user);
   }
 
+  @Post(':manufacturedMaterialCode')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.ADD_MANUFACTURED_MATERIAL_BOM)
+  @ApiBearerAuth()
+  create(
+    @Param('manufacturedMaterialCode') manufacturedMaterialCode: string,
+    @Body() createBomDto: CreateMmBomDto,
+    @RequestUser() user: User,
+  ) {
+    return this.mmBomsService.create(manufacturedMaterialCode, createBomDto, user);
+  }
+
   @Get(':manufacturedMaterialCode')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MANUFACTURED_MATERIAL_BOMS)
@@ -42,7 +46,7 @@ export class MmBomsController {
     return this.mmBomsService.get(manufacturedMaterialCode);
   }
 
-  @Patch('items/:itemId')
+  @Patch(':itemId')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_MANUFACTURED_MATERIAL_BOM)
   @ApiBearerAuth()

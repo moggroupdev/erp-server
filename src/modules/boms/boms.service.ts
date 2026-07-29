@@ -13,21 +13,21 @@ import { UpdateBomItemDto } from './dto/update-bom-item.dto';
 export class BomsService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
-  public async create(createBomDto: CreateBomDto, user: User) {
-    const { productDimensionId, items } = createBomDto;
+  public async create(dimensionId: string, createBomDto: CreateBomDto, user: User) {
+    const { items } = createBomDto;
 
-    await this.assertIsManufacturedProduct(productDimensionId);
+    await this.assertIsManufacturedProduct(dimensionId);
 
     if (
       await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.productDimensionId, productDimensionId),
+        where: eq(productStandardBoms.productDimensionId, dimensionId),
         columns: { id: true },
       })
     ) {
       throw new ConflictException(
         translate(
-          `A BOM already exists for dimension ${productDimensionId}.`,
-          `توجد بالفعل قائمة مواد للمقاس ${productDimensionId}.`,
+          `A BOM already exists for dimension ${dimensionId}.`,
+          `توجد بالفعل قائمة مواد للمقاس ${dimensionId}.`,
         ),
       );
     }
@@ -45,7 +45,7 @@ export class BomsService {
     return await this.db.transaction(async (tx) => {
       return await tx
         .insert(productStandardBoms)
-        .values(items.map((item) => ({ ...item, productDimensionId, createdBy: user.id })))
+        .values(items.map((item) => ({ ...item, productDimensionId: dimensionId, createdBy: user.id })))
         .returning();
     });
   }
