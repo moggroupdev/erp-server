@@ -41,6 +41,7 @@ export const PERMISSION_VALUES = [
   'add_product',
   'read_products',
   'update_product',
+  'print_products_list',
   'add_product_bom',
   'read_product_boms',
   'update_product_bom',
