@@ -1,8 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { productDimensions, productStandardBoms } from 'src/database/schema';
-import { PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
+import { materials, productDimensions, productStandardBoms } from 'src/database/schema';
+import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { CreateBomDto } from './dto/create-bom.dto';
@@ -25,10 +25,7 @@ export class BomsService {
       })
     ) {
       throw new ConflictException(
-        translate(
-          `A BOM already exists for dimension ${dimensionId}.`,
-          `توجد بالفعل قائمة مواد للمقاس ${dimensionId}.`,
-        ),
+        translate(`A BOM already exists for dimension ${dimensionId}.`, `توجد بالفعل قائمة مواد للمقاس ${dimensionId}.`),
       );
     }
 
@@ -128,6 +125,7 @@ export class BomsService {
               columns: {
                 code: true,
                 title: true,
+                materialType: true,
                 subCategoryId: true,
                 unitOfMeasurement: true,
                 unitPrice: true,
@@ -143,7 +141,60 @@ export class BomsService {
         translate(`Product dimension with ID ${dimensionId} does not exist.`, `لا يوجد مقاس منتج بالمعرف ${dimensionId}.`),
       );
 
-    return dimension;
+    // Nested relational query through productStandardBoms → material → manufacturedMaterialBoms breaks under Drizzle's dual materials ↔ mm-boms relations; load MM components separately.
+    const manufacturedMaterialCodes = [
+      ...new Set(
+        dimension.standardBoms
+          .filter((item) => item.material.materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL)
+          .map((item) => item.material.code),
+      ),
+    ];
+
+    const manufacturedMaterials =
+      manufacturedMaterialCodes.length > 0
+        ? await this.db.query.materials.findMany({
+            where: inArray(materials.code, manufacturedMaterialCodes),
+            columns: { code: true },
+            with: {
+              manufacturedMaterialBoms: {
+                columns: {
+                  id: true,
+                  materialCode: true,
+                  quantityRequired: true,
+                  notes: true,
+                },
+                with: {
+                  material: {
+                    columns: {
+                      code: true,
+                      title: true,
+                      materialType: true,
+                      subCategoryId: true,
+                      unitOfMeasurement: true,
+                      unitPrice: true,
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : [];
+
+    const componentsByMaterialCode = new Map(
+      manufacturedMaterials.map((material) => [material.code, material.manufacturedMaterialBoms]),
+    );
+
+    // Overwrite the results to enclude the manufactured naterial BOMs
+    return {
+      ...dimension,
+      standardBoms: dimension.standardBoms.map((item) => ({
+        ...item,
+        material: {
+          ...item.material,
+          manufacturedMaterialBoms: componentsByMaterialCode.get(item.material.code) || [],
+        },
+      })),
+    };
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
