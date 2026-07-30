@@ -13,7 +13,51 @@ export class MmBomsService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
   public async appendItem(manufacturedMaterialCode: string, createBomItemDto: CreateMmBomItemDto, user: User) {
-    await this.assertIsManufacturedMaterial(manufacturedMaterialCode);
+    const parentMaterial = await this.db.query.materials.findFirst({
+      where: eq(materials.code, manufacturedMaterialCode),
+      columns: { code: true, materialType: true },
+    });
+
+    if (!parentMaterial) {
+      throw new NotFoundException(
+        translate(
+          `Material with code ${manufacturedMaterialCode} does not exist.`,
+          `لا توجد مادة بالكود ${manufacturedMaterialCode}.`,
+        ),
+      );
+    }
+
+    if (parentMaterial.materialType !== MATERIAL_TYPES.MANUFACTURED_MATERIAL) {
+      throw new ConflictException(
+        translate(
+          `Material ${manufacturedMaterialCode} is not a manufactured material.`,
+          `المادة ${manufacturedMaterialCode} ليست مادة مصنعة.`,
+        ),
+      );
+    }
+
+    const componentMaterial = await this.db.query.materials.findFirst({
+      where: eq(materials.code, createBomItemDto.materialCode),
+      columns: { code: true, materialType: true },
+    });
+
+    if (!componentMaterial) {
+      throw new NotFoundException(
+        translate(
+          `Material with code ${createBomItemDto.materialCode} does not exist.`,
+          `لا توجد مادة بالكود ${createBomItemDto.materialCode}.`,
+        ),
+      );
+    }
+
+    if (componentMaterial.materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL) {
+      throw new ConflictException(
+        translate(
+          `Manufactured material ${createBomItemDto.materialCode} cannot be used as a BOM component.`,
+          `لا يمكن استخدام المادة المصنعة ${createBomItemDto.materialCode} كمكون في قائمة المواد.`,
+        ),
+      );
+    }
 
     // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
     const sameItemExistsInBom = await this.db.query.manufacturedMaterialBoms.findFirst({
@@ -32,8 +76,6 @@ export class MmBomsService {
         ),
       );
     }
-
-    await this.assertNoCircularReference(manufacturedMaterialCode, createBomItemDto.materialCode);
 
     const [item] = await this.db
       .insert(manufacturedMaterialBoms)
@@ -107,59 +149,5 @@ export class MmBomsService {
     }
 
     return updatedItem;
-  }
-
-  // ============================== PRIVATE METHODS ==============================
-
-  private async assertIsManufacturedMaterial(materialCode: string) {
-    const material = await this.db.query.materials.findFirst({
-      where: eq(materials.code, materialCode),
-      columns: { code: true, materialType: true },
-    });
-
-    if (!material) {
-      throw new NotFoundException(
-        translate(`Material with code ${materialCode} does not exist.`, `لا توجد مادة بالكود ${materialCode}.`),
-      );
-    }
-
-    if (material.materialType !== MATERIAL_TYPES.MANUFACTURED_MATERIAL) {
-      throw new ConflictException(
-        translate(`Material ${materialCode} is not a manufactured material.`, `المادة ${materialCode} ليست مادة مصنعة.`),
-      );
-    }
-  }
-
-  // Walk the component's BOM tree; reject if manufacturedMaterialCode appears (indirect cycle).
-  // Direct self-reference is already blocked by the DB check manufactured_material_boms_no_self_reference.
-  private async assertNoCircularReference(manufacturedMaterialCode: string, componentMaterialCode: string) {
-    const visited = new Set<string>();
-    const queue = [componentMaterialCode];
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      if (visited.has(current)) continue;
-      visited.add(current);
-
-      if (current === manufacturedMaterialCode) {
-        throw new ConflictException(
-          translate(
-            `Adding material ${componentMaterialCode} would create a circular BOM chain for ${manufacturedMaterialCode}.`,
-            `إضافة المادة ${componentMaterialCode} ستنشئ سلسلة دائرية في قائمة المواد للمادة ${manufacturedMaterialCode}.`,
-          ),
-        );
-      }
-
-      const children = await this.db.query.manufacturedMaterialBoms.findMany({
-        where: eq(manufacturedMaterialBoms.manufacturedMaterialCode, current),
-        columns: { materialCode: true },
-      });
-
-      for (const child of children) {
-        if (!visited.has(child.materialCode)) {
-          queue.push(child.materialCode);
-        }
-      }
-    }
   }
 }

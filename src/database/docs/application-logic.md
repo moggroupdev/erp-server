@@ -87,7 +87,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 - Manufactured-material BOMs are managed by Nest module / route `mm-boms` (`MmBoms*`); table remains `manufactured_material_boms` (`mm` = manufactured material)
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
-- `manufactured_material_boms` — reject inserts/updates that would create a circular BOM chain (nested manufactured materials allowed; direct self-reference is DB-checked)
+- `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - Materials issued to the vendor are recorded as `inventory_transaction_items` (`transaction_type = 'issue'`) linked via `outsourcing_order_item_id` — no separate issue header table (mirrors `production_plan_items` / `maintenance_order_spare_parts`)
 - `inventory_transaction_items.material_code` — when `outsourcing_order_item_id` is set, must exist in the order item's manufactured material `manufactured_material_boms`
