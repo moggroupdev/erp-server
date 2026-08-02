@@ -1,14 +1,15 @@
 import { randomInt } from 'crypto';
-import { and, desc, eq, isNull } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { productCategorySubs, productDimensions, products } from 'src/database/schema';
+import { productCategorySubs, productDimensions, productProductionRoutes, products } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
+import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 
 @Injectable()
 export class ProductsService {
@@ -125,6 +126,61 @@ export class ProductsService {
         .returning();
 
       return updatedDimension;
+    });
+  }
+
+  // ========================= Production Routes =========================
+
+  public async setProductionRoutes(productCode: string, setProductProductionRoutesDto: SetProductProductionRoutesDto) {
+    const { routes } = setProductProductionRoutesDto;
+
+    const totalPercentage = routes.reduce((sum, route) => sum + route.completionPercentage, 0);
+    if (totalPercentage !== 100) {
+      throw new ConflictException(
+        translate(
+          `Completion percentages for product ${productCode} must sum to 100% (got ${totalPercentage}%).`,
+          `يجب أن مجموع نسب الإنجاز للمنتج ${productCode} يساوي 100% (المجموع: ${totalPercentage}%).`,
+        ),
+      );
+    }
+
+    const seenSubDepartments = new Set<string>();
+    const seenSequenceOrders = new Set<number>();
+    for (const route of routes) {
+      if (seenSubDepartments.has(route.productionSubDepartment)) {
+        throw new ConflictException(
+          translate(
+            `Duplicate production sub-department \`${route.productionSubDepartment}\` in routes.`,
+            `القسم الفرعي للإنتاج \`${route.productionSubDepartment}\` مكرر في المسارات.`,
+          ),
+        );
+      }
+      if (seenSequenceOrders.has(route.sequenceOrder)) {
+        throw new ConflictException(
+          translate(
+            `Duplicate sequence order \`${route.sequenceOrder}\` in routes.`,
+            `ترتيب التسلسل \`${route.sequenceOrder}\` مكرر في المسارات.`,
+          ),
+        );
+      }
+      seenSubDepartments.add(route.productionSubDepartment);
+      seenSequenceOrders.add(route.sequenceOrder);
+    }
+
+    return await this.db.transaction(async (tx) => {
+      await tx.delete(productProductionRoutes).where(eq(productProductionRoutes.productCode, productCode));
+
+      return await tx
+        .insert(productProductionRoutes)
+        .values(routes.map((route) => ({ ...route, productCode })))
+        .returning();
+    });
+  }
+
+  public async listProductionRoutes(productCode: string) {
+    return await this.db.query.productProductionRoutes.findMany({
+      where: eq(productProductionRoutes.productCode, productCode),
+      orderBy: asc(productProductionRoutes.sequenceOrder),
     });
   }
 

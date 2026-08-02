@@ -23,6 +23,7 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
+import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 import { ProductsRenderer } from './products.renderer';
 
 @Controller('products')
@@ -100,5 +101,23 @@ export class ProductsController {
   @ApiBearerAuth()
   setDefaultDimension(@Param('code') code: string, @Param('dimensionId', ParseUUIDPipe) dimensionId: string) {
     return this.productsService.setDefaultDimension(code, dimensionId);
+  }
+
+  // ========================= Production Routes =========================
+
+  @Put(':code/production-routes')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT)
+  @ApiBearerAuth()
+  setProductionRoutes(@Param('code') code: string, @Body() setProductProductionRoutesDto: SetProductProductionRoutesDto) {
+    return this.productsService.setProductionRoutes(code, setProductProductionRoutesDto);
+  }
+
+  @Get(':code/production-routes')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_PRODUCTS)
+  @ApiBearerAuth()
+  listProductionRoutes(@Param('code') code: string) {
+    return this.productsService.listProductionRoutes(code);
   }
 }
