@@ -1,5 +1,4 @@
 import {
-  DIMENSION_UNIT_VALUES,
   INVENTORY_TRANSACTION_TYPE_VALUES,
   LOGIN_STATUS_VALUES,
   MATERIAL_TYPE_VALUES,
@@ -42,10 +41,7 @@ export type LoginStatus = (typeof LOGIN_STATUS_VALUES)[number];
 
 export type MaterialUnit = (typeof MATERIAL_UNIT_VALUES)[number];
 
-export type DimensionUnit = (typeof DIMENSION_UNIT_VALUES)[number];
-
 export type MaterialType = (typeof MATERIAL_TYPE_VALUES)[number];
-
 export type ProductSourceType = (typeof PRODUCT_SOURCE_TYPE_VALUES)[number];
 
 export type InquiryStatus = (typeof INQUIRY_STATUS_VALUES)[number];

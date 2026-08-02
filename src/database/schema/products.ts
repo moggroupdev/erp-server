@@ -5,8 +5,8 @@ import {
   percentage,
   createdAt,
   deletedAt,
-  dimensionUnitEnum,
   nonNegativeQuantityCheck,
+  nonNegativeNullableQuantityCheck,
   positiveQuantityCheck,
   productSourceTypeEnum,
   productionSubDepartmentEnum,
@@ -55,10 +55,10 @@ export const productDimensions = pgTable(
     productCode: text('product_code')
       .notNull()
       .references(() => products.code),
-    length: numeric('length').notNull(),
-    depth: numeric('depth').notNull(),
+    length: numeric('length'),
+    depth: numeric('depth'),
+    diameter: numeric('diameter'),
     height: numeric('height').notNull(),
-    dimensionUnit: dimensionUnitEnum('dimension_unit').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
     createdAt,
     createdBy: uuid('created_by')
@@ -70,9 +70,16 @@ export const productDimensions = pgTable(
     uniqueIndex('product_dimensions_default_per_product_idx')
       .on(table.productCode)
       .where(sql`${table.isDefault} = true`),
-    nonNegativeQuantityCheck('product_dimensions_length_non_negative', table.length),
-    nonNegativeQuantityCheck('product_dimensions_depth_non_negative', table.depth),
+    nonNegativeNullableQuantityCheck('product_dimensions_length_non_negative', table.length),
+    nonNegativeNullableQuantityCheck('product_dimensions_depth_non_negative', table.depth),
+    nonNegativeNullableQuantityCheck('product_dimensions_diameter_non_negative', table.diameter),
     nonNegativeQuantityCheck('product_dimensions_height_non_negative', table.height),
+    // Either (length AND depth) OR diameter - never both, never neither. Height is always required.
+    check(
+      'product_dimensions_length_depth_xor_diameter',
+      sql`(${table.length} IS NOT NULL AND ${table.depth} IS NOT NULL AND ${table.diameter} IS NULL)
+          OR (${table.length} IS NULL AND ${table.depth} IS NULL AND ${table.diameter} IS NOT NULL)`,
+    ),
   ],
 );
 

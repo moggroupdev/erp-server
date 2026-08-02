@@ -71,14 +71,6 @@ export const MATERIAL_UNITS = Object.fromEntries(
   [K in Uppercase<(typeof MATERIAL_UNIT_VALUES)[number]>]: Lowercase<K>;
 };
 
-// ==================== DIMENSION_UNITS ====================
-
-export const DIMENSION_UNIT_VALUES = ['m', 'cm', 'mm'] as const;
-
-export const DIMENSION_UNITS = Object.fromEntries(DIMENSION_UNIT_VALUES.map((unit) => [unit.toUpperCase(), unit])) as {
-  [K in Uppercase<(typeof DIMENSION_UNIT_VALUES)[number]>]: Lowercase<K>;
-};
-
 // ==================== MATERIAL_TYPES ====================
 
 export const MATERIAL_TYPE_VALUES = ['raw_materials', 'spare_parts', 'manufactured_material'] as const;

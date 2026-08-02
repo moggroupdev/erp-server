@@ -1,6 +1,5 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 import {
-  DIMENSION_UNIT_VALUES,
   INQUIRY_STATUS_VALUES,
   LOGIN_STATUS_VALUES,
   MAINTENANCE_SERVICE_LOCATION_VALUES,
@@ -22,8 +21,6 @@ export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
 export const loginStatusEnum = pgEnum('login_status', LOGIN_STATUS_VALUES);
 
 export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNIT_VALUES);
-
-export const dimensionUnitEnum = pgEnum('dimension_unit', DIMENSION_UNIT_VALUES);
 
 export const materialTypeEnum = pgEnum('material_type', MATERIAL_TYPE_VALUES);
 
