@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import * as schema from '../src/database/schema';
-import { PRODUCT_SOURCE_TYPE_VALUES, DIMENSION_UNIT_VALUES } from '../src/utils/constants';
+import { PRODUCT_SOURCE_TYPE_VALUES } from '../src/utils/constants';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -47,16 +47,16 @@ type CleanProduct = {
 type CleanDimension = {
   length: number | null;
   depth: number | null;
+  diameter: number | null;
   height: number | null;
-  dimensionUnit: string;
   isDefault: boolean;
 };
 
 type ValidDimension = {
-  length: number;
-  depth: number;
+  length: number | null;
+  depth: number | null;
+  diameter: number | null;
   height: number;
-  dimensionUnit: string;
   isDefault: boolean;
 };
 
@@ -133,10 +133,11 @@ function normalizeTitle(value: string): string {
   return value.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-function isValidDimension(
-  d: CleanDimension,
-): d is { length: number; depth: number; height: number; dimensionUnit: string; isDefault: boolean } {
-  return d.length != null && d.depth != null && d.height != null;
+function isValidDimension(d: CleanDimension): d is ValidDimension {
+  if (d.height == null) return false;
+  const rectangular = d.length != null && d.depth != null && d.diameter == null;
+  const cylindrical = d.diameter != null && d.length == null && d.depth == null;
+  return rectangular || cylindrical;
 }
 
 function normalizeDimensions(dims: CleanDimension[]): ValidDimension[] {
@@ -280,8 +281,8 @@ async function main() {
           productCode: code,
           length: dim.length,
           depth: dim.depth,
+          diameter: dim.diameter,
           height: dim.height,
-          dimensionUnit: dim.dimensionUnit as (typeof DIMENSION_UNIT_VALUES)[number],
           isDefault: dim.isDefault,
           createdBy: user.id,
         });

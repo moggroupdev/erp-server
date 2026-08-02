@@ -64,6 +64,40 @@ export function IsUuidString(validationOptions?: ValidationOptions) {
   };
 }
 
+/**
+ * Ensures product dimensions provide either (length AND depth) OR diameter — never both, never neither.
+ * Apply on any one of the three fields (typically `height`).
+ */
+export function IsLengthDepthXorDiameter(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'IsLengthDepthXorDiameter',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      validator: {
+        validate(_value: unknown, args: ValidationArguments) {
+          const dto = args.object as { length?: number | null; depth?: number | null; diameter?: number | null };
+          const hasLength = dto.length != null;
+          const hasDepth = dto.depth != null;
+          const hasDiameter = dto.diameter != null;
+
+          const rectangular = hasLength && hasDepth && !hasDiameter;
+          const cylindrical = hasDiameter && !hasLength && !hasDepth;
+
+          return rectangular || cylindrical;
+        },
+        defaultMessage() {
+          return translate(
+            'Provide either length and depth, or diameter - not both and not neither.',
+            'يجب توفير الطول والعمق، أو القطر - وليس كلاهما ولا أي منهما.',
+          );
+        },
+      },
+    });
+  };
+}
+
 /** Trims string values before validation. Requires ValidationPipe `transform: true`. */
 export function Trim() {
   return Transform(({ value }) => (typeof value === 'string' ? value.trim() : value));

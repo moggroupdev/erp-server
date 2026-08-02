@@ -13,8 +13,6 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   [PRODUCT_SOURCE_TYPES.IMPORTED]: 'مستورد',
 };
 
-const DIMENSION_UNIT_LABELS: Record<string, string> = { m: 'م', cm: 'سم', mm: 'مم' };
-
 @Injectable()
 export class ProductsRenderer {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
@@ -146,18 +144,18 @@ export class ProductsRenderer {
 
     const rows = sorted
       .map((dim) => {
-        const unit = DIMENSION_UNIT_LABELS[dim.dimensionUnit] ?? dim.dimensionUnit;
         const statusCell = dim.isDefault
           ? '<td class="col-status"><span class="default-pill" title="افتراضي">افتراضي</span></td>'
           : '<td class="col-status"></td>';
         const rowClass = dim.isDefault ? 'default-row' : '';
+        const label =
+          dim.diameter != null
+            ? `<span style="font-size:1.2em;color:#9ca3af;line-height:1">⌀</span>${escapeHtml(String(dim.diameter))} × ${escapeHtml(String(dim.height))} سم`
+            : `${escapeHtml(String(dim.length))} × ${escapeHtml(String(dim.depth))} × ${escapeHtml(String(dim.height))} سم`;
 
         return `<tr class="${rowClass}">
           ${statusCell}
-          <td class="dim-value">${escapeHtml(String(dim.length))}</td>
-          <td class="dim-value">${escapeHtml(String(dim.depth))}</td>
-          <td class="dim-value">${escapeHtml(String(dim.height))}</td>
-          <td class="dim-unit">${escapeHtml(unit)}</td>
+          <td class="dim-value">${label}</td>
         </tr>`;
       })
       .join('');
@@ -167,10 +165,7 @@ export class ProductsRenderer {
         <thead>
           <tr>
             <th class="col-status" aria-label="الحالة"></th>
-            <th>طول</th>
-            <th>عمق</th>
-            <th>ارتفاع</th>
-            <th>وحدة</th>
+            <th>المقاس (سم)</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

@@ -1,27 +1,31 @@
-import { IsBoolean, IsIn, IsNumber, IsOptional, Min } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, Min, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DIMENSION_UNIT_VALUES } from 'src/utils/constants';
-import { type DimensionUnit } from 'src/utils/types';
+import { IsLengthDepthXorDiameter } from 'src/utils/decorators';
 
 export class CreateProductDimensionDto {
+  @ValidateIf((o: CreateProductDimensionDto) => o.diameter == null)
   @IsNumber()
   @Min(0)
-  @ApiProperty()
-  length: number;
+  @ApiPropertyOptional()
+  length: number | null;
+
+  @ValidateIf((o: CreateProductDimensionDto) => o.diameter == null)
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional()
+  depth: number | null;
+
+  @ValidateIf((o: CreateProductDimensionDto) => o.length == null && o.depth == null)
+  @IsNumber()
+  @Min(0)
+  @ApiPropertyOptional()
+  diameter: number | null;
 
   @IsNumber()
   @Min(0)
-  @ApiProperty()
-  depth: number;
-
-  @IsNumber()
-  @Min(0)
+  @IsLengthDepthXorDiameter()
   @ApiProperty()
   height: number;
-
-  @IsIn(DIMENSION_UNIT_VALUES)
-  @ApiProperty({ enum: DIMENSION_UNIT_VALUES })
-  dimensionUnit: DimensionUnit;
 
   @IsBoolean()
   @IsOptional()

@@ -97,8 +97,8 @@ export class BomsService {
         productCode: true,
         length: true,
         depth: true,
+        diameter: true,
         height: true,
-        dimensionUnit: true,
         isDefault: true,
       },
       with: {

@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as xlsx from 'xlsx';
-import { PRODUCT_SOURCE_TYPES, DIMENSION_UNITS } from '../src/utils/constants';
+import { PRODUCT_SOURCE_TYPES } from '../src/utils/constants';
 
 type CategoryJson = {
   legacy_code: string;
@@ -12,8 +12,8 @@ type CategoryJson = {
 type ProductDimensionJson = {
   length: number | null;
   depth: number | null;
+  diameter: number | null;
   height: number | null;
-  dimensionUnit: string;
   isDefault: boolean;
 };
 
@@ -46,7 +46,6 @@ const OUT_DIR = path.join(ROOT, 'data/products/results');
 const OUT_PATH = path.join(OUT_DIR, 'clean-products.json');
 
 const DEFAULT_SOURCE_TYPE = PRODUCT_SOURCE_TYPES.MANUFACTURED;
-const DEFAULT_DIMENSION_UNIT = DIMENSION_UNITS.CM;
 const DEFAULT_PRICING_FACTOR = 1.5;
 
 function norm(value: unknown): string {
@@ -204,12 +203,12 @@ function groupByName(valid: ParsedItem[]): ProductJson[] {
     const dimension: ProductDimensionJson = {
       length: item.length,
       depth: item.depth,
+      diameter: null,
       height: item.height,
-      dimensionUnit: DEFAULT_DIMENSION_UNIT,
       isDefault: false,
     };
 
-    if (dimension.length != null || dimension.depth != null || dimension.height != null) {
+    if ((dimension.length != null && dimension.depth != null && dimension.height != null) || (dimension.diameter != null && dimension.height != null)) {
       product.dimensions.push(dimension);
     }
   }
