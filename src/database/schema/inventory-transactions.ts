@@ -13,6 +13,7 @@ export const inventoryTransactions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: IVT-00000001
+    legacyNumber: text('legacy_number').unique(), // Old system transaction number for seed/migration
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
     notes: text('notes'),
     createdAt,

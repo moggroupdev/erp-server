@@ -18,6 +18,7 @@
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seed-departments.ts",
     "seed:materials": "ts-node -r tsconfig-paths/register scripts/seed-materials.ts",
+    "seed:inventory-receipts": "ts-node -r tsconfig-paths/register scripts/seed-inventory-receipts.ts",
     "seed:products": "ts-node -r tsconfig-paths/register scripts/seed-products.ts",
     "create:first-admin": "ts-node -r tsconfig-paths/register scripts/create-first-admin.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",

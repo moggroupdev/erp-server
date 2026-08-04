@@ -18,6 +18,7 @@ export const materialPurchaseOrders = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPO-00000001
+    legacyInvoiceNumber: text('legacy_invoice_number'), // Legacy invoice number from historical seeded receipts
     vendorId: uuid('vendor_id')
       .notNull()
       .references(() => vendors.id),
