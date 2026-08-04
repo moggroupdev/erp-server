@@ -17,6 +17,7 @@ import { MaterialsModule } from './modules/materials/materials.module';
 import { MmBomsModule } from './modules/mm-boms/mm-boms.module';
 import { ProductsModule } from './modules/products/products.module';
 import { BomsModule } from './modules/boms/boms.module';
+import { InventoryTransactionsModule } from './modules/inventory-transactions/inventory-transactions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     MmBomsModule,
     ProductsModule,
     BomsModule,
+    InventoryTransactionsModule,
     ReportsModule,
   ],
   controllers: [AppController],

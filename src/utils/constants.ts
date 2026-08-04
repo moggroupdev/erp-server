@@ -45,6 +45,7 @@ export const PERMISSION_VALUES = [
   'add_product_bom',
   'read_product_boms',
   'update_product_bom',
+  'read_inventory_transactions',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
