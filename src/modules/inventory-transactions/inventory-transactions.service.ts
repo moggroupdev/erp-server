@@ -36,6 +36,7 @@ export class InventoryTransactionsService {
                 title: true,
                 materialType: true,
                 unitOfMeasurement: true,
+                subCategoryId: true,
                 unitPrice: true,
               },
             },
@@ -46,10 +47,7 @@ export class InventoryTransactionsService {
 
     if (!transaction)
       throw new NotFoundException(
-        translate(
-          `Inventory transaction with ID ${id} does not exist.`,
-          `لا توجد حركة مخزون بالمعرف ${id}.`,
-        ),
+        translate(`Inventory transaction with ID ${id} does not exist.`, `لا توجد حركة مخزون بالمعرف ${id}.`),
       );
 
     return transaction;
