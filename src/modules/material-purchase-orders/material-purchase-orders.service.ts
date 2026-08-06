@@ -75,6 +75,12 @@ export class MaterialPurchaseOrdersService {
               columns: { id: true, materialCode: true, quantityOrdered: true, unitPrice: true },
               with: { material: { columns: MATERIAL_COLUMNS } },
             },
+            inventoryTransactionItems: {
+              columns: { id: true },
+              with: {
+                transaction: { columns: { id: true, code: true, legacyNumber: true } },
+              },
+            },
           },
         },
       },
@@ -85,6 +91,14 @@ export class MaterialPurchaseOrdersService {
         translate(`Material purchase receipt with ID ${id} does not exist.`, `لا يوجد إذن استلام مواد بالمعرف ${id}.`),
       );
 
-    return receipt;
+    const { items, ...receiptRest } = receipt;
+
+    return {
+      ...receiptRest,
+      items: items.map(({ inventoryTransactionItems, ...item }) => ({
+        ...item,
+        transaction: inventoryTransactionItems.find((invItem) => invItem.transaction)?.transaction ?? null,
+      })),
+    };
   }
 }
