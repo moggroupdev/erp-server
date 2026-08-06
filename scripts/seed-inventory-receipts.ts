@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 import { stdin as input, stdout as output } from 'node:process';
 import * as crypto from 'crypto';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'node:readline/promises';
 import * as schema from '../src/database/schema';
@@ -15,10 +16,10 @@ dotenv.config();
 
 const USAGE = `Usage: npm run seed:inventory-receipts [-- --email <email> | --id <uuid>]
 
-Seeds historical goods-receipt workbooks from:
-  - data/transactions/أذونات الإضافة لشهر 1.xlsx
-  - data/transactions/أذونات الإضافة لشهر 2.xlsx
-  - data/transactions/أذونات الإضافة لشهر 4.xlsx
+Seeds historical goods-receipt workbooks from every .xlsx file in:
+  data/transactions/
+
+Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -33,14 +34,9 @@ Examples:
   npm run seed:inventory-receipts -- --email admin@example.com
   npm run seed:inventory-receipts -- --id 00000000-0000-0000-0000-000000000001`;
 
-const DATA_FILES = [
-  'أذونات الإضافة لشهر 1.xlsx',
-  'أذونات الإضافة لشهر 2.xlsx',
-  'أذونات الإضافة لشهر 4.xlsx',
-] as const;
-
 const DATA_DIR = path.join(__dirname, '../data/transactions');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
 const VALID_UNITS = new Set<string>(MATERIAL_UNIT_VALUES);
 const UNIT_MAP: Record<string, (typeof MATERIAL_UNIT_VALUES)[number]> = {
   عدد: MATERIAL_UNITS.COUNT,
@@ -208,27 +204,81 @@ function normalizeIdentifier(value: unknown): string {
   return trimmed;
 }
 
+/** Build a UTC noon Date and reject impossible calendar values (e.g. 31/02). */
+function utcDateFromParts(year: number, month: number, day: number, label: string): Date {
+  if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+    throw new Error(`Invalid ${label} year: ${year}`);
+  }
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error(`Invalid ${label} month: ${month}`);
+  }
+  if (!Number.isInteger(day) || day < 1 || day > 31) {
+    throw new Error(`Invalid ${label} day: ${day}`);
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    throw new Error(`Invalid ${label} calendar date: ${day}/${month}/${year}`);
+  }
+  return date;
+}
+
+/**
+ * Dates in these workbooks are always DD/MM/YYYY.
+ *
+ * Excel often stores ambiguous values (both parts <= 12) as US MM/DD serials —
+ * e.g. typed "12/1/2026" (12 Jan) becomes serial for 1 Dec. When the serial's
+ * day is <= 12 we swap month/day to recover DD/MM intent. When day > 12 the
+ * serial cannot be a swapped misread, so we keep it as-is.
+ */
 function excelDateToDate(value: unknown, label: string): Date {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear();
+    const month = value.getMonth() + 1;
+    const day = value.getDate();
+    if (day > 12) return utcDateFromParts(year, month, day, label);
+    return utcDateFromParts(year, day, month, label);
+  }
 
   if (typeof value === 'number') {
     const parsed = xlsx.SSF.parse_date_code(value);
     if (!parsed) throw new Error(`Invalid Excel serial date for ${label}: ${value}`);
-    return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d, 12, 0, 0));
+    if (parsed.d > 12) return utcDateFromParts(parsed.y, parsed.m, parsed.d, label);
+    // Recover DD/MM intent from a US MM/DD-stored serial
+    return utcDateFromParts(parsed.y, parsed.d, parsed.m, label);
   }
 
   const trimmed = normalizeText(value);
   if (!trimmed) throw new Error(`Missing ${label}`);
 
-  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  // Strip stray letters (e.g. Arabic typos glued to the date) then parse DD/MM/YYYY
+  const cleaned = trimmed.replace(/[^\d/\-]/g, '');
+  const match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/);
   if (!match) throw new Error(`Unsupported ${label} format: "${trimmed}"`);
 
-  const [, dayStr, monthStr, yearStr] = match;
-  const day = Number(dayStr);
-  const month = Number(monthStr);
-  const year = Number(yearStr);
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  let year = Number(match[3]);
+  if (match[3].length === 2) year += year >= 70 ? 1900 : 2000;
 
-  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  return utcDateFromParts(year, month, day, label);
+}
+
+function listTransactionWorkbooks(): string[] {
+  if (!fs.existsSync(DATA_DIR)) {
+    throw new Error(`Transactions directory not found: ${DATA_DIR}`);
+  }
+
+  const files = fs
+    .readdirSync(DATA_DIR)
+    .filter((fileName) => fileName.toLowerCase().endsWith('.xlsx') && !fileName.startsWith('~$'))
+    .sort((a, b) => a.localeCompare(b, 'ar'));
+
+  if (files.length === 0) {
+    throw new Error(`No .xlsx files found in ${DATA_DIR}`);
+  }
+
+  return files;
 }
 
 function isoDay(date: Date): string {
@@ -273,8 +323,12 @@ function findColumnIndex(header: unknown[], aliases: string[]): number {
 function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } {
   const rows: WorkbookRow[] = [];
   const invalidRows: InvalidRow[] = [];
+  const dataFiles = listTransactionWorkbooks();
 
-  for (const fileName of DATA_FILES) {
+  console.log(`Reading ${dataFiles.length} workbook(s) from ${DATA_DIR}:`);
+  for (const fileName of dataFiles) console.log(`  - ${fileName}`);
+
+  for (const fileName of dataFiles) {
     const workbookPath = path.join(DATA_DIR, fileName);
     const workbook = xlsx.readFile(workbookPath);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -601,6 +655,7 @@ async function main() {
             legacyInvoiceNumber: usableRows[0].invoiceNumber,
             totalAmount,
             completedAt,
+            notes: SEED_IMPORT_NOTE,
             createdAt: invoiceDate,
             createdBy: user.id,
           })
@@ -643,6 +698,7 @@ async function main() {
               materialPurchaseOrderId: createdOrder.id,
               receivedAt: receiptDate,
               receivedBy: user.id,
+              notes: SEED_IMPORT_NOTE,
               createdAt: receiptDate,
               createdBy: user.id,
             })
@@ -677,6 +733,7 @@ async function main() {
               code: sql`DEFAULT`,
               legacyNumber: permitNumber,
               transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
+              notes: SEED_IMPORT_NOTE,
               createdAt: receiptDate,
               createdBy: user.id,
             })
