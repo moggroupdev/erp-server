@@ -7,8 +7,8 @@ import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permissio
 import { PERMISSIONS } from 'src/utils/constants';
 import { MaterialPurchaseOrdersService } from './material-purchase-orders.service';
 
-@Controller('material-purchase-orders')
-export class MaterialPurchaseOrdersController {
+@Controller('material-purchase-receipts')
+export class MaterialPurchaseReceiptsController {
   constructor(private readonly materialPurchaseOrdersService: MaterialPurchaseOrdersService) {}
 
   @Get()
@@ -17,7 +17,7 @@ export class MaterialPurchaseOrdersController {
   @ApiBearerAuth()
   @ApiListQueries()
   list(@Query() query: QueryParams) {
-    return this.materialPurchaseOrdersService.listOrders(query);
+    return this.materialPurchaseOrdersService.listReceipts(query);
   }
 
   @Get(':id')
@@ -25,6 +25,6 @@ export class MaterialPurchaseOrdersController {
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.materialPurchaseOrdersService.getOrder(id);
+    return this.materialPurchaseOrdersService.getReceipt(id);
   }
 }
