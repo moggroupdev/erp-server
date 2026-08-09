@@ -8,7 +8,7 @@ import {
   positiveNullableQuantityCheck,
 } from './common';
 import { users } from './users';
-import { vendors } from './vendors';
+import { suppliers } from './suppliers';
 import { materials } from './materials';
 import { contractItems } from './contracts';
 import { inventoryTransactionItems } from './inventory-transactions';
@@ -19,9 +19,9 @@ export const materialPurchaseOrders = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPO-00000001
     legacyInvoiceNumber: text('legacy_invoice_number'), // Legacy invoice number from historical seeded receipts
-    vendorId: uuid('vendor_id')
+    supplierId: uuid('supplier_id')
       .notNull()
-      .references(() => vendors.id),
+      .references(() => suppliers.id),
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_price) from material_purchase_order_items
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when all order lines are fully received across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -32,7 +32,7 @@ export const materialPurchaseOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('mpo_vendor_id_idx').on(table.vendorId),
+    index('mpo_supplier_id_idx').on(table.supplierId),
     index('mpo_completed_at_idx').on(table.completedAt),
     index('mpo_cancelled_at_idx').on(table.cancelledAt),
     index('mpo_created_at_idx').on(table.createdAt),
@@ -154,9 +154,9 @@ export const materialPurchaseReceiptItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders, ({ one, many }) => ({
-  vendor: one(vendors, {
-    fields: [materialPurchaseOrders.vendorId],
-    references: [vendors.id],
+  supplier: one(suppliers, {
+    fields: [materialPurchaseOrders.supplierId],
+    references: [suppliers.id],
   }),
   createdBy: one(users, {
     fields: [materialPurchaseOrders.createdBy],

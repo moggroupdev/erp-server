@@ -11,7 +11,7 @@ import {
   PERMISSION_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
   SERVICE_CONTRACT_INTERVAL_VALUES,
-  VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
+  SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INVENTORY_TRANSACTION_TYPE_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
 } from 'src/utils/constants';
@@ -32,7 +32,10 @@ export const offerStatusEnum = pgEnum('offer_status', OFFER_STATUS_VALUES);
 
 export const negotiationPartyEnum = pgEnum('negotiation_party', NEGOTIATION_PARTY_VALUES);
 
-export const vendorQuotationEmailStatusEnum = pgEnum('vendor_quotation_email_status', VENDOR_QUOTATION_EMAIL_STATUS_VALUES);
+export const supplierQuotationEmailStatusEnum = pgEnum(
+  'supplier_quotation_email_status',
+  SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
+);
 
 export const inventoryTransactionTypeEnum = pgEnum('inventory_transaction_type', INVENTORY_TRANSACTION_TYPE_VALUES);
 

@@ -28,7 +28,7 @@ export class MaterialPurchaseOrdersService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: { vendor: { columns: { id: true, name: true } } },
+      withRelations: { supplier: { columns: { id: true, name: true } } },
     });
   }
 
@@ -36,7 +36,7 @@ export class MaterialPurchaseOrdersService {
     const order = await this.db.query.materialPurchaseOrders.findFirst({
       where: eq(materialPurchaseOrders.id, id),
       with: {
-        vendor: { columns: { id: true, name: true } },
+        supplier: { columns: { id: true, name: true } },
         createdBy: { columns: { id: true, name: true } },
         items: {
           with: { material: { columns: MATERIAL_COLUMNS } },

@@ -6,71 +6,71 @@ import { PermissionGuard } from 'src/modules/auth/guards/permission.guard';
 import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permission.decorator';
 import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator';
 import { PERMISSIONS } from 'src/utils/constants';
-import { VendorsService } from './vendors.service';
-import { CreateVendorDto } from './dto/create-vendor.dto';
+import { SuppliersService } from './suppliers.service';
+import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
-import { UpdateVendorDto } from './dto/update-vendor.dto';
+import { UpdateSupplierDto } from './dto/update-supplier.dto';
 
-@Controller('vendors')
-export class VendorsController {
-  constructor(private readonly vendorsService: VendorsService) {}
+@Controller('suppliers')
+export class SuppliersController {
+  constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.ADD_VENDOR)
+  @AllowedPermission(PERMISSIONS.ADD_SUPPLIER)
   @ApiBearerAuth()
-  create(@Body() createVendorDto: CreateVendorDto, @RequestUser() user: User) {
-    return this.vendorsService.create(createVendorDto, user);
+  create(@Body() createSupplierDto: CreateSupplierDto, @RequestUser() user: User) {
+    return this.suppliersService.create(createSupplierDto, user);
   }
 
   @Get()
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_VENDORS)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIERS)
   @ApiBearerAuth()
   @ApiListQueries()
   list(@Query() query: QueryParams) {
-    return this.vendorsService.list(query);
+    return this.suppliersService.list(query);
   }
 
   @Get(':id')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_VENDORS)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIERS)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.get(id);
+    return this.suppliersService.get(id);
   }
 
   @Put(':id')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
   @ApiBearerAuth()
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateVendorDto: UpdateVendorDto) {
-    return this.vendorsService.update(id, updateVendorDto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateSupplierDto: UpdateSupplierDto) {
+    return this.suppliersService.update(id, updateSupplierDto);
   }
 
   // ========================= Addresses =========================
 
   @Post(':id/addresses')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
   @ApiBearerAuth()
-  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createVendorAddressDto: CreateAddressDto) {
-    return this.vendorsService.addAddress(id, createVendorAddressDto);
+  addAddress(@Param('id', ParseUUIDPipe) id: string, @Body() createSupplierAddressDto: CreateAddressDto) {
+    return this.suppliersService.addAddress(id, createSupplierAddressDto);
   }
 
   @Get(':id/addresses')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_VENDORS)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIERS)
   @ApiBearerAuth()
   listAddresses(@Param('id', ParseUUIDPipe) id: string) {
-    return this.vendorsService.listAddresses(id);
+    return this.suppliersService.listAddresses(id);
   }
 
   @Put(':id/addresses/:addressId/default')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_VENDOR)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
   @ApiBearerAuth()
   setDefaultAddress(@Param('id', ParseUUIDPipe) id: string, @Param('addressId', ParseUUIDPipe) addressId: string) {
-    return this.vendorsService.setDefaultAddress(id, addressId);
+    return this.suppliersService.setDefaultAddress(id, addressId);
   }
 }

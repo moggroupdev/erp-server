@@ -54,23 +54,23 @@ FOR EACH ROW EXECUTE PROCEDURE generate_customers_code();
 
 -- ---------------------------------------------------------------------------
 
--- VENDORS: VEN
-CREATE SEQUENCE IF NOT EXISTS vendors_code_seq START 1 INCREMENT 1;
+-- SUPPLIERS: SUP
+CREATE SEQUENCE IF NOT EXISTS suppliers_code_seq START 1 INCREMENT 1;
 
-CREATE OR REPLACE FUNCTION generate_vendors_code()
+CREATE OR REPLACE FUNCTION generate_suppliers_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'VEN-' || LPAD(nextval('vendors_code_seq')::text, 8, '0');
+    NEW.code := 'SUP-' || LPAD(nextval('suppliers_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS vendors_generate_code ON vendors;
-CREATE TRIGGER vendors_generate_code
-BEFORE INSERT ON vendors
-FOR EACH ROW EXECUTE PROCEDURE generate_vendors_code();
+DROP TRIGGER IF EXISTS suppliers_generate_code ON suppliers;
+CREATE TRIGGER suppliers_generate_code
+BEFORE INSERT ON suppliers
+FOR EACH ROW EXECUTE PROCEDURE generate_suppliers_code();
 
 -- ---------------------------------------------------------------------------
 

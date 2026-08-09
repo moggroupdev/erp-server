@@ -24,9 +24,9 @@ export const PERMISSION_VALUES = [
   'add_department',
   'read_departments',
   'update_department',
-  'add_vendor',
-  'read_vendors',
-  'update_vendor',
+  'add_supplier',
+  'read_suppliers',
+  'update_supplier',
   'add_customer',
   'read_customers',
   'update_customer',
@@ -129,14 +129,14 @@ export const NEGOTIATION_PARTIES = Object.fromEntries(
   [K in Uppercase<(typeof NEGOTIATION_PARTY_VALUES)[number]>]: Lowercase<K>;
 };
 
-// ==================== VENDOR_QUOTATION_EMAIL_STATUSES ====================
+// ==================== SUPPLIER_QUOTATION_EMAIL_STATUSES ====================
 
-export const VENDOR_QUOTATION_EMAIL_STATUS_VALUES = ['draft', 'sent', 'failed'] as const;
+export const SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES = ['draft', 'sent', 'failed'] as const;
 
-export const VENDOR_QUOTATION_EMAIL_STATUSES = Object.fromEntries(
-  VENDOR_QUOTATION_EMAIL_STATUS_VALUES.map((status) => [status.toUpperCase(), status]),
+export const SUPPLIER_QUOTATION_EMAIL_STATUSES = Object.fromEntries(
+  SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES.map((status) => [status.toUpperCase(), status]),
 ) as {
-  [K in Uppercase<(typeof VENDOR_QUOTATION_EMAIL_STATUS_VALUES)[number]>]: Lowercase<K>;
+  [K in Uppercase<(typeof SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== INVENTORY_TRANSACTION_TYPES ====================

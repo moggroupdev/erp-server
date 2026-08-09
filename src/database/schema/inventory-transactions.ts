@@ -40,7 +40,7 @@ export const inventoryTransactionItems = pgTable(
     unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual price at transaction time
     productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
     maintenanceOrderMaterialId: uuid('maintenance_order_material_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
-    outsourcingOrderItemId: uuid('outsourcing_order_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue'); materials sent to the vendor for this order line
+    outsourcingOrderItemId: uuid('outsourcing_order_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue'); materials sent to the supplier for this order line
     outsourcingReceiptItemId: uuid('outsourcing_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
     materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
   },

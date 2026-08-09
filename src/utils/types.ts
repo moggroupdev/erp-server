@@ -6,12 +6,12 @@ import {
   OFFER_STATUS_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
   TOKEN_TYPE_VALUES,
-  VENDOR_QUOTATION_EMAIL_STATUS_VALUES,
+  SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
 } from './constants';
-import { departments, users, roles, vendors, customers } from 'src/database/schema';
+import { departments, users, roles, suppliers, customers } from 'src/database/schema';
 
 export type Pagination = {
   page: number;
@@ -48,7 +48,7 @@ export type InquiryStatus = (typeof INQUIRY_STATUS_VALUES)[number];
 
 export type OfferStatus = (typeof OFFER_STATUS_VALUES)[number];
 
-export type VendorQuotationEmailStatus = (typeof VENDOR_QUOTATION_EMAIL_STATUS_VALUES)[number];
+export type SupplierQuotationEmailStatus = (typeof SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES)[number];
 
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number];
 
@@ -66,6 +66,6 @@ export type UserWithRoleWithPermissions = User & { role: RoleWithPermissions | n
 
 export type Department = typeof departments.$inferSelect;
 
-export type Vendor = typeof vendors.$inferSelect;
+export type Supplier = typeof suppliers.$inferSelect;
 
 export type Customer = typeof customers.$inferSelect;

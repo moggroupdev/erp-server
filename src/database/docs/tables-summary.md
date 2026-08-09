@@ -31,8 +31,8 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | cities                                      | uuid        | —    | NO                | NO        | NO             |
 | customers                                   | uuid        | CUS  | deletedAt field   | YES       | YES (NOT NULL) |
 | customer_addresses                          | uuid        | —    | NO                | NO        | NO             |
-| vendors                                     | uuid        | VEN  | deletedAt field   | YES       | YES (NOT NULL) |
-| vendor_addresses                            | uuid        | —    | NO                | NO        | NO             |
+| suppliers                                   | uuid        | SUP  | deletedAt field   | YES       | YES (NOT NULL) |
+| supplier_addresses                          | uuid        | —    | NO                | NO        | NO             |
 | material_category_mains                     | uuid        | —    | NO                | NO        | NO             |
 | material_category_subs                      | uuid        | —    | NO                | NO        | NO             |
 | product_category_mains                      | uuid        | —    | NO                | NO        | NO             |
@@ -61,7 +61,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | outsourcing_order_items                     | uuid        | —    | NO                | NO        | NO             |
 | outsourcing_receipts                        | uuid        | OSR  | NO                | YES       | YES (NOT NULL) |
 | outsourcing_receipt_items                   | uuid        | —    | NO                | NO        | NO             |
-| vendor_quotation_emails                     | uuid        | —    | NO                | YES       | YES (NOT NULL) |
+| supplier_quotation_emails                   | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | deliveries                                  | uuid        | DEL  | cancelledAt field | YES       | YES (NOT NULL) |
 | delivery_items                              | uuid        | —    | NO                | NO        | NO             |
 | trips                                       | uuid        | TRP  | cancelledAt field | YES       | YES (NOT NULL) |

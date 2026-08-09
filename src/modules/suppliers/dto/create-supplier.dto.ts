@@ -2,7 +2,7 @@ import { IsPhone, Trim, TrimToNull } from 'src/utils/decorators';
 import { IsNotEmpty, IsString, IsEmail, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class CreateVendorDto {
+export class CreateSupplierDto {
   @Trim()
   @IsString()
   @IsNotEmpty()

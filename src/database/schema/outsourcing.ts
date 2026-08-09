@@ -2,7 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
 import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
-import { vendors } from './vendors';
+import { suppliers } from './suppliers';
 import { materials } from './materials';
 import { inventoryTransactionItems } from './inventory-transactions';
 
@@ -11,9 +11,9 @@ export const outsourcingOrders = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: OSO-00000001
-    vendorId: uuid('vendor_id')
+    supplierId: uuid('supplier_id')
       .notNull()
-      .references(() => vendors.id),
+      .references(() => suppliers.id),
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_manufacturing_cost) from outsourcing_order_items
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when all order lines are fully received across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -24,7 +24,7 @@ export const outsourcingOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('oso_vendor_id_idx').on(table.vendorId),
+    index('oso_supplier_id_idx').on(table.supplierId),
     index('oso_completed_at_idx').on(table.completedAt),
     index('oso_cancelled_at_idx').on(table.cancelledAt),
     index('oso_created_at_idx').on(table.createdAt),
@@ -120,9 +120,9 @@ export const outsourcingReceiptItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const outsourcingOrdersRelations = relations(outsourcingOrders, ({ one, many }) => ({
-  vendor: one(vendors, {
-    fields: [outsourcingOrders.vendorId],
-    references: [vendors.id],
+  supplier: one(suppliers, {
+    fields: [outsourcingOrders.supplierId],
+    references: [suppliers.id],
   }),
   createdBy: one(users, {
     fields: [outsourcingOrders.createdBy],

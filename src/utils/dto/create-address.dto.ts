@@ -33,7 +33,7 @@ function ValidateAddressCity(validationOptions?: ValidationOptions) {
   };
 }
 
-/** Shared address shape for entities that own addresses (customers, vendors, …). */
+/** Shared address shape for entities that own addresses (customers, suppliers, …). */
 export class CreateAddressDto {
   @IsUUID()
   @IsNotEmpty()

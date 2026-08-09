@@ -10,7 +10,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
-import { VendorsModule } from './modules/vendors/vendors.module';
+import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { MaterialsModule } from './modules/materials/materials.module';
@@ -30,7 +30,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     LocationsModule,
     RolesModule,
     UsersModule,
-    VendorsModule,
+    SuppliersModule,
     CustomersModule,
     CategoriesModule,
     MaterialsModule,

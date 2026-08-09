@@ -15,7 +15,7 @@ export const productUnits = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     serialNumber: text('serial_number').notNull().unique(),
-    vendorSerialNumber: text('vendor_serial_number').unique(), // For the imported products
+    supplierSerialNumber: text('supplier_serial_number').unique(), // For the imported products
     contractItemId: uuid('contract_item_id')
       .notNull()
       .references(() => contractItems.id),

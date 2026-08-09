@@ -73,7 +73,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - `material_purchase_receipt_item_id` only when `transaction_type = 'receipt'`
 - `production_plan_item_id` only when `transaction_type = 'issue'`
 - `maintenance_order_material_id` only when `transaction_type = 'issue'`
-- `outsourcing_order_item_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing vendor)
+- `outsourcing_order_item_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing supplier)
 - `outsourcing_receipt_item_id` only when `transaction_type = 'receipt'`
 - At most one source FK (DB check enforces non-conflict; validate type match)
 
@@ -89,7 +89,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
-- Materials issued to the vendor are recorded as `inventory_transaction_items` (`transaction_type = 'issue'`) linked via `outsourcing_order_item_id` — no separate issue header table (mirrors `production_plan_items` / `maintenance_order_materials`)
+- Materials issued to the supplier are recorded as `inventory_transaction_items` (`transaction_type = 'issue'`) linked via `outsourcing_order_item_id` — no separate issue header table (mirrors `production_plan_items` / `maintenance_order_materials`)
 - `inventory_transaction_items.material_code` — when `outsourcing_order_item_id` is set, must exist in the order item's manufactured material `manufactured_material_boms`
 - Issue quantities — pre-fill from `manufactured_material_boms.quantity_required ×` remaining ordered qty; user may adjust before confirming
 - Outsourcing receipt: sum of `quantity_received + quantity_rejected` per order line ≤ `quantity_ordered`
@@ -137,10 +137,10 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
 
-### Vendor addresses
+### Supplier addresses
 
-- `vendor_addresses.city_id` — required when `country_id = EGYPT_COUNTRY_ID`; must be omitted (null) for other countries
-- At most one default address per vendor (`vendor_addresses_one_default`); setting a new default clears the previous one in `addAddress` and `setDefaultAddress`
+- `supplier_addresses.city_id` — required when `country_id = EGYPT_COUNTRY_ID`; must be omitted (null) for other countries
+- At most one default address per supplier (`supplier_addresses_one_default`); setting a new default clears the previous one in `addAddress` and `setDefaultAddress`
 
 ---
 

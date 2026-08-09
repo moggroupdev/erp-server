@@ -2,7 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
 import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
-import { vendors } from './vendors';
+import { suppliers } from './suppliers';
 import { contractItems } from './contracts';
 import { productUnits } from './product-units';
 
@@ -11,9 +11,9 @@ export const productPurchaseOrders = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: PPO-00000001
-    vendorId: uuid('vendor_id')
+    supplierId: uuid('supplier_id')
       .notNull()
-      .references(() => vendors.id),
+      .references(() => suppliers.id),
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_price) from product_purchase_order_items
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when every ordered unit has a linked product_purchase_receipt_items row
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -24,7 +24,7 @@ export const productPurchaseOrders = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('ppo_vendor_id_idx').on(table.vendorId),
+    index('ppo_supplier_id_idx').on(table.supplierId),
     index('ppo_created_at_idx').on(table.createdAt),
     index('ppo_created_by_idx').on(table.createdBy),
     index('ppo_completed_at_idx').on(table.completedAt),
@@ -124,9 +124,9 @@ export const productPurchaseReceiptItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const productPurchaseOrdersRelations = relations(productPurchaseOrders, ({ one, many }) => ({
-  vendor: one(vendors, {
-    fields: [productPurchaseOrders.vendorId],
-    references: [vendors.id],
+  supplier: one(suppliers, {
+    fields: [productPurchaseOrders.supplierId],
+    references: [suppliers.id],
   }),
   createdBy: one(users, {
     fields: [productPurchaseOrders.createdBy],

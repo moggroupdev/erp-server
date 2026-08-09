@@ -58,7 +58,7 @@ type WorkbookRow = {
   unitPrice: number;
   invoiceNumber: string;
   invoiceDate: Date;
-  vendorName: string;
+  supplierName: string;
   permitNumber: string;
   receiptDate: Date;
 };
@@ -95,7 +95,7 @@ type Summary = {
   receiptItemsCreated: number;
   inventoryTransactionsCreated: number;
   inventoryTransactionItemsCreated: number;
-  vendorsCreated: number;
+  suppliersCreated: number;
   materialsCreated: number;
   skippedExistingPermitGroups: number;
   skippedPartialPermitGroups: number;
@@ -349,7 +349,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
     const unitPriceIdx = findColumnIndex(header, ['السعر']);
     const invoiceNumberIdx = findColumnIndex(header, ['رقم الفاتورة']);
     const invoiceDateIdx = findColumnIndex(header, ['تاريخ الفاتورة']);
-    const vendorNameIdx = findColumnIndex(header, ['اسم المورد', 'أسم المورد']);
+    const supplierNameIdx = findColumnIndex(header, ['اسم المورد', 'أسم المورد']);
     const permitNumberIdx = findColumnIndex(header, ['رقم إذن الإضافة']);
     const receiptDateIdx = findColumnIndex(header, ['تاريخ الإضافة']);
 
@@ -361,7 +361,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
       unitPriceIdx,
       invoiceNumberIdx,
       invoiceDateIdx,
-      vendorNameIdx,
+      supplierNameIdx,
       permitNumberIdx,
       receiptDateIdx,
     ];
@@ -376,7 +376,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
 
       try {
         const title = normalizeText(rawRow[titleIdx]);
-        const vendorName = normalizeText(rawRow[vendorNameIdx]);
+        const supplierName = normalizeText(rawRow[supplierNameIdx]);
         const invoiceNumber = normalizeIdentifier(rawRow[invoiceNumberIdx]);
         const permitNumber = normalizeIdentifier(rawRow[permitNumberIdx]);
         const quantity = normalizeNumber(rawRow[quantityIdx], 'quantity');
@@ -385,7 +385,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
         const receiptDate = excelDateToDate(rawRow[receiptDateIdx], 'receipt date');
 
         if (!title) throw new Error('Missing material title');
-        if (!vendorName) throw new Error('Missing vendor name');
+        if (!supplierName) throw new Error('Missing supplier name');
         if (!invoiceNumber) throw new Error('Missing invoice number');
         if (!permitNumber) throw new Error('Missing permit number');
         if (quantity <= 0) throw new Error(`Quantity must be positive, got ${quantity}`);
@@ -401,7 +401,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
           unitPrice,
           invoiceNumber,
           invoiceDate,
-          vendorName,
+          supplierName,
           permitNumber,
           receiptDate,
         });
@@ -436,7 +436,7 @@ async function main() {
     receiptItemsCreated: 0,
     inventoryTransactionsCreated: 0,
     inventoryTransactionItemsCreated: 0,
-    vendorsCreated: 0,
+    suppliersCreated: 0,
     materialsCreated: 0,
     skippedExistingPermitGroups: 0,
     skippedPartialPermitGroups: 0,
@@ -490,16 +490,16 @@ async function main() {
       if (material.legacyCode) materialCodeByLegacy.set(material.legacyCode, material.code);
     }
 
-    const vendorRows = await db
+    const supplierRows = await db
       .select({
-        id: schema.vendors.id,
-        name: schema.vendors.name,
+        id: schema.suppliers.id,
+        name: schema.suppliers.name,
       })
-      .from(schema.vendors);
+      .from(schema.suppliers);
 
-    const vendorIdByName = new Map<string, string>();
-    for (const vendor of vendorRows) {
-      vendorIdByName.set(normalizeText(vendor.name), vendor.id);
+    const supplierIdByName = new Map<string, string>();
+    for (const supplier of supplierRows) {
+      supplierIdByName.set(normalizeText(supplier.name), supplier.id);
     }
 
     const existingTransactions = await db
@@ -514,7 +514,7 @@ async function main() {
 
     const orderGroups = new Map<string, WorkbookRow[]>();
     for (const row of rows) {
-      const groupKey = `${row.vendorName}|${row.invoiceNumber}|${isoDay(row.invoiceDate)}`;
+      const groupKey = `${row.supplierName}|${row.invoiceNumber}|${isoDay(row.invoiceDate)}`;
       const groupRows = orderGroups.get(groupKey);
       if (groupRows) groupRows.push(row);
       else orderGroups.set(groupKey, [row]);
@@ -537,22 +537,22 @@ async function main() {
       }
 
       await db.transaction(async (tx) => {
-        const vendorName = groupRows[0].vendorName;
-        let vendorId = vendorIdByName.get(vendorName);
+        const supplierName = groupRows[0].supplierName;
+        let supplierId = supplierIdByName.get(supplierName);
 
-        if (!vendorId) {
-          const [createdVendor] = await tx
-            .insert(schema.vendors)
+        if (!supplierId) {
+          const [createdSupplier] = await tx
+            .insert(schema.suppliers)
             .values({
               code: sql`DEFAULT`,
-              name: vendorName,
+              name: supplierName,
               createdBy: user.id,
             })
-            .returning({ id: schema.vendors.id });
+            .returning({ id: schema.suppliers.id });
 
-          vendorId = createdVendor.id;
-          vendorIdByName.set(vendorName, vendorId);
-          summary.vendorsCreated++;
+          supplierId = createdSupplier.id;
+          supplierIdByName.set(supplierName, supplierId);
+          summary.suppliersCreated++;
         }
 
         const usableRows: Array<WorkbookRow & { materialCode: string }> = [];
@@ -651,7 +651,7 @@ async function main() {
           .insert(schema.materialPurchaseOrders)
           .values({
             code: sql`DEFAULT`,
-            vendorId,
+            supplierId,
             legacyInvoiceNumber: usableRows[0].invoiceNumber,
             totalAmount,
             completedAt,
@@ -773,7 +773,7 @@ async function main() {
     console.log(`Receipt items created:          ${summary.receiptItemsCreated}`);
     console.log(`Inventory transactions created: ${summary.inventoryTransactionsCreated}`);
     console.log(`Inventory items created:        ${summary.inventoryTransactionItemsCreated}`);
-    console.log(`Vendors created:                ${summary.vendorsCreated}`);
+    console.log(`Suppliers created:              ${summary.suppliersCreated}`);
     console.log(`Materials created:              ${summary.materialsCreated}`);
     console.log(`Existing permit groups skipped: ${summary.skippedExistingPermitGroups}`);
     console.log(`Partial groups skipped:         ${summary.skippedPartialPermitGroups}`);
