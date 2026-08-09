@@ -147,7 +147,6 @@ export class BomsService {
         translate(`Product dimension with ID ${dimensionId} does not exist.`, `لا يوجد مقاس منتج بالمعرف ${dimensionId}.`),
       );
 
-    // Nested relational query through productStandardBoms → material → manufacturedMaterialBoms breaks under Drizzle's dual materials ↔ mm-boms relations; load MM components separately.
     const manufacturedMaterialCodes = [
       ...new Set(
         dimension.standardBoms
@@ -156,72 +155,18 @@ export class BomsService {
       ),
     ];
 
-    const manufacturedMaterials =
-      manufacturedMaterialCodes.length > 0
-        ? await this.db.query.materials.findMany({
-            where: inArray(materials.code, manufacturedMaterialCodes),
-            columns: { code: true },
-            with: {
-              manufacturedMaterialBoms: {
-                columns: {
-                  id: true,
-                  materialCode: true,
-                  quantityRequired: true,
-                  notes: true,
-                },
-                with: {
-                  material: {
-                    columns: {
-                      code: true,
-                      title: true,
-                      materialType: true,
-                      subCategoryId: true,
-                      unitOfMeasurement: true,
-                      unitPrice: true,
-                    },
-                  },
-                },
-              },
-            },
-          })
-        : [];
-
-    const componentsByMaterialCode = new Map(
-      manufacturedMaterials.map((material) => [material.code, material.manufacturedMaterialBoms]),
-    );
+    const componentsByMaterialCode = await this.getManufacturedMaterialComponents(manufacturedMaterialCodes);
 
     const allMaterialCodes = [
       ...new Set([
         ...dimension.standardBoms.map((item) => item.material.code),
-        ...manufacturedMaterials.flatMap((material) =>
-          material.manufacturedMaterialBoms.map((component) => component.material.code),
+        ...[...componentsByMaterialCode.values()].flatMap((components) =>
+          components.map((component) => component.material.code),
         ),
       ]),
     ];
 
-    // Last purchased price = unit price of the newest non-cancelled purchase order containing the material.
-    const lastPurchasePriceRows =
-      allMaterialCodes.length > 0
-        ? await this.db
-            .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
-              materialCode: materialPurchaseOrderItems.materialCode,
-              unitPrice: materialPurchaseOrderItems.unitPrice,
-            })
-            .from(materialPurchaseOrderItems)
-            .innerJoin(
-              materialPurchaseOrders,
-              eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id),
-            )
-            .where(
-              and(
-                inArray(materialPurchaseOrderItems.materialCode, allMaterialCodes),
-                isNull(materialPurchaseOrders.cancelledAt),
-              ),
-            )
-            .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt))
-        : [];
-
-    const lastPurchasePriceByMaterialCode = new Map(lastPurchasePriceRows.map((row) => [row.materialCode, row.unitPrice]));
+    const lastPurchasePriceByMaterialCode = await this.getLastPurchasePriceByMaterialCode(allMaterialCodes);
 
     // Overwrite the results to enclude the manufactured naterial BOMs
     return {
@@ -288,5 +233,66 @@ export class BomsService {
         ),
       );
     }
+  }
+
+  // Nested relational query through productStandardBoms → material → manufacturedMaterialBoms breaks under Drizzle's dual materials ↔ mm-boms relations; load MM components separately.
+  private async getManufacturedMaterialComponents(manufacturedMaterialCodes: string[]) {
+    const manufacturedMaterials =
+      manufacturedMaterialCodes.length > 0
+        ? await this.db.query.materials.findMany({
+            where: inArray(materials.code, manufacturedMaterialCodes),
+            columns: { code: true },
+            with: {
+              manufacturedMaterialBoms: {
+                columns: {
+                  id: true,
+                  materialCode: true,
+                  quantityRequired: true,
+                  notes: true,
+                },
+                with: {
+                  material: {
+                    columns: {
+                      code: true,
+                      title: true,
+                      materialType: true,
+                      subCategoryId: true,
+                      unitOfMeasurement: true,
+                      unitPrice: true,
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : [];
+
+    return new Map(manufacturedMaterials.map((material) => [material.code, material.manufacturedMaterialBoms]));
+  }
+
+  // Last purchased price = unit price of the newest non-cancelled purchase order containing the material.
+  private async getLastPurchasePriceByMaterialCode(materialCodes: string[]) {
+    const rows =
+      materialCodes.length > 0
+        ? await this.db
+            .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
+              materialCode: materialPurchaseOrderItems.materialCode,
+              unitPrice: materialPurchaseOrderItems.unitPrice,
+            })
+            .from(materialPurchaseOrderItems)
+            .innerJoin(
+              materialPurchaseOrders,
+              eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id),
+            )
+            .where(
+              and(
+                inArray(materialPurchaseOrderItems.materialCode, materialCodes),
+                isNull(materialPurchaseOrders.cancelledAt),
+              ),
+            )
+            .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt))
+        : [];
+
+    return new Map(rows.map((row) => [row.materialCode, row.unitPrice]));
   }
 }
