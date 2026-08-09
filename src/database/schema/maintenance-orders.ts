@@ -88,8 +88,8 @@ export const maintenanceOrderItems = pgTable(
   ],
 );
 
-export const maintenanceOrderSpareParts = pgTable(
-  'maintenance_order_spare_parts',
+export const maintenanceOrderMaterials = pgTable(
+  'maintenance_order_materials',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     maintenanceOrderId: uuid('maintenance_order_id').notNull(),
@@ -103,14 +103,14 @@ export const maintenanceOrderSpareParts = pgTable(
   },
   (table) => [
     foreignKey({
-      name: 'mosp_mo_id_fk',
+      name: 'mom_mo_id_fk',
       columns: [table.maintenanceOrderId],
       foreignColumns: [maintenanceOrders.id],
     }),
-    index('maintenance_order_spare_parts_maintenance_order_id_idx').on(table.maintenanceOrderId),
-    index('maintenance_order_spare_parts_material_code_idx').on(table.materialCode),
-    positiveQuantityCheck('maintenance_order_spare_parts_quantity_positive', table.quantity),
-    positiveQuantityCheck('maintenance_order_spare_parts_unit_price_positive', table.unitPrice),
+    index('maintenance_order_materials_maintenance_order_id_idx').on(table.maintenanceOrderId),
+    index('maintenance_order_materials_material_code_idx').on(table.materialCode),
+    positiveQuantityCheck('maintenance_order_materials_quantity_positive', table.quantity),
+    positiveQuantityCheck('maintenance_order_materials_unit_price_positive', table.unitPrice),
   ],
 );
 
@@ -144,7 +144,7 @@ export const maintenanceOrdersRelations = relations(maintenanceOrders, ({ one, m
     relationName: 'maintenanceOrderCreatedBy',
   }),
   items: many(maintenanceOrderItems),
-  spareParts: many(maintenanceOrderSpareParts),
+  materials: many(maintenanceOrderMaterials),
 }));
 
 export const maintenanceOrderItemsRelations = relations(maintenanceOrderItems, ({ one }) => ({
@@ -158,13 +158,13 @@ export const maintenanceOrderItemsRelations = relations(maintenanceOrderItems, (
   }),
 }));
 
-export const maintenanceOrderSparePartsRelations = relations(maintenanceOrderSpareParts, ({ one, many }) => ({
+export const maintenanceOrderMaterialsRelations = relations(maintenanceOrderMaterials, ({ one, many }) => ({
   maintenanceOrder: one(maintenanceOrders, {
-    fields: [maintenanceOrderSpareParts.maintenanceOrderId],
+    fields: [maintenanceOrderMaterials.maintenanceOrderId],
     references: [maintenanceOrders.id],
   }),
   material: one(materials, {
-    fields: [maintenanceOrderSpareParts.materialCode],
+    fields: [maintenanceOrderMaterials.materialCode],
     references: [materials.code],
   }),
   inventoryTransactionItems: many(inventoryTransactionItems),

@@ -72,7 +72,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | service_agreements                          | uuid        | SVC  | NO                | YES       | YES (NOT NULL) |
 | maintenance_orders                          | uuid        | MNT  | cancelledAt field | YES       | YES (NOT NULL) |
 | maintenance_order_items                     | uuid        | —    | NO                | NO        | NO             |
-| maintenance_order_spare_parts               | uuid        | —    | NO                | NO        | NO             |
+| maintenance_order_materials                 | uuid        | —    | NO                | NO        | NO             |
 | production_plans                            | uuid        | PPL  | NO                | YES       | YES (NOT NULL) |
 | production_sub_department_managers          | enum        | —    | NO                | NO        | NO             |
 | production_plan_items                       | uuid        | —    | NO                | NO        | NO             |

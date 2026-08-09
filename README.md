@@ -42,7 +42,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Raw materials, spare parts, and manufactured materials with stock levels and minimum thresholds
 - Manufactured materials have their own bill of materials (BOM) listing the component materials required to produce them; components may themselves be manufactured materials
 - Inventory movements: receipts from purchase inspection or outsourcing returns, issues to production, maintenance, or outsourcing vendors, and returns
-- Material issues linked to the production work, maintenance spare-part lines, or outsourcing order lines consuming them
+- Material issues linked to the production work, maintenance order material lines, or outsourcing order lines consuming them
 
 ### Procurement
 
@@ -70,7 +70,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 - Service agreements: recurring maintenance contracts per customer address (monthly, quarterly, semi-annual, or annual intervals)
 - Maintenance orders: in-warranty, out-of-warranty, or service-contract work on one or more product units; performed on-site at the customer or in-factory
-- Spare parts consumed during maintenance with selling-price snapshots; customer is billed for parts except in-warranty work not caused by misuse
+- Materials of any type (spare parts, raw materials, manufactured materials) consumed during maintenance with selling-price snapshots; customer is billed for them except in-warranty work not caused by misuse
 
 ### Organization & Access
 
@@ -122,7 +122,7 @@ Customer reception is recorded separately when the customer physically receives 
 
 ### After-Sales Maintenance
 
-Once equipment is in the field, the company services it under three arrangements: in-warranty repair, out-of-warranty paid service, or a recurring service contract tied to a customer address. Maintenance orders may cover multiple units in one visit, performed on-site or with the product brought into the factory. Spare parts issued from inventory are recorded with a price snapshot; whether the customer is charged is set per line when adding spare parts.
+Once equipment is in the field, the company services it under three arrangements: in-warranty repair, out-of-warranty paid service, or a recurring service contract tied to a customer address. Maintenance orders may cover multiple units in one visit, performed on-site or with the product brought into the factory. Materials issued from inventory for the job are recorded with a price snapshot; whether the customer is charged is set per line.
 
 ---
 

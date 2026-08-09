@@ -5,7 +5,7 @@ import { users } from './users';
 import { materialPurchaseReceiptItems } from './purchasing-materials';
 import { productionPlanItems } from './production-plans';
 import { materials } from './materials';
-import { maintenanceOrderSpareParts } from './maintenance-orders';
+import { maintenanceOrderMaterials } from './maintenance-orders';
 import { outsourcingOrderItems, outsourcingReceiptItems } from './outsourcing';
 
 export const inventoryTransactions = pgTable(
@@ -39,7 +39,7 @@ export const inventoryTransactionItems = pgTable(
     quantity: numeric('quantity').notNull(),
     unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual price at transaction time
     productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
-    maintenanceOrderSparePartId: uuid('maintenance_order_spare_part_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
+    maintenanceOrderMaterialId: uuid('maintenance_order_material_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue')
     outsourcingOrderItemId: uuid('outsourcing_order_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('issue'); materials sent to the vendor for this order line
     outsourcingReceiptItemId: uuid('outsourcing_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
     materialPurchaseReceiptItemId: uuid('material_purchase_receipt_item_id'), // @APP_CHECKED - Source must match parent transaction_type ('receipt')
@@ -57,9 +57,9 @@ export const inventoryTransactionItems = pgTable(
       foreignColumns: [productionPlanItems.id],
     }),
     foreignKey({
-      name: 'inv_tx_items_mosp_id_fk',
-      columns: [table.maintenanceOrderSparePartId],
-      foreignColumns: [maintenanceOrderSpareParts.id],
+      name: 'inv_tx_items_mom_id_fk',
+      columns: [table.maintenanceOrderMaterialId],
+      foreignColumns: [maintenanceOrderMaterials.id],
     }),
     foreignKey({
       name: 'inv_tx_items_osoi_id_fk',
@@ -79,7 +79,7 @@ export const inventoryTransactionItems = pgTable(
     index('inv_tx_items_transaction_id_idx').on(table.transactionId),
     index('inv_tx_items_material_code_idx').on(table.materialCode),
     index('inv_tx_items_pp_item_id_idx').on(table.productionPlanItemId),
-    index('inv_tx_items_mosp_id_idx').on(table.maintenanceOrderSparePartId),
+    index('inv_tx_items_mom_id_idx').on(table.maintenanceOrderMaterialId),
     index('inv_tx_items_osoi_id_idx').on(table.outsourcingOrderItemId),
     index('inv_tx_items_osri_id_idx').on(table.outsourcingReceiptItemId),
     index('inv_tx_items_mpri_id_idx').on(table.materialPurchaseReceiptItemId),
@@ -88,7 +88,7 @@ export const inventoryTransactionItems = pgTable(
     check(
       'inv_tx_items_source_non_conflicting',
       // This check ensures that only one source is specified for the inventory transaction item
-      sql`num_nonnulls(${table.materialPurchaseReceiptItemId}, ${table.productionPlanItemId}, ${table.maintenanceOrderSparePartId}, ${table.outsourcingOrderItemId}, ${table.outsourcingReceiptItemId}) <= 1`,
+      sql`num_nonnulls(${table.materialPurchaseReceiptItemId}, ${table.productionPlanItemId}, ${table.maintenanceOrderMaterialId}, ${table.outsourcingOrderItemId}, ${table.outsourcingReceiptItemId}) <= 1`,
     ),
   ],
 );
@@ -121,9 +121,9 @@ export const inventoryTransactionItemsRelations = relations(inventoryTransaction
     fields: [inventoryTransactionItems.productionPlanItemId],
     references: [productionPlanItems.id],
   }),
-  maintenanceOrderSparePart: one(maintenanceOrderSpareParts, {
-    fields: [inventoryTransactionItems.maintenanceOrderSparePartId],
-    references: [maintenanceOrderSpareParts.id],
+  maintenanceOrderMaterial: one(maintenanceOrderMaterials, {
+    fields: [inventoryTransactionItems.maintenanceOrderMaterialId],
+    references: [maintenanceOrderMaterials.id],
   }),
   outsourcingOrderItem: one(outsourcingOrderItems, {
     fields: [inventoryTransactionItems.outsourcingOrderItemId],
