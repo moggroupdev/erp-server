@@ -716,16 +716,9 @@ async function main() {
                 quantityRejected: 0,
               })),
             )
-            .returning({
-              id: schema.materialPurchaseReceiptItems.id,
-              materialPurchaseOrderItemId: schema.materialPurchaseReceiptItems.materialPurchaseOrderItemId,
-            });
+            .returning({ id: schema.materialPurchaseReceiptItems.id });
 
           summary.receiptItemsCreated += createdReceiptItems.length;
-
-          const receiptItemIdByOrderItemId = new Map(
-            createdReceiptItems.map((item) => [item.materialPurchaseOrderItemId, item.id]),
-          );
 
           const [createdTransaction] = await tx
             .insert(schema.inventoryTransactions)
@@ -733,6 +726,7 @@ async function main() {
               code: sql`DEFAULT`,
               legacyNumber: permitNumber,
               transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
+              materialPurchaseReceiptId: createdReceipt.id,
               notes: SEED_IMPORT_NOTE,
               createdAt: receiptDate,
               createdBy: user.id,
@@ -748,9 +742,6 @@ async function main() {
               materialCode: row.materialCode,
               quantity: row.quantity,
               unitPrice: row.unitPrice,
-              materialPurchaseReceiptItemId: receiptItemIdByOrderItemId.get(
-                orderItemIdByMaterialCode.get(row.materialCode)!,
-              )!,
             })),
           );
 
