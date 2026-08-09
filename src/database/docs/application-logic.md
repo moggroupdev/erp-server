@@ -68,14 +68,17 @@ Recalculate inside a transaction when source rows change.
 
 Skip when DB already enforces (checks, partial unique indexes, deferred triggers).
 
-### Inventory (`inventory_transaction_items`)
+### Inventory (`inventory_transactions` / `inventory_transaction_items`)
 
-- `material_purchase_receipt_item_id` only when `transaction_type = 'receipt'`
-- `production_plan_item_id` only when `transaction_type = 'issue'`
-- `maintenance_order_material_id` only when `transaction_type = 'issue'`
-- `outsourcing_order_item_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing supplier)
-- `outsourcing_receipt_item_id` only when `transaction_type = 'receipt'`
-- At most one source FK (DB check enforces non-conflict; validate type match)
+All sources live on the header — one source event per transaction; items only carry material, quantity, and price.
+
+- `inventory_transactions.material_purchase_receipt_id` only when `transaction_type = 'receipt'`
+- `inventory_transactions.outsourcing_receipt_id` only when `transaction_type = 'receipt'`
+- `inventory_transactions.maintenance_order_id` only when `transaction_type = 'issue'`
+- `inventory_transactions.outsourcing_order_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing supplier)
+- `inventory_transactions.production_plan_item_id` only when `transaction_type = 'issue'`; scoped to one plan item (one unit + stage) per transaction
+- At most one header source FK (DB check enforces non-conflict; validate type match)
+- Each item's `material_code` must belong to the header source (e.g. a line of the linked purchase receipt, a `maintenance_order_materials` row of the linked maintenance order, or the plan item's product BOM)
 
 ### Purchasing
 
@@ -89,8 +92,8 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
-- Materials issued to the supplier are recorded as `inventory_transaction_items` (`transaction_type = 'issue'`) linked via `outsourcing_order_item_id` — no separate issue header table (mirrors `production_plan_items` / `maintenance_order_materials`)
-- `inventory_transaction_items.material_code` — when `outsourcing_order_item_id` is set, must exist in the order item's manufactured material `manufactured_material_boms`
+- Materials issued to the supplier are recorded as an `inventory_transactions` header (`transaction_type = 'issue'`) linked via `outsourcing_order_id` — no separate issue header table (mirrors the maintenance order flow)
+- `inventory_transaction_items.material_code` — when the header's `outsourcing_order_id` is set, must exist in the `manufactured_material_boms` of one of the order's manufactured materials
 - Issue quantities — pre-fill from `manufactured_material_boms.quantity_required ×` remaining ordered qty; user may adjust before confirming
 - Outsourcing receipt: sum of `quantity_received + quantity_rejected` per order line ≤ `quantity_ordered`
 
@@ -126,6 +129,7 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 ### Maintenance
 
 - `maintenance_order_items.product_unit_id` — belongs to MO `customer_id`; not cancelled; in-warranty rules when `in_warranty`; address match when `service_contract`
+- `maintenance_order_materials` — one row per material per order (DB unique); repeated use of the same material accumulates into that row's `quantity`
 
 ### Catalog pricing
 

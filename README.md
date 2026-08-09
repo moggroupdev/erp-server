@@ -55,7 +55,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 - External manufacturing of manufactured materials: send component materials from stock to a supplier, pay a manufacturing fee, and receive the finished manufactured material back into inventory
 - Outsourcing orders track the agreed manufactured material quantities and unit manufacturing costs
-- Materials are issued from stock to the supplier via inventory transactions linked to the outsourcing order line (quantities suggested from the manufactured material BOM, adjustable before confirm); multiple partial issues per order are supported
+- Materials are issued from stock to the supplier via inventory transactions linked to the outsourcing order (quantities suggested from the manufactured material BOM, adjustable before confirm); multiple partial issues per order are supported
 - Outsourcing receipts inspect and accept/reject returned manufactured materials; accepted quantities enter stock via inventory transactions; multiple partial receipts per order are supported
 
 ### Delivery & Installation

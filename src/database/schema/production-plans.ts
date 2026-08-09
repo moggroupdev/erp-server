@@ -1,7 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, check, index, foreignKey, uniqueIndex } from 'drizzle-orm/pg-core';
 import { createdAt, productionSubDepartmentEnum } from './common';
-import { inventoryTransactionItems } from './inventory-transactions';
+import { inventoryTransactions } from './inventory-transactions';
 import { productUnits } from './product-units';
 import { users } from './users';
 
@@ -110,7 +110,7 @@ export const productionPlanItemsRelations = relations(productionPlanItems, ({ on
     references: [productUnits.id],
   }),
   notes: many(productionPlanItemNotes),
-  inventoryTransactionItems: many(inventoryTransactionItems),
+  inventoryTransactions: many(inventoryTransactions),
 }));
 
 export const productionPlanItemNotesRelations = relations(productionPlanItemNotes, ({ one }) => ({

@@ -11,7 +11,7 @@ import { users } from './users';
 import { suppliers } from './suppliers';
 import { materials } from './materials';
 import { contractItems } from './contracts';
-import { inventoryTransactionItems } from './inventory-transactions';
+import { inventoryTransactions } from './inventory-transactions';
 
 export const materialPurchaseOrders = pgTable(
   'material_purchase_orders',
@@ -210,9 +210,10 @@ export const materialPurchaseReceiptsRelations = relations(materialPurchaseRecei
     relationName: 'materialPurchaseReceiptCreatedBy',
   }),
   items: many(materialPurchaseReceiptItems),
+  inventoryTransactions: many(inventoryTransactions),
 }));
 
-export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseReceiptItems, ({ one, many }) => ({
+export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseReceiptItems, ({ one }) => ({
   materialPurchaseReceipt: one(materialPurchaseReceipts, {
     fields: [materialPurchaseReceiptItems.materialPurchaseReceiptId],
     references: [materialPurchaseReceipts.id],
@@ -221,5 +222,4 @@ export const materialPurchaseReceiptItemsRelations = relations(materialPurchaseR
     fields: [materialPurchaseReceiptItems.materialPurchaseOrderItemId],
     references: [materialPurchaseOrderItems.id],
   }),
-  inventoryTransactionItems: many(inventoryTransactionItems),
 }));

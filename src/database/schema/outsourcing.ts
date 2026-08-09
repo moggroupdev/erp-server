@@ -4,7 +4,7 @@ import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } f
 import { users } from './users';
 import { suppliers } from './suppliers';
 import { materials } from './materials';
-import { inventoryTransactionItems } from './inventory-transactions';
+import { inventoryTransactions } from './inventory-transactions';
 
 export const outsourcingOrders = pgTable(
   'outsourcing_orders',
@@ -131,6 +131,7 @@ export const outsourcingOrdersRelations = relations(outsourcingOrders, ({ one, m
   }),
   items: many(outsourcingOrderItems),
   receipts: many(outsourcingReceipts),
+  materialIssueTransactions: many(inventoryTransactions),
 }));
 
 export const outsourcingOrderItemsRelations = relations(outsourcingOrderItems, ({ one, many }) => ({
@@ -142,7 +143,6 @@ export const outsourcingOrderItemsRelations = relations(outsourcingOrderItems, (
     fields: [outsourcingOrderItems.manufacturedMaterialCode],
     references: [materials.code],
   }),
-  materialIssueTransactionItems: many(inventoryTransactionItems),
   receiptItems: many(outsourcingReceiptItems),
 }));
 
@@ -162,9 +162,10 @@ export const outsourcingReceiptsRelations = relations(outsourcingReceipts, ({ on
     relationName: 'outsourcingReceiptCreatedBy',
   }),
   items: many(outsourcingReceiptItems),
+  inventoryTransactions: many(inventoryTransactions),
 }));
 
-export const outsourcingReceiptItemsRelations = relations(outsourcingReceiptItems, ({ one, many }) => ({
+export const outsourcingReceiptItemsRelations = relations(outsourcingReceiptItems, ({ one }) => ({
   outsourcingReceipt: one(outsourcingReceipts, {
     fields: [outsourcingReceiptItems.outsourcingReceiptId],
     references: [outsourcingReceipts.id],
@@ -173,5 +174,4 @@ export const outsourcingReceiptItemsRelations = relations(outsourcingReceiptItem
     fields: [outsourcingReceiptItems.outsourcingOrderItemId],
     references: [outsourcingOrderItems.id],
   }),
-  inventoryTransactionItems: many(inventoryTransactionItems),
 }));

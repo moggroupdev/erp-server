@@ -6,7 +6,7 @@ import { serviceAgreements } from './service-agreements';
 import { productUnits } from './product-units';
 import { materials } from './materials';
 import { users } from './users';
-import { inventoryTransactionItems } from './inventory-transactions';
+import { inventoryTransactions } from './inventory-transactions';
 import { trips } from './trips';
 
 export const maintenanceOrders = pgTable(
@@ -109,6 +109,8 @@ export const maintenanceOrderMaterials = pgTable(
     }),
     index('maintenance_order_materials_maintenance_order_id_idx').on(table.maintenanceOrderId),
     index('maintenance_order_materials_material_code_idx').on(table.materialCode),
+    // One row per material per order, so a sourced inventory transaction line resolves unambiguously
+    unique('mom_mo_material_unique').on(table.maintenanceOrderId, table.materialCode),
     positiveQuantityCheck('maintenance_order_materials_quantity_positive', table.quantity),
     positiveQuantityCheck('maintenance_order_materials_unit_price_positive', table.unitPrice),
   ],
@@ -145,6 +147,7 @@ export const maintenanceOrdersRelations = relations(maintenanceOrders, ({ one, m
   }),
   items: many(maintenanceOrderItems),
   materials: many(maintenanceOrderMaterials),
+  inventoryTransactions: many(inventoryTransactions),
 }));
 
 export const maintenanceOrderItemsRelations = relations(maintenanceOrderItems, ({ one }) => ({
@@ -158,7 +161,7 @@ export const maintenanceOrderItemsRelations = relations(maintenanceOrderItems, (
   }),
 }));
 
-export const maintenanceOrderMaterialsRelations = relations(maintenanceOrderMaterials, ({ one, many }) => ({
+export const maintenanceOrderMaterialsRelations = relations(maintenanceOrderMaterials, ({ one }) => ({
   maintenanceOrder: one(maintenanceOrders, {
     fields: [maintenanceOrderMaterials.maintenanceOrderId],
     references: [maintenanceOrders.id],
@@ -167,5 +170,4 @@ export const maintenanceOrderMaterialsRelations = relations(maintenanceOrderMate
     fields: [maintenanceOrderMaterials.materialCode],
     references: [materials.code],
   }),
-  inventoryTransactionItems: many(inventoryTransactionItems),
 }));
