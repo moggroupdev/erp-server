@@ -1,7 +1,13 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materials, productDimensions, productStandardBoms } from 'src/database/schema';
+import {
+  materialPurchaseOrderItems,
+  materialPurchaseOrders,
+  materials,
+  productDimensions,
+  productStandardBoms,
+} from 'src/database/schema';
 import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
@@ -184,6 +190,39 @@ export class BomsService {
       manufacturedMaterials.map((material) => [material.code, material.manufacturedMaterialBoms]),
     );
 
+    const allMaterialCodes = [
+      ...new Set([
+        ...dimension.standardBoms.map((item) => item.material.code),
+        ...manufacturedMaterials.flatMap((material) =>
+          material.manufacturedMaterialBoms.map((component) => component.material.code),
+        ),
+      ]),
+    ];
+
+    // Last purchased price = unit price of the newest non-cancelled purchase order containing the material.
+    const lastPurchasePriceRows =
+      allMaterialCodes.length > 0
+        ? await this.db
+            .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
+              materialCode: materialPurchaseOrderItems.materialCode,
+              unitPrice: materialPurchaseOrderItems.unitPrice,
+            })
+            .from(materialPurchaseOrderItems)
+            .innerJoin(
+              materialPurchaseOrders,
+              eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id),
+            )
+            .where(
+              and(
+                inArray(materialPurchaseOrderItems.materialCode, allMaterialCodes),
+                isNull(materialPurchaseOrders.cancelledAt),
+              ),
+            )
+            .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt))
+        : [];
+
+    const lastPurchasePriceByMaterialCode = new Map(lastPurchasePriceRows.map((row) => [row.materialCode, row.unitPrice]));
+
     // Overwrite the results to enclude the manufactured naterial BOMs
     return {
       ...dimension,
@@ -191,7 +230,14 @@ export class BomsService {
         ...item,
         material: {
           ...item.material,
-          manufacturedMaterialBoms: componentsByMaterialCode.get(item.material.code) || [],
+          lastPurchasePrice: lastPurchasePriceByMaterialCode.get(item.material.code) ?? null,
+          manufacturedMaterialBoms: (componentsByMaterialCode.get(item.material.code) || []).map((component) => ({
+            ...component,
+            material: {
+              ...component.material,
+              lastPurchasePrice: lastPurchasePriceByMaterialCode.get(component.material.code) ?? null,
+            },
+          })),
         },
       })),
     };
