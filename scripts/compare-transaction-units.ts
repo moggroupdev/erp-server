@@ -28,7 +28,14 @@ const OUT_DIR = path.join(TRANSACTIONS_DIR, 'results');
 const OUT_CSV_PATH = path.join(OUT_DIR, 'unit-mismatches.csv');
 const OUT_XLSX_PATH = path.join(OUT_DIR, 'unit-mismatches.xlsx');
 
-const CSV_HEADERS = ['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', 'الوحدة في الفواتير'] as const;
+const CSV_HEADERS = [
+  'الكود',
+  'اسم الصنف',
+  'الوحدة في قاعدة البيانات',
+  'الوحدة في الفواتير',
+  'المورد',
+  'آخر فاتورة',
+] as const;
 
 type MaterialRow = {
   legacyCode: string;
@@ -41,11 +48,59 @@ type OutputRow = {
   title: string;
   dbUnitArabic: string;
   invoiceUnit: string;
+  supplierNames: string;
+  lastInvoiceNumber: string;
+};
+
+/** Per (material, invoice unit) aggregate used to build one output row. */
+type UnitUsage = {
+  invoiceUnit: string;
+  supplierNames: Set<string>;
+  lastInvoiceNumber: string;
+  lastInvoiceTime: number;
 };
 
 function norm(value: unknown): string {
   if (value == null) return '';
   return String(value).replace(/\s+/g, ' ').trim();
+}
+
+/** Invoice numbers are stored as numbers in some workbooks; render them without decimals. */
+function normIdentifier(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'number') return Number.isInteger(value) ? String(value) : String(value);
+  return norm(value);
+}
+
+/**
+ * Invoice dates are DD/MM/YYYY, but Excel often stores ambiguous values as US
+ * MM/DD serials (same handling as seed-inventory-receipts). Only used for
+ * ordering here, so unparsable values fall back to 0.
+ */
+function invoiceDateTime(value: unknown): number {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear();
+    const month = value.getMonth() + 1;
+    const day = value.getDate();
+    return day > 12 ? Date.UTC(year, month - 1, day) : Date.UTC(year, day - 1, month);
+  }
+
+  if (typeof value === 'number') {
+    const parsed = xlsx.SSF.parse_date_code(value);
+    if (!parsed) return 0;
+    return parsed.d > 12 ? Date.UTC(parsed.y, parsed.m - 1, parsed.d) : Date.UTC(parsed.y, parsed.d - 1, parsed.m);
+  }
+
+  const cleaned = norm(value).replace(/[^\d/\-]/g, '');
+  const match = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/);
+  if (!match) return 0;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  let year = Number(match[3]);
+  if (match[3].length === 2) year += year >= 70 ? 1900 : 2000;
+
+  return Date.UTC(year, month - 1, day);
 }
 
 function escapeCsv(value: string): string {
@@ -95,6 +150,8 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
     { header: 'اسم الصنف', key: 'title', width: 48 },
     { header: 'الوحدة في قاعدة البيانات', key: 'dbUnitArabic', width: 26 },
     { header: 'الوحدة في الفواتير', key: 'invoiceUnit', width: 22 },
+    { header: 'المورد', key: 'supplierNames', width: 40 },
+    { header: 'آخر رقم فاتورة', key: 'lastInvoiceNumber', width: 18 },
   ];
 
   const thinBorder: Partial<ExcelJS.Borders> = {
@@ -119,13 +176,15 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
       title: row.title,
       dbUnitArabic: row.dbUnitArabic,
       invoiceUnit: row.invoiceUnit,
+      supplierNames: row.supplierNames,
+      lastInvoiceNumber: row.lastInvoiceNumber,
     });
     excelRow.height = 22;
     excelRow.eachCell((cell, colNumber) => {
       cell.font = { size: 11, name: 'Arial' };
       cell.border = thinBorder;
       cell.alignment = {
-        horizontal: colNumber === 2 ? 'right' : 'center',
+        horizontal: colNumber === 2 || colNumber === 5 ? 'right' : 'center',
         vertical: 'middle',
         wrapText: true,
         readingOrder: 'rtl',
@@ -143,7 +202,7 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
 
   sheet.autoFilter = {
     from: { row: 1, column: 1 },
-    to: { row: Math.max(1, sheet.rowCount), column: 4 },
+    to: { row: Math.max(1, sheet.rowCount), column: 6 },
   };
 
   sheet.headerFooter = {
@@ -171,8 +230,25 @@ function findCol(row: (string | number | null)[] | undefined, name: string): num
   return -1;
 }
 
+function findColAny(row: (string | number | null)[] | undefined, names: string[]): number {
+  for (const name of names) {
+    const idx = findCol(row, name);
+    if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+type ParsedRow = {
+  legacyCode: string;
+  title: string;
+  unit: string;
+  supplierName: string;
+  invoiceNumber: string;
+  invoiceTime: number;
+};
+
 function parseTransactionFile(filePath: string): {
-  rows: { legacyCode: string; title: string; unit: string }[];
+  rows: ParsedRow[];
   headerFound: boolean;
 } {
   const wb = xlsx.readFile(filePath);
@@ -191,12 +267,15 @@ function parseTransactionFile(filePath: string): {
   const codeCol = findCol(header, 'كود الصنف');
   const titleCol = findCol(header, 'الصنف');
   const unitCol = findCol(header, 'الوحدة');
+  const supplierCol = findColAny(header, ['اسم المورد', 'أسم المورد', 'المورد']);
+  const invoiceNumberCol = findCol(header, 'رقم الفاتورة');
+  const invoiceDateCol = findCol(header, 'تاريخ الفاتورة');
 
   if (codeCol === -1 || unitCol === -1) {
     return { rows: [], headerFound: false };
   }
 
-  const rows: { legacyCode: string; title: string; unit: string }[] = [];
+  const rows: ParsedRow[] = [];
   for (let i = headerIdx + 1; i < sheetRows.length; i++) {
     const row = sheetRows[i];
     if (!row) continue;
@@ -208,6 +287,9 @@ function parseTransactionFile(filePath: string): {
       legacyCode,
       title: titleCol >= 0 ? norm(row[titleCol]) : '',
       unit: norm(row[unitCol]),
+      supplierName: supplierCol >= 0 ? norm(row[supplierCol]) : '',
+      invoiceNumber: invoiceNumberCol >= 0 ? normIdentifier(row[invoiceNumberCol]) : '',
+      invoiceTime: invoiceDateCol >= 0 ? invoiceDateTime(row[invoiceDateCol]) : 0,
     });
   }
 
@@ -258,8 +340,8 @@ async function main(): Promise<void> {
     console.log(`Loaded ${materialsByLegacy.size} materials with legacyCode from DB`);
     console.log(`Found ${files.length} transaction file(s)`);
 
-    // legacyCode -> distinct raw invoice units
-    const invoiceUnitsByLegacy = new Map<string, Set<string>>();
+    // legacyCode -> raw invoice unit -> suppliers + latest invoice seen with that unit
+    const invoiceUnitsByLegacy = new Map<string, Map<string, UnitUsage>>();
     let filesParsed = 0;
     let rowsScanned = 0;
     const unmatchedLegacyCodes = new Set<string>();
@@ -285,13 +367,21 @@ async function main(): Promise<void> {
 
         let units = invoiceUnitsByLegacy.get(row.legacyCode);
         if (!units) {
-          units = new Set();
+          units = new Map();
           invoiceUnitsByLegacy.set(row.legacyCode, units);
         }
-        if (row.unit) {
-          units.add(row.unit);
-        } else {
-          units.add('(فارغ)');
+
+        const invoiceUnit = row.unit || '(فارغ)';
+        let usage = units.get(invoiceUnit);
+        if (!usage) {
+          usage = { invoiceUnit, supplierNames: new Set(), lastInvoiceNumber: '', lastInvoiceTime: -1 };
+          units.set(invoiceUnit, usage);
+        }
+
+        if (row.supplierName) usage.supplierNames.add(row.supplierName);
+        if (row.invoiceNumber && row.invoiceTime >= usage.lastInvoiceTime) {
+          usage.lastInvoiceNumber = row.invoiceNumber;
+          usage.lastInvoiceTime = row.invoiceTime;
         }
       }
     }
@@ -307,14 +397,16 @@ async function main(): Promise<void> {
       const dbNorm = norm(dbUnitArabic);
 
       let hasMismatch = false;
-      for (const invoiceUnit of invoiceUnits) {
-        if (norm(invoiceUnit) !== dbNorm) {
+      for (const usage of invoiceUnits.values()) {
+        if (norm(usage.invoiceUnit) !== dbNorm) {
           hasMismatch = true;
           output.push({
             legacyCode,
             title: material.title,
             dbUnitArabic,
-            invoiceUnit,
+            invoiceUnit: usage.invoiceUnit,
+            supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
+            lastInvoiceNumber: usage.lastInvoiceNumber,
           });
         }
       }
@@ -329,7 +421,7 @@ async function main(): Promise<void> {
       writeCsv(
         OUT_CSV_PATH,
         CSV_HEADERS,
-        output.map((r) => [r.legacyCode, r.title, r.dbUnitArabic, r.invoiceUnit]),
+        output.map((r) => [r.legacyCode, r.title, r.dbUnitArabic, r.invoiceUnit, r.supplierNames, r.lastInvoiceNumber]),
       );
       console.log(`Wrote: ${OUT_CSV_PATH}`);
     } catch (e) {
