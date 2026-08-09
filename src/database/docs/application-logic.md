@@ -70,14 +70,9 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 ### Inventory (`inventory_transactions` / `inventory_transaction_items`)
 
-All sources live on the header — one source event per transaction; items only carry material, quantity, and price.
+All sources live on the header — one source event per transaction; items only carry material, quantity, and price. Source exclusivity and source-vs-`transaction_type` matching are DB checks (`inv_tx_source_non_conflicting`, `inv_tx_receipt_source_type_match`, `inv_tx_issue_source_type_match`), so `return` transactions can carry no source at all.
 
-- `inventory_transactions.material_purchase_receipt_id` only when `transaction_type = 'receipt'`
-- `inventory_transactions.outsourcing_receipt_id` only when `transaction_type = 'receipt'`
-- `inventory_transactions.maintenance_order_id` only when `transaction_type = 'issue'`
-- `inventory_transactions.outsourcing_order_id` only when `transaction_type = 'issue'` (materials sent to the outsourcing supplier)
-- `inventory_transactions.production_plan_item_id` only when `transaction_type = 'issue'`; scoped to one plan item (one unit + stage) per transaction
-- At most one header source FK (DB check enforces non-conflict; validate type match)
+- A production issue is scoped to one `production_plan_item_id` (one unit + stage) per transaction
 - Each item's `material_code` must belong to the header source (e.g. a line of the linked purchase receipt, a `maintenance_order_materials` row of the linked maintenance order, or the plan item's product BOM)
 
 ### Purchasing

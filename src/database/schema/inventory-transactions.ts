@@ -13,15 +13,15 @@ export const inventoryTransactions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: IVT-00000001
-    legacyNumber: text('legacy_number').unique(), // Old system transaction number for seed/migration
+    legacyNumber: text('legacy_number'), // Old system transaction number for seed/migration
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
     notes: text('notes'),
-    // Sources - one source event per transaction
-    materialPurchaseReceiptId: uuid('material_purchase_receipt_id'), // @APP_CHECKED - Source must match transaction_type ('receipt')
-    maintenanceOrderId: uuid('maintenance_order_id'), // @APP_CHECKED - Source must match transaction_type ('issue')
-    outsourcingOrderId: uuid('outsourcing_order_id'), // @APP_CHECKED - Source must match transaction_type ('issue'); materials sent to the supplier for this order
-    outsourcingReceiptId: uuid('outsourcing_receipt_id'), // @APP_CHECKED - Source must match transaction_type ('receipt')
-    productionPlanItemId: uuid('production_plan_item_id'), // @APP_CHECKED - Source must match transaction_type ('issue')
+    // Sources - one source event per transaction; the source must match transaction_type (DB-checked below)
+    materialPurchaseReceiptId: uuid('material_purchase_receipt_id'),
+    maintenanceOrderId: uuid('maintenance_order_id'),
+    outsourcingOrderId: uuid('outsourcing_order_id'), // Materials sent to the supplier for this order
+    outsourcingReceiptId: uuid('outsourcing_receipt_id'),
+    productionPlanItemId: uuid('production_plan_item_id'),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
@@ -53,6 +53,7 @@ export const inventoryTransactions = pgTable(
       columns: [table.productionPlanItemId],
       foreignColumns: [productionPlanItems.id],
     }),
+    index('inventory_transactions_legacy_number_idx').on(table.legacyNumber),
     index('inventory_transactions_transaction_type_idx').on(table.transactionType),
     index('inventory_transactions_created_at_idx').on(table.createdAt),
     index('inventory_transactions_created_by_idx').on(table.createdBy),
@@ -65,6 +66,14 @@ export const inventoryTransactions = pgTable(
       'inv_tx_source_non_conflicting',
       // This check ensures that only one source is specified for the inventory transaction
       sql`num_nonnulls(${table.materialPurchaseReceiptId}, ${table.maintenanceOrderId}, ${table.outsourcingOrderId}, ${table.outsourcingReceiptId}, ${table.productionPlanItemId}) <= 1`,
+    ),
+    check(
+      'inv_tx_receipt_source_type_match',
+      sql`num_nonnulls(${table.materialPurchaseReceiptId}, ${table.outsourcingReceiptId}) = 0 OR ${table.transactionType} = 'receipt'`,
+    ),
+    check(
+      'inv_tx_issue_source_type_match',
+      sql`num_nonnulls(${table.maintenanceOrderId}, ${table.outsourcingOrderId}, ${table.productionPlanItemId}) = 0 OR ${table.transactionType} = 'issue'`,
     ),
   ],
 );
