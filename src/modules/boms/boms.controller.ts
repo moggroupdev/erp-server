@@ -14,18 +14,6 @@ import { UpdateBomItemDto } from './dto/update-bom-item.dto';
 export class BomsController {
   constructor(private readonly bomsService: BomsService) {}
 
-  @Post(':dimensionId/append')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.ADD_PRODUCT_BOM)
-  @ApiBearerAuth()
-  appendItem(
-    @Param('dimensionId', ParseUUIDPipe) dimensionId: string,
-    @Body() createBomItemDto: CreateBomItemDto,
-    @RequestUser() user: User,
-  ) {
-    return this.bomsService.appendItem(dimensionId, createBomItemDto, user);
-  }
-
   @Post(':dimensionId')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.ADD_PRODUCT_BOM)
@@ -44,6 +32,18 @@ export class BomsController {
   @ApiBearerAuth()
   get(@Param('dimensionId', ParseUUIDPipe) dimensionId: string) {
     return this.bomsService.get(dimensionId);
+  }
+
+  @Post(':dimensionId/append')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.ADD_PRODUCT_BOM)
+  @ApiBearerAuth()
+  appendItem(
+    @Param('dimensionId', ParseUUIDPipe) dimensionId: string,
+    @Body() createBomItemDto: CreateBomItemDto,
+    @RequestUser() user: User,
+  ) {
+    return this.bomsService.appendItem(dimensionId, createBomItemDto, user);
   }
 
   @Patch(':itemId')
