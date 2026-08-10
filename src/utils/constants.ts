@@ -65,7 +65,20 @@ export const LOGIN_STATUSES = Object.fromEntries(LOGIN_STATUS_VALUES.map((status
 
 // ==================== MATERIAL_UNITS ====================
 
-export const MATERIAL_UNIT_VALUES = ['count', 'kg', 'gram', 'meter', 'cm', 'liter', 'sheet', 'roll', 'box'] as const;
+export const MATERIAL_UNIT_VALUES = [
+  'count',
+  'gram',
+  'kg',
+  'ton',
+  'cm',
+  'meter',
+  'square_meter',
+  'cubic_meter',
+  'liter',
+  'sheet',
+  'roll',
+  'box',
+] as const;
 
 export const MATERIAL_UNITS = Object.fromEntries(
   MATERIAL_UNIT_VALUES.map((materialUnit) => [materialUnit.toUpperCase(), materialUnit]),
