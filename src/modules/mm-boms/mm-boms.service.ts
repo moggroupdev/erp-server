@@ -5,12 +5,66 @@ import { manufacturedMaterialBoms, materials } from 'src/database/schema';
 import { MATERIAL_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateMmBomItemDto } from './dto/create-mm-bom-item.dto';
 import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 
 @Injectable()
 export class MmBomsService {
-  constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private db: DrizzleDB,
+    private materialUnitConversionService: MaterialUnitConversionService,
+  ) {}
+
+  public async get(manufacturedMaterialCode: string) {
+    const material = await this.db.query.materials.findFirst({
+      where: eq(materials.code, manufacturedMaterialCode),
+      columns: {
+        code: true,
+        title: true,
+        description: true,
+        subCategoryId: true,
+        materialType: true,
+        unitOfMeasurement: true,
+        unitPrice: true,
+        quantity: true,
+      },
+      with: {
+        manufacturedMaterialBoms: {
+          columns: {
+            id: true,
+            manufacturedMaterialCode: true,
+            materialCode: true,
+            quantityRequired: true,
+            notes: true,
+          },
+          with: {
+            material: {
+              columns: {
+                code: true,
+                title: true,
+                subCategoryId: true,
+                materialType: true,
+                unitOfMeasurement: true,
+                unitPrice: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!material) {
+      throw new NotFoundException(
+        translate(
+          `Material with code ${manufacturedMaterialCode} does not exist.`,
+          `لا توجد مادة بالكود ${manufacturedMaterialCode}.`,
+        ),
+      );
+    }
+
+    return material;
+  }
 
   public async appendItem(manufacturedMaterialCode: string, createBomItemDto: CreateMmBomItemDto, user: User) {
     const parentMaterial = await this.db.query.materials.findFirst({
@@ -77,68 +131,49 @@ export class MmBomsService {
       );
     }
 
+    const { unit, quantityRequired, ...rest } = createBomItemDto;
+
+    const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
+      createBomItemDto.materialCode,
+      quantityRequired,
+      unit,
+    );
+
     const [item] = await this.db
       .insert(manufacturedMaterialBoms)
-      .values({ ...createBomItemDto, manufacturedMaterialCode, createdBy: user.id })
+      .values({ ...rest, quantityRequired: quantityInBaseUnit, manufacturedMaterialCode, createdBy: user.id })
       .returning();
 
     return item;
   }
 
-  public async get(manufacturedMaterialCode: string) {
-    const material = await this.db.query.materials.findFirst({
-      where: eq(materials.code, manufacturedMaterialCode),
-      columns: {
-        code: true,
-        title: true,
-        description: true,
-        subCategoryId: true,
-        materialType: true,
-        unitOfMeasurement: true,
-        unitPrice: true,
-        quantity: true,
-      },
-      with: {
-        manufacturedMaterialBoms: {
-          columns: {
-            id: true,
-            manufacturedMaterialCode: true,
-            materialCode: true,
-            quantityRequired: true,
-            notes: true,
-          },
-          with: {
-            material: {
-              columns: {
-                code: true,
-                title: true,
-                subCategoryId: true,
-                materialType: true,
-                unitOfMeasurement: true,
-                unitPrice: true,
-              },
-            },
-          },
-        },
-      },
-    });
+  public async updateItem(itemId: string, updateBomItemDto: UpdateMmBomItemDto) {
+    const { unit, quantityRequired, ...rest } = updateBomItemDto;
 
-    if (!material) {
-      throw new NotFoundException(
-        translate(
-          `Material with code ${manufacturedMaterialCode} does not exist.`,
-          `لا توجد مادة بالكود ${manufacturedMaterialCode}.`,
-        ),
+    let quantityInBaseUnit = quantityRequired;
+
+    if (quantityRequired !== undefined) {
+      const existing = await this.db.query.manufacturedMaterialBoms.findFirst({
+        where: eq(manufacturedMaterialBoms.id, itemId),
+        columns: { materialCode: true },
+      });
+
+      if (!existing) {
+        throw new NotFoundException(
+          translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+        );
+      }
+
+      quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
+        existing.materialCode,
+        quantityRequired,
+        unit,
       );
     }
 
-    return material;
-  }
-
-  public async updateItem(itemId: string, updateBomItemDto: UpdateMmBomItemDto) {
     const [updatedItem] = await this.db
       .update(manufacturedMaterialBoms)
-      .set(updateBomItemDto)
+      .set({ ...rest, ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}) })
       .where(eq(manufacturedMaterialBoms.id, itemId))
       .returning();
 

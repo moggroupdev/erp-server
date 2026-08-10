@@ -13,6 +13,14 @@ import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 export class MmBomsController {
   constructor(private readonly mmBomsService: MmBomsService) {}
 
+  @Get(':manufacturedMaterialCode')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MANUFACTURED_MATERIAL_BOMS)
+  @ApiBearerAuth()
+  get(@Param('manufacturedMaterialCode') manufacturedMaterialCode: string) {
+    return this.mmBomsService.get(manufacturedMaterialCode);
+  }
+
   @Post(':manufacturedMaterialCode/append')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.ADD_MANUFACTURED_MATERIAL_BOM)
@@ -23,14 +31,6 @@ export class MmBomsController {
     @RequestUser() user: User,
   ) {
     return this.mmBomsService.appendItem(manufacturedMaterialCode, createBomItemDto, user);
-  }
-
-  @Get(':manufacturedMaterialCode')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MANUFACTURED_MATERIAL_BOMS)
-  @ApiBearerAuth()
-  get(@Param('manufacturedMaterialCode') manufacturedMaterialCode: string) {
-    return this.mmBomsService.get(manufacturedMaterialCode);
   }
 
   @Patch(':itemId')
