@@ -135,6 +135,8 @@ All sources live on the header — one source event per transaction; items only 
 - `materials.code` — random unique 6-digit string (`100000`–`999999`) generated on create; omit from create/update DTOs; immutable
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
+- `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`
+- Quantity-entry endpoints (BOM items today; purchasing/inventory/maintenance/outsourcing when built) may accept an optional `unit`; the service converts via `conversion_factor_to_base` (or leaves the quantity unchanged when `unit` is omitted / equals the base unit) and persists only the base-unit quantity — the entered unit is not stored
 
 ### Supplier addresses
 

@@ -51,6 +51,28 @@ export const materials = pgTable(
   ],
 );
 
+// Alternate units for a material with fixed conversion factors into materials.unit_of_measurement (base unit).
+export const materialUnitConversions = pgTable(
+  'material_unit_conversions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialCode: text('material_code')
+      .notNull()
+      .references(() => materials.code),
+    unit: materialUnitEnum('unit').notNull(), // @APP_CHECKED - must differ from materials.unit_of_measurement
+    conversionFactorToBase: numeric('conversion_factor_to_base').notNull(), // 1 `unit` = conversionFactorToBase base units
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    unique('muc_material_unit_unique').on(table.materialCode, table.unit),
+    index('muc_material_code_idx').on(table.materialCode),
+    positiveQuantityCheck('muc_conversion_factor_positive', table.conversionFactorToBase),
+  ],
+);
+
 // Standard BOM template for a manufactured material (material with material_type = 'manufactured_material').
 export const manufacturedMaterialBoms = pgTable(
   'manufactured_material_boms',
@@ -101,6 +123,7 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
   purchaseOrderItems: many(materialPurchaseOrderItems),
   inventoryTransactionItems: many(inventoryTransactionItems),
   productStandardBoms: many(productStandardBoms),
+  unitConversions: many(materialUnitConversions),
   manufacturedMaterialBoms: many(manufacturedMaterialBoms, {
     relationName: 'manufacturedMaterialBomManufacturedMaterial',
   }),
@@ -108,6 +131,17 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
     relationName: 'manufacturedMaterialBomMaterial',
   }),
   outsourcingOrderItems: many(outsourcingOrderItems),
+}));
+
+export const materialUnitConversionsRelations = relations(materialUnitConversions, ({ one }) => ({
+  material: one(materials, {
+    fields: [materialUnitConversions.materialCode],
+    references: [materials.code],
+  }),
+  createdBy: one(users, {
+    fields: [materialUnitConversions.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const manufacturedMaterialBomsRelations = relations(manufacturedMaterialBoms, ({ one }) => ({
