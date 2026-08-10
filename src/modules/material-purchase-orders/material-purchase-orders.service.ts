@@ -66,7 +66,8 @@ export class MaterialPurchaseOrdersService {
     const receipt = await this.db.query.materialPurchaseReceipts.findFirst({
       where: eq(materialPurchaseReceipts.id, id),
       with: {
-        materialPurchaseOrder: { columns: { id: true, code: true, legacyInvoiceNumber: true } },
+        materialPurchaseOrder: { columns: { id: true, legacyInvoiceNumber: true } },
+        inventoryTransactions: { columns: { id: true, legacyNumber: true } },
         createdBy: { columns: { id: true, name: true } },
         receivedBy: { columns: { id: true, name: true } },
         items: {
@@ -77,7 +78,6 @@ export class MaterialPurchaseOrdersService {
             },
           },
         },
-        inventoryTransactions: { columns: { id: true, code: true, legacyNumber: true } },
       },
     });
 
@@ -86,13 +86,6 @@ export class MaterialPurchaseOrdersService {
         translate(`Material purchase receipt with ID ${id} does not exist.`, `لا يوجد إذن استلام مواد بالمعرف ${id}.`),
       );
 
-    const { items, inventoryTransactions, ...receiptRest } = receipt;
-    // The stock receipt transaction is sourced from the receipt itself, so every line shares it.
-    const transaction = inventoryTransactions[0] ?? null;
-
-    return {
-      ...receiptRest,
-      items: items.map((item) => ({ ...item, transaction })),
-    };
+    return receipt;
   }
 }

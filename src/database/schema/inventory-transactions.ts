@@ -18,9 +18,9 @@ export const inventoryTransactions = pgTable(
     notes: text('notes'),
     // Sources - one source event per transaction; the source must match transaction_type (DB-checked below)
     materialPurchaseReceiptId: uuid('material_purchase_receipt_id'),
-    maintenanceOrderId: uuid('maintenance_order_id'),
-    outsourcingOrderId: uuid('outsourcing_order_id'), // Materials sent to the supplier for this order
     outsourcingReceiptId: uuid('outsourcing_receipt_id'),
+    outsourcingOrderId: uuid('outsourcing_order_id'),
+    maintenanceOrderId: uuid('maintenance_order_id'),
     productionPlanItemId: uuid('production_plan_item_id'),
     createdAt,
     createdBy: uuid('created_by')
