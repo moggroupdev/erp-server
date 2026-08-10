@@ -1,13 +1,14 @@
 import { randomInt } from 'crypto';
-import { and, eq, isNull } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, eq, isNull } from 'drizzle-orm';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialCategorySubs, materials } from 'src/database/schema';
+import { materialCategorySubs, materials, materialUnitConversions } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
+import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 
 @Injectable()
 export class MaterialsService {
@@ -66,7 +67,76 @@ export class MaterialsService {
     return updatedMaterial;
   }
 
+  // ============================== UNIT CONVERSIONS ==============================
+
+  public async addUnitConversion(materialCode: string, dto: CreateMaterialUnitConversionDto, user: User) {
+    const material = await this.assertMaterialExists(materialCode);
+
+    if (dto.unit === material.unitOfMeasurement) {
+      throw new BadRequestException(
+        translate(
+          `Unit "${dto.unit}" is already the base unit for material ${materialCode}.`,
+          `الوحدة "${dto.unit}" هي بالفعل وحدة القياس الأساسية للمادة ${materialCode}.`,
+        ),
+      );
+    }
+
+    const [row] = await this.db
+      .insert(materialUnitConversions)
+      .values({
+        materialCode,
+        unit: dto.unit,
+        conversionFactorToBase: dto.conversionFactorToBase,
+        createdBy: user.id,
+      })
+      .returning();
+
+    return row;
+  }
+
+  public async listUnitConversions(materialCode: string) {
+    await this.assertMaterialExists(materialCode);
+
+    return await this.db.query.materialUnitConversions.findMany({
+      where: eq(materialUnitConversions.materialCode, materialCode),
+      with: { createdBy: { columns: { id: true, name: true } } },
+      orderBy: asc(materialUnitConversions.createdAt),
+    });
+  }
+
+  public async removeUnitConversion(materialCode: string, id: string) {
+    await this.assertMaterialExists(materialCode);
+
+    const [deleted] = await this.db
+      .delete(materialUnitConversions)
+      .where(and(eq(materialUnitConversions.id, id), eq(materialUnitConversions.materialCode, materialCode)))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(
+        translate(
+          `Unit conversion with ID ${id} does not exist for material ${materialCode}.`,
+          `لا يوجد تحويل وحدة بالمعرف ${id} للمادة ${materialCode}.`,
+        ),
+      );
+    }
+
+    return deleted;
+  }
+
   // ============================== PRIVATE METHODS ==============================
+
+  private async assertMaterialExists(code: string) {
+    const material = await this.db.query.materials.findFirst({
+      where: and(eq(materials.code, code), isNull(materials.deletedAt)),
+      columns: { code: true, unitOfMeasurement: true },
+    });
+
+    if (!material)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+    return material;
+  }
 
   private async generateUniqueCode(): Promise<string> {
     for (let attempt = 0; attempt < 1000; attempt++) {

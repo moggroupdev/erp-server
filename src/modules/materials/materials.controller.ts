@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -9,6 +9,7 @@ import { PERMISSIONS } from 'src/utils/constants';
 import { MaterialsService } from './materials.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
+import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 
 @Controller('materials')
 export class MaterialsController {
@@ -45,5 +46,29 @@ export class MaterialsController {
   @ApiBearerAuth()
   update(@Param('code') code: string, @Body() updateMaterialDto: UpdateMaterialDto) {
     return this.materialsService.update(code, updateMaterialDto);
+  }
+
+  @Post(':code/units')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_MATERIAL)
+  @ApiBearerAuth()
+  addUnitConversion(@Param('code') code: string, @Body() dto: CreateMaterialUnitConversionDto, @RequestUser() user: User) {
+    return this.materialsService.addUnitConversion(code, dto, user);
+  }
+
+  @Get(':code/units')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIALS)
+  @ApiBearerAuth()
+  listUnitConversions(@Param('code') code: string) {
+    return this.materialsService.listUnitConversions(code);
+  }
+
+  @Delete(':code/units/:id')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_MATERIAL)
+  @ApiBearerAuth()
+  removeUnitConversion(@Param('code') code: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.materialsService.removeUnitConversion(code, id);
   }
 }
