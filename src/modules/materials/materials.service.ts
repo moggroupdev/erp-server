@@ -108,26 +108,6 @@ export class MaterialsService {
     });
   }
 
-  public async removeUnitConversion(materialCode: string, id: string) {
-    await this.assertMaterialExists(materialCode);
-
-    const [deleted] = await this.db
-      .delete(materialUnitConversions)
-      .where(and(eq(materialUnitConversions.id, id), eq(materialUnitConversions.materialCode, materialCode)))
-      .returning();
-
-    if (!deleted) {
-      throw new NotFoundException(
-        translate(
-          `Unit conversion with ID ${id} does not exist for material ${materialCode}.`,
-          `لا يوجد تحويل وحدة بالمعرف ${id} للمادة ${materialCode}.`,
-        ),
-      );
-    }
-
-    return deleted;
-  }
-
   // ============================== PRIVATE METHODS ==============================
 
   private async assertMaterialExists(code: string) {

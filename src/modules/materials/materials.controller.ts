@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, UseGuards, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -62,13 +62,5 @@ export class MaterialsController {
   @ApiBearerAuth()
   listUnitConversions(@Param('code') code: string) {
     return this.materialsService.listUnitConversions(code);
-  }
-
-  @Delete(':code/units/:id')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_MATERIAL)
-  @ApiBearerAuth()
-  removeUnitConversion(@Param('code') code: string, @Param('id', ParseUUIDPipe) id: string) {
-    return this.materialsService.removeUnitConversion(code, id);
   }
 }
