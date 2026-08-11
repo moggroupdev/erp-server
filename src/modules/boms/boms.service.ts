@@ -309,6 +309,9 @@ export class BomsService {
                       unitOfMeasurement: true,
                       unitPrice: true,
                     },
+                    with: {
+                      unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
+                    },
                   },
                 },
               },
