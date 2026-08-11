@@ -7,7 +7,7 @@ const createNumericType = (precision: number, scale: number) =>
     toDriver: (value: number) => value.toString(),
   });
 
-export const numeric = createNumericType(17, 5);
+export const numeric = createNumericType(18, 6);
 
 /** Percentage value — 0.00 – 100.00 */
 export const percentage = createNumericType(5, 2);

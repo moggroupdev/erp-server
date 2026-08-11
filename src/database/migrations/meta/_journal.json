@@ -127,6 +127,13 @@
       "when": 1786448075228,
       "tag": "0017_bright_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786449512299,
+      "tag": "0018_aberrant_katie_power",
+      "breakpoints": true
     }
   ]
 }
