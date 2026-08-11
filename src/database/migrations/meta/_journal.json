@@ -120,6 +120,13 @@
       "when": 1786361164698,
       "tag": "0016_oval_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786448075228,
+      "tag": "0017_bright_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }
