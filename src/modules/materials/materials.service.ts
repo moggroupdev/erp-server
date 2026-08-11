@@ -34,6 +34,7 @@ export class MaterialsService {
       sorting: true,
       pagination: true,
       additionalConditions: [isNull(materials.deletedAt)],
+      withRelations: { unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } } },
       joinFilters: {
         mainCategoryId: {
           localColumn: materials.subCategoryId,
@@ -49,7 +50,10 @@ export class MaterialsService {
   public async get(code: string) {
     const material = await this.db.query.materials.findFirst({
       where: eq(materials.code, code),
-      with: { createdBy: { columns: { id: true, name: true } } },
+      with: {
+        createdBy: { columns: { id: true, name: true } },
+        unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
+      },
     });
     if (!material)
       throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));

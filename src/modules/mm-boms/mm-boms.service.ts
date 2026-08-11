@@ -48,6 +48,9 @@ export class MmBomsService {
                 unitOfMeasurement: true,
                 unitPrice: true,
               },
+              with: {
+                unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
+              },
             },
           },
         },
