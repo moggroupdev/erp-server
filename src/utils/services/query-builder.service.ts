@@ -1,5 +1,23 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { getTableColumns, SQL, and, or, asc, desc, count, eq, gt, gte, lt, lte, ne, ilike, inArray } from 'drizzle-orm';
+import {
+  getTableColumns,
+  SQL,
+  sql,
+  and,
+  or,
+  asc,
+  desc,
+  count,
+  eq,
+  gt,
+  gte,
+  lt,
+  lte,
+  ne,
+  ilike,
+  inArray,
+  type SQLWrapper,
+} from 'drizzle-orm';
 import { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { PaginatedData, Pagination, QueryParams } from '../types';
@@ -34,6 +52,7 @@ interface QueryBuilderOptionsBase {
   sorting?: boolean;
   additionalConditions?: SQL[];
   withRelations?: RelationConfig;
+  extras?: (fields: Record<string, SQLWrapper>, operators: { sql: typeof sql }) => Record<string, unknown>;
   /** Virtual filter keys resolved via subquery on a related table (e.g. filter materials by mainCategoryId). */
   joinFilters?: Record<string, JoinFilterConfig>;
   /** Drizzle column selection (e.g. `{ password: false }`) — works for both plain and relational queries. */
@@ -72,6 +91,7 @@ export class QueryBuilderService {
       pagination = false,
       sorting = false,
       withRelations,
+      extras,
       joinFilters,
       columns,
     } = options;
@@ -149,8 +169,8 @@ export class QueryBuilderService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // If relations are requested, use relational query API
-    if (withRelations) {
+    // If relations or extras are requested, use relational query API
+    if (withRelations || extras) {
       return this.executeWithRelations<T>(table, queryParams, whereClause, {
         filtering,
         searchableFields,
@@ -158,6 +178,7 @@ export class QueryBuilderService {
         pagination,
         sorting,
         withRelations,
+        extras,
         columns,
       });
     }
@@ -258,7 +279,7 @@ export class QueryBuilderService {
     whereClause: SQL | undefined,
     options: QueryBuilderOptionsBase & { pagination?: boolean },
   ): Promise<Partial<T>[] | PaginatedData<T>> {
-    const { pagination, sorting, withRelations, columns } = options;
+    const { pagination, sorting, withRelations, extras, columns } = options;
     const tableColumns = getTableColumns(table);
 
     // Get table name from the table object
@@ -303,6 +324,7 @@ export class QueryBuilderService {
       where?: SQL;
       columns?: Record<string, boolean>;
       with?: RelationConfig;
+      extras?: QueryBuilderOptionsBase['extras'];
       orderBy?: SQL;
       limit?: number;
       offset?: number;
@@ -310,9 +332,10 @@ export class QueryBuilderService {
 
     const queryOptions: QueryOptions = {
       where: whereClause,
-      with: withRelations,
     };
 
+    if (withRelations) queryOptions.with = withRelations;
+    if (extras) queryOptions.extras = extras;
     if (columns) queryOptions.columns = columns;
     if (orderByClause) queryOptions.orderBy = orderByClause;
 

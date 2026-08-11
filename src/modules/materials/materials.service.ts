@@ -5,6 +5,7 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { materialCategorySubs, materials, materialUnitConversions } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
@@ -34,7 +35,7 @@ export class MaterialsService {
       sorting: true,
       pagination: true,
       additionalConditions: [isNull(materials.deletedAt)],
-      withRelations: { unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } } },
+      extras: materialUnitConversionsExtra,
       joinFilters: {
         mainCategoryId: {
           localColumn: materials.subCategoryId,
@@ -50,10 +51,8 @@ export class MaterialsService {
   public async get(code: string) {
     const material = await this.db.query.materials.findFirst({
       where: eq(materials.code, code),
-      with: {
-        createdBy: { columns: { id: true, name: true } },
-        unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
-      },
+      with: { createdBy: { columns: { id: true, name: true } } },
+      extras: materialUnitConversionsExtra,
     });
     if (!material)
       throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
