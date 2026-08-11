@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { materialCategorySubs, materials, materialUnitConversions } from 'src/database/schema';
@@ -74,7 +74,15 @@ export class MaterialsService {
   // ============================== UNIT CONVERSIONS ==============================
 
   public async addUnitConversion(materialCode: string, dto: CreateMaterialUnitConversionDto, user: User) {
-    const material = await this.assertMaterialExists(materialCode);
+    const material = await this.db.query.materials.findFirst({
+      where: and(eq(materials.code, materialCode), isNull(materials.deletedAt)),
+      columns: { code: true, unitOfMeasurement: true },
+    });
+
+    if (!material)
+      throw new NotFoundException(
+        translate(`Material with code ${materialCode} does not exist.`, `لا توجد مادة بالكود ${materialCode}.`),
+      );
 
     if (dto.unit === material.unitOfMeasurement) {
       throw new BadRequestException(
@@ -98,29 +106,7 @@ export class MaterialsService {
     return row;
   }
 
-  public async listUnitConversions(materialCode: string) {
-    await this.assertMaterialExists(materialCode);
-
-    return await this.db.query.materialUnitConversions.findMany({
-      where: eq(materialUnitConversions.materialCode, materialCode),
-      with: { createdBy: { columns: { id: true, name: true } } },
-      orderBy: asc(materialUnitConversions.createdAt),
-    });
-  }
-
   // ============================== PRIVATE METHODS ==============================
-
-  private async assertMaterialExists(code: string) {
-    const material = await this.db.query.materials.findFirst({
-      where: and(eq(materials.code, code), isNull(materials.deletedAt)),
-      columns: { code: true, unitOfMeasurement: true },
-    });
-
-    if (!material)
-      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
-
-    return material;
-  }
 
   private async generateUniqueCode(): Promise<string> {
     for (let attempt = 0; attempt < 1000; attempt++) {

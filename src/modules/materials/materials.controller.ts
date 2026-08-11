@@ -55,12 +55,4 @@ export class MaterialsController {
   addUnitConversion(@Param('code') code: string, @Body() dto: CreateMaterialUnitConversionDto, @RequestUser() user: User) {
     return this.materialsService.addUnitConversion(code, dto, user);
   }
-
-  @Get(':code/units')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIALS)
-  @ApiBearerAuth()
-  listUnitConversions(@Param('code') code: string) {
-    return this.materialsService.listUnitConversions(code);
-  }
 }
