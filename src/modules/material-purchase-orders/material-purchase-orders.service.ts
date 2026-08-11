@@ -14,6 +14,10 @@ const MATERIAL_COLUMNS = {
   subCategoryId: true,
 } as const;
 
+const MATERIAL_UNIT_CONVERSIONS_WITH = {
+  unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
+} as const;
+
 @Injectable()
 export class MaterialPurchaseOrdersService {
   constructor(
@@ -39,7 +43,7 @@ export class MaterialPurchaseOrdersService {
         supplier: { columns: { id: true, name: true } },
         createdBy: { columns: { id: true, name: true } },
         items: {
-          with: { material: { columns: MATERIAL_COLUMNS } },
+          with: { material: { columns: MATERIAL_COLUMNS, with: MATERIAL_UNIT_CONVERSIONS_WITH } },
         },
       },
     });
@@ -74,7 +78,7 @@ export class MaterialPurchaseOrdersService {
           with: {
             materialPurchaseOrderItem: {
               columns: { id: true, materialCode: true, quantityOrdered: true, unitPrice: true },
-              with: { material: { columns: MATERIAL_COLUMNS } },
+              with: { material: { columns: MATERIAL_COLUMNS, with: MATERIAL_UNIT_CONVERSIONS_WITH } },
             },
           },
         },
