@@ -4,6 +4,7 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { contractItems, inventoryTransactions } from 'src/database/schema';
 import { QueryParams } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 
 /**
@@ -69,9 +70,7 @@ export class InventoryTransactionsService {
                 subCategoryId: true,
                 unitPrice: true,
               },
-              with: {
-                unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
-              },
+              extras: materialUnitConversionsExtra,
             },
           },
         },

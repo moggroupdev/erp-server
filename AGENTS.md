@@ -38,6 +38,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 - Index columns used in `WHERE`, `ORDER BY`, and join keys.
 - Prefer narrow selects; use Drizzle `with` only when needed.
+- Drizzle `with` aliases are `{table}_{rel}_{rel}_…` and Postgres truncates identifiers at 63 chars. Do not nest another `with` on a deep path — load the leaf via `extras` (see `src/utils/extras/`) or a second query.
 - Use `src/utils/services/query-builder.service.ts` for list/filter/pagination.
 - Quantity updates: `sql\`quantity + ${n}` in transactions — never read-modify-write in Node.
 

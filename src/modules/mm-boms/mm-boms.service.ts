@@ -5,6 +5,7 @@ import { manufacturedMaterialBoms, materials } from 'src/database/schema';
 import { MATERIAL_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateMmBomItemDto } from './dto/create-mm-bom-item.dto';
 import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
@@ -48,9 +49,7 @@ export class MmBomsService {
                 unitOfMeasurement: true,
                 unitPrice: true,
               },
-              with: {
-                unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
-              },
+              extras: materialUnitConversionsExtra,
             },
           },
         },

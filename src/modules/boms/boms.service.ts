@@ -11,6 +11,7 @@ import {
 import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
@@ -111,9 +112,7 @@ export class BomsService {
                 unitOfMeasurement: true,
                 unitPrice: true,
               },
-              with: {
-                unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
-              },
+              extras: materialUnitConversionsExtra,
             },
           },
         },
@@ -309,9 +308,7 @@ export class BomsService {
                       unitOfMeasurement: true,
                       unitPrice: true,
                     },
-                    with: {
-                      unitConversions: { columns: { id: true, unit: true, conversionFactorToBase: true } },
-                    },
+                    extras: materialUnitConversionsExtra,
                   },
                 },
               },
