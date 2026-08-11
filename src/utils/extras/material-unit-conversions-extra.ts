@@ -4,7 +4,7 @@ import type { MaterialUnit } from '../types';
 export type MaterialUnitConversionSummary = {
   id: string;
   unit: MaterialUnit;
-  conversionFactorToBase: string;
+  conversionFactorToBase: number;
 };
 
 /**
@@ -19,7 +19,7 @@ export function materialUnitConversionsExtra(fields: { code: SQLWrapper }, opera
         json_agg(json_build_object(
           'id', muc.id,
           'unit', muc.unit,
-          'conversionFactorToBase', muc.conversion_factor_to_base::text
+          'conversionFactorToBase', muc.conversion_factor_to_base
         )),
         '[]'::json
       )
