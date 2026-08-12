@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { isNotNull } from 'drizzle-orm';
+import { parse } from 'csv-parse/sync';
 import * as xlsx from 'xlsx';
 import ExcelJS from 'exceljs';
 import * as schema from '../src/database/schema';
@@ -55,22 +55,30 @@ const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
 })();
 
 const TRANSACTIONS_DIR = path.join(__dirname, '../data/transactions');
-const OUT_DIR = path.join(TRANSACTIONS_DIR, 'results');
-const OUT_CSV_PATH = path.join(OUT_DIR, 'unit-mismatches.csv');
-const OUT_XLSX_PATH = path.join(OUT_DIR, 'unit-mismatches.xlsx');
+const TRANSACTIONS_OUT_DIR = path.join(TRANSACTIONS_DIR, '_unit-mismatches');
+const MATERIALS_OUT_DIR = path.join(__dirname, '../data/materials/_unit-mismatches');
 
-const CSV_HEADERS = [
-  'الكود',
-  'اسم الصنف',
-  'الوحدة في قاعدة البيانات',
-  'الوحدة في الفواتير',
-  'المورد',
-  'آخر فاتورة',
+const MATERIAL_CSV_SOURCES = [
+  {
+    label: 'raw-materials',
+    sourceLabel: 'مواد خام',
+    filePath: path.join(__dirname, '../data/materials/raw-materials/results/clean-raw-materials.csv'),
+  },
+  {
+    label: 'stagnant-glass',
+    sourceLabel: 'زجاج راكد',
+    filePath: path.join(__dirname, '../data/materials/raw-materials/results/clean-stagnant-glass.csv'),
+  },
+  {
+    label: 'spare-parts',
+    sourceLabel: 'قطع غيار',
+    filePath: path.join(__dirname, '../data/materials/spare-parts/results/clean-spare-parts.csv'),
+  },
 ] as const;
 
 type MaterialRow = {
   code: string;
-  legacyCode: string;
+  legacyCode: string | null;
   title: string;
   unitOfMeasurement: string;
   /** Alternate units from material_unit_conversions (enum keys). */
@@ -81,9 +89,26 @@ type OutputRow = {
   legacyCode: string;
   title: string;
   dbUnitArabic: string;
-  invoiceUnit: string;
+  sourceUnit: string;
   supplierNames: string;
   lastInvoiceNumber: string;
+  /** Present on combined material CSV mismatch rows. */
+  sourceLabel?: string;
+};
+
+type DbMaterials = {
+  byLegacy: Map<string, MaterialRow>;
+  byTitle: Map<string, MaterialRow>;
+  withLegacyCount: number;
+  conversionCount: number;
+  withAlternatesCount: number;
+};
+
+type WriteReportOptions = {
+  sourceUnitHeader: string;
+  includeInvoiceColumns: boolean;
+  includeSourceColumn: boolean;
+  excelTitle: string;
 };
 
 /** Per (material, invoice unit) aggregate used to build one output row. */
@@ -94,7 +119,7 @@ type UnitUsage = {
   lastInvoiceTime: number;
 };
 
-/** Resolve an invoice/DB unit string to a material_unit enum key, if known. */
+/** Resolve a raw unit string to a material_unit enum key, if known. */
 function resolveUnitKey(raw: string): string | null {
   const n = norm(raw);
   if (!n || n === '(فارغ)') return null;
@@ -110,6 +135,19 @@ function acceptedUnitKeys(material: MaterialRow): Set<string> {
 function formatDbUnitsArabic(material: MaterialRow): string {
   const units = [material.unitOfMeasurement, ...material.alternateUnits];
   return units.map((u) => UNIT_AR_LABELS[u] ?? u).join('، ');
+}
+
+/** Arabic label for a single unit string (enum key or known alias). */
+function formatUnitArabic(raw: string): string {
+  const key = resolveUnitKey(raw);
+  if (key) return UNIT_AR_LABELS[key] ?? raw;
+  return raw;
+}
+
+function isUnitAccepted(material: MaterialRow, rawUnit: string): boolean {
+  const sourceKey = resolveUnitKey(rawUnit);
+  if (!sourceKey) return false;
+  return acceptedUnitKeys(material).has(sourceKey);
 }
 
 /** Invoice numbers are stored as numbers in some workbooks; render them without decimals. */
@@ -164,7 +202,7 @@ function writeCsv(filePath: string, headers: readonly string[], rows: string[][]
   fs.writeFileSync(filePath, '\uFEFF' + lines.join('\n') + '\n', 'utf-8');
 }
 
-async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
+async function writeExcel(filePath: string, rows: OutputRow[], options: WriteReportOptions): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'ERP';
   workbook.created = new Date();
@@ -192,14 +230,25 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
     },
   });
 
-  sheet.columns = [
+  const columns: Partial<ExcelJS.Column>[] = [
     { header: 'الكود', key: 'legacyCode', width: 14 },
     { header: 'اسم الصنف', key: 'title', width: 48 },
     { header: 'الوحدة في قاعدة البيانات', key: 'dbUnitArabic', width: 26 },
-    { header: 'الوحدة في الفواتير', key: 'invoiceUnit', width: 22 },
-    { header: 'المورد', key: 'supplierNames', width: 40 },
-    { header: 'آخر رقم فاتورة', key: 'lastInvoiceNumber', width: 18 },
+    { header: options.sourceUnitHeader, key: 'sourceUnit', width: 22 },
   ];
+
+  if (options.includeSourceColumn) {
+    columns.unshift({ header: 'المصدر', key: 'sourceLabel', width: 16 });
+  }
+
+  if (options.includeInvoiceColumns) {
+    columns.push(
+      { header: 'المورد', key: 'supplierNames', width: 40 },
+      { header: 'آخر رقم فاتورة', key: 'lastInvoiceNumber', width: 18 },
+    );
+  }
+
+  sheet.columns = columns;
 
   const thinBorder: Partial<ExcelJS.Borders> = {
     top: { style: 'thin', color: { argb: 'FF94A3B8' } },
@@ -217,12 +266,16 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
     cell.border = thinBorder;
   });
 
+  const rightAlignColumns = new Set<number>([options.includeSourceColumn ? 3 : 2]);
+  if (options.includeInvoiceColumns) rightAlignColumns.add(options.includeSourceColumn ? 6 : 5);
+
   for (const row of rows) {
     const excelRow = sheet.addRow({
+      sourceLabel: row.sourceLabel ?? '',
       legacyCode: row.legacyCode,
       title: row.title,
       dbUnitArabic: row.dbUnitArabic,
-      invoiceUnit: row.invoiceUnit,
+      sourceUnit: row.sourceUnit,
       supplierNames: row.supplierNames,
       lastInvoiceNumber: row.lastInvoiceNumber,
     });
@@ -231,7 +284,7 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
       cell.font = { size: 11, name: 'Arial' };
       cell.border = thinBorder;
       cell.alignment = {
-        horizontal: colNumber === 2 || colNumber === 5 ? 'right' : 'center',
+        horizontal: rightAlignColumns.has(colNumber) ? 'right' : 'center',
         vertical: 'middle',
         wrapText: true,
         readingOrder: 'rtl',
@@ -249,15 +302,58 @@ async function writeExcel(filePath: string, rows: OutputRow[]): Promise<void> {
 
   sheet.autoFilter = {
     from: { row: 1, column: 1 },
-    to: { row: Math.max(1, sheet.rowCount), column: 6 },
+    to: { row: Math.max(1, sheet.rowCount), column: columns.length },
   };
 
   sheet.headerFooter = {
-    oddHeader: '&Rاختلاف وحدات القياس بين قاعدة البيانات والفواتير',
+    oddHeader: `&R${options.excelTitle}`,
     oddFooter: '&Rصفحة &P من &N',
   };
 
   await workbook.xlsx.writeFile(filePath);
+}
+
+async function writeReport(
+  outDir: string,
+  baseName: string,
+  rows: OutputRow[],
+  options: WriteReportOptions,
+): Promise<void> {
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const csvPath = path.join(outDir, `${baseName}.csv`);
+  const xlsxPath = path.join(outDir, `${baseName}.xlsx`);
+
+  const headers = options.includeInvoiceColumns
+    ? options.includeSourceColumn
+      ? (['المصدر', 'الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader, 'المورد', 'آخر فاتورة'] as const)
+      : (['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader, 'المورد', 'آخر فاتورة'] as const)
+    : options.includeSourceColumn
+      ? (['المصدر', 'الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader] as const)
+      : (['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader] as const);
+
+  const csvRows = rows.map((r) => {
+    const base = [r.legacyCode, r.title, r.dbUnitArabic, r.sourceUnit];
+    const withSource = options.includeSourceColumn ? [r.sourceLabel ?? '', ...base] : base;
+    return options.includeInvoiceColumns
+      ? [...withSource, r.supplierNames, r.lastInvoiceNumber]
+      : withSource;
+  });
+
+  try {
+    writeCsv(csvPath, headers, csvRows);
+    console.log(`Wrote: ${csvPath}`);
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === 'EBUSY' || err.code === 'EPERM') {
+      console.warn(`Could not write CSV (file may be open): ${csvPath}`);
+    } else {
+      throw e;
+    }
+  }
+
+  await writeExcel(xlsxPath, rows, options);
+  console.log(`Wrote: ${xlsxPath}`);
 }
 
 function findHeaderRow(rows: (string | number | null)[][]): number {
@@ -285,7 +381,7 @@ function findColAny(row: (string | number | null)[] | undefined, names: string[]
   return -1;
 }
 
-type ParsedRow = {
+type ParsedTransactionRow = {
   legacyCode: string;
   title: string;
   unit: string;
@@ -295,7 +391,7 @@ type ParsedRow = {
 };
 
 function parseTransactionFile(filePath: string): {
-  rows: ParsedRow[];
+  rows: ParsedTransactionRow[];
   headerFound: boolean;
 } {
   const wb = xlsx.readFile(filePath);
@@ -322,7 +418,7 @@ function parseTransactionFile(filePath: string): {
     return { rows: [], headerFound: false };
   }
 
-  const rows: ParsedRow[] = [];
+  const rows: ParsedTransactionRow[] = [];
   for (let i = headerIdx + 1; i < sheetRows.length; i++) {
     const row = sheetRows[i];
     if (!row) continue;
@@ -343,11 +439,129 @@ function parseTransactionFile(filePath: string): {
   return { rows, headerFound: true };
 }
 
-async function main(): Promise<void> {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL is not defined in .env');
+type ParsedMaterialCsvRow = {
+  legacyCode: string;
+  title: string;
+  unit: string;
+  quantity: number;
+};
+
+function parseMaterialQuantity(raw: string): number {
+  const trimmed = norm(raw);
+  if (!trimmed) return 0;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Inventory CSV rows without a unit or with zero quantity are not compared. */
+function shouldSkipMaterialCsvRow(row: ParsedMaterialCsvRow): boolean {
+  return !row.unit || row.quantity === 0;
+}
+
+function parseMaterialCsvFile(filePath: string): ParsedMaterialCsvRow[] {
+  const csvData = fs.readFileSync(filePath, 'utf-8').replace(/^\uFEFF/, '');
+  const sheetRows = parse<Record<string, string>>(csvData, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+  });
+
+  const rows: ParsedMaterialCsvRow[] = [];
+  for (const row of sheetRows) {
+    const legacyCode = norm(row.legacyCode);
+    const title = norm(row.title);
+    if (!legacyCode && !title) continue;
+
+    rows.push({
+      legacyCode,
+      title,
+      unit: norm(row.unitOfMeasurement),
+      quantity: parseMaterialQuantity(row.quantity),
+    });
   }
 
+  return rows;
+}
+
+async function loadDbMaterials(db: ReturnType<typeof drizzle>): Promise<DbMaterials> {
+  const materialRows = await db
+    .select({
+      code: schema.materials.code,
+      legacyCode: schema.materials.legacyCode,
+      title: schema.materials.title,
+      unitOfMeasurement: schema.materials.unitOfMeasurement,
+    })
+    .from(schema.materials);
+
+  const conversionRows = await db
+    .select({
+      materialCode: schema.materialUnitConversions.materialCode,
+      unit: schema.materialUnitConversions.unit,
+    })
+    .from(schema.materialUnitConversions);
+
+  const alternateUnitsByCode = new Map<string, string[]>();
+  for (const row of conversionRows) {
+    let units = alternateUnitsByCode.get(row.materialCode);
+    if (!units) {
+      units = [];
+      alternateUnitsByCode.set(row.materialCode, units);
+    }
+    units.push(row.unit);
+  }
+
+  const byLegacy = new Map<string, MaterialRow>();
+  const byTitle = new Map<string, MaterialRow>();
+
+  for (const row of materialRows) {
+    const material: MaterialRow = {
+      code: row.code,
+      legacyCode: row.legacyCode,
+      title: row.title,
+      unitOfMeasurement: row.unitOfMeasurement,
+      alternateUnits: alternateUnitsByCode.get(row.code) ?? [],
+    };
+
+    if (row.legacyCode) {
+      byLegacy.set(row.legacyCode, material);
+    }
+
+    const titleKey = norm(row.title);
+    if (titleKey && !byTitle.has(titleKey)) {
+      byTitle.set(titleKey, material);
+    }
+  }
+
+  const withLegacyCount = materialRows.filter((r) => r.legacyCode).length;
+  const withAlternatesCount = materialRows.filter((r) => (alternateUnitsByCode.get(r.code) ?? []).length > 0).length;
+
+  return {
+    byLegacy,
+    byTitle,
+    withLegacyCount,
+    conversionCount: conversionRows.length,
+    withAlternatesCount,
+  };
+}
+
+function resolveMaterial(
+  dbMaterials: DbMaterials,
+  legacyCode: string,
+  title: string,
+): MaterialRow | null {
+  if (legacyCode && dbMaterials.byLegacy.has(legacyCode)) {
+    return dbMaterials.byLegacy.get(legacyCode)!;
+  }
+
+  const titleKey = norm(title);
+  if (titleKey && dbMaterials.byTitle.has(titleKey)) {
+    return dbMaterials.byTitle.get(titleKey)!;
+  }
+
+  return null;
+}
+
+async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> {
   if (!fs.existsSync(TRANSACTIONS_DIR)) {
     throw new Error(`Transactions directory not found: ${TRANSACTIONS_DIR}`);
   }
@@ -361,163 +575,205 @@ async function main(): Promise<void> {
     throw new Error(`No .xlsx files found in ${TRANSACTIONS_DIR}`);
   }
 
+  console.log(`\n--- Transaction invoices ---`);
+  console.log(`Found ${files.length} transaction file(s)`);
+
+  const invoiceUnitsByLegacy = new Map<string, Map<string, UnitUsage>>();
+  let filesParsed = 0;
+  let rowsScanned = 0;
+  const unmatchedLegacyCodes = new Set<string>();
+
+  for (const fileName of files) {
+    const filePath = path.join(TRANSACTIONS_DIR, fileName);
+    const { rows, headerFound } = parseTransactionFile(filePath);
+
+    if (!headerFound) {
+      console.warn(`  Skipping ${fileName}: header row with 'كود الصنف' not found`);
+      continue;
+    }
+
+    filesParsed++;
+    rowsScanned += rows.length;
+    console.log(`  Parsed ${fileName}: ${rows.length} item rows`);
+
+    for (const row of rows) {
+      if (!dbMaterials.byLegacy.has(row.legacyCode)) {
+        unmatchedLegacyCodes.add(row.legacyCode);
+        continue;
+      }
+
+      let units = invoiceUnitsByLegacy.get(row.legacyCode);
+      if (!units) {
+        units = new Map();
+        invoiceUnitsByLegacy.set(row.legacyCode, units);
+      }
+
+      const invoiceUnit = row.unit || '(فارغ)';
+      let usage = units.get(invoiceUnit);
+      if (!usage) {
+        usage = { invoiceUnit, supplierNames: new Set(), lastInvoiceNumber: '', lastInvoiceTime: -1 };
+        units.set(invoiceUnit, usage);
+      }
+
+      if (row.supplierName) usage.supplierNames.add(row.supplierName);
+      if (row.invoiceNumber && row.invoiceTime >= usage.lastInvoiceTime) {
+        usage.lastInvoiceNumber = row.invoiceNumber;
+        usage.lastInvoiceTime = row.invoiceTime;
+      }
+    }
+  }
+
+  const output: OutputRow[] = [];
+  let matchedMaterials = 0;
+  let materialsWithMismatch = 0;
+
+  for (const [legacyCode, invoiceUnits] of invoiceUnitsByLegacy) {
+    matchedMaterials++;
+    const material = dbMaterials.byLegacy.get(legacyCode)!;
+    const dbUnitArabic = formatDbUnitsArabic(material);
+
+    let hasMismatch = false;
+    for (const usage of invoiceUnits.values()) {
+      if (isUnitAccepted(material, usage.invoiceUnit)) continue;
+
+      hasMismatch = true;
+      output.push({
+        legacyCode,
+        title: material.title,
+        dbUnitArabic,
+        sourceUnit: usage.invoiceUnit,
+        supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
+        lastInvoiceNumber: usage.lastInvoiceNumber,
+      });
+    }
+    if (hasMismatch) materialsWithMismatch++;
+  }
+
+  output.sort((a, b) => a.legacyCode.localeCompare(b.legacyCode) || a.sourceUnit.localeCompare(b.sourceUnit));
+
+  await writeReport(TRANSACTIONS_OUT_DIR, 'unit-mismatches', output, {
+    sourceUnitHeader: 'الوحدة في الفواتير',
+    includeInvoiceColumns: true,
+    includeSourceColumn: false,
+    excelTitle: 'اختلاف وحدات القياس بين قاعدة البيانات والفواتير',
+  });
+
+  console.log('\n========== TRANSACTION UNIT COMPARISON STATS ==========');
+  console.log(`Files parsed:                    ${filesParsed}`);
+  console.log(`Transaction rows scanned:        ${rowsScanned}`);
+  console.log(`Materials matched (in invoices): ${matchedMaterials}`);
+  console.log(`Unmatched legacy codes in files: ${unmatchedLegacyCodes.size}`);
+  if (unmatchedLegacyCodes.size > 0) {
+    console.log(`  samples: ${[...unmatchedLegacyCodes].slice(0, 10).join(', ')}`);
+  }
+  console.log(`Materials with unit mismatch:    ${materialsWithMismatch}`);
+  console.log(`Mismatch rows written:           ${output.length}`);
+  console.log('=======================================================');
+}
+
+async function compareMaterialCsvSources(dbMaterials: DbMaterials): Promise<void> {
+  console.log(`\n--- Material CSV files ---`);
+
+  const combinedOutput: OutputRow[] = [];
+  let totalMatchedRows = 0;
+  let totalUnmatchedRows = 0;
+  let totalSkippedRows = 0;
+  let totalMismatchRows = 0;
+
+  for (const source of MATERIAL_CSV_SOURCES) {
+    if (!fs.existsSync(source.filePath)) {
+      throw new Error(`Material CSV not found: ${source.filePath}`);
+    }
+
+    const rows = parseMaterialCsvFile(source.filePath);
+    console.log(`\n  ${source.label}: ${rows.length} row(s) from ${path.basename(source.filePath)}`);
+
+    let matchedRows = 0;
+    let skippedRows = 0;
+    let rowsWithMismatch = 0;
+    const unmatchedKeys = new Set<string>();
+
+    for (const row of rows) {
+      if (shouldSkipMaterialCsvRow(row)) {
+        skippedRows++;
+        continue;
+      }
+
+      const material = resolveMaterial(dbMaterials, row.legacyCode, row.title);
+      if (!material) {
+        unmatchedKeys.add(row.legacyCode || row.title);
+        continue;
+      }
+
+      matchedRows++;
+      if (isUnitAccepted(material, row.unit)) continue;
+
+      rowsWithMismatch++;
+      combinedOutput.push({
+        sourceLabel: source.sourceLabel,
+        legacyCode: material.legacyCode ?? row.legacyCode,
+        title: material.title,
+        dbUnitArabic: formatDbUnitsArabic(material),
+        sourceUnit: formatUnitArabic(row.unit),
+        supplierNames: '',
+        lastInvoiceNumber: '',
+      });
+    }
+
+    totalMatchedRows += matchedRows;
+    totalUnmatchedRows += unmatchedKeys.size;
+    totalSkippedRows += skippedRows;
+    totalMismatchRows += rowsWithMismatch;
+
+    console.log(`  Skipped rows:        ${skippedRows} (no unit or quantity 0)`);
+    console.log(`  Matched rows:        ${matchedRows}`);
+    console.log(`  Unmatched rows:      ${unmatchedKeys.size}`);
+    if (unmatchedKeys.size > 0) {
+      console.log(`    samples: ${[...unmatchedKeys].slice(0, 10).join(', ')}`);
+    }
+    console.log(`  Rows with mismatch:  ${rowsWithMismatch}`);
+  }
+
+  combinedOutput.sort(
+    (a, b) =>
+      (a.sourceLabel ?? '').localeCompare(b.sourceLabel ?? '', 'ar') ||
+      a.legacyCode.localeCompare(b.legacyCode) ||
+      a.sourceUnit.localeCompare(b.sourceUnit),
+  );
+
+  await writeReport(MATERIALS_OUT_DIR, 'unit-mismatches', combinedOutput, {
+    sourceUnitHeader: 'الوحدة في ملف الجرد',
+    includeInvoiceColumns: false,
+    includeSourceColumn: true,
+    excelTitle: 'اختلاف وحدات القياس بين قاعدة البيانات وملفات المواد',
+  });
+
+  console.log(`\n  Combined mismatch rows: ${combinedOutput.length}`);
+  console.log(`  Total skipped rows:     ${totalSkippedRows}`);
+  console.log(`  Total matched rows:     ${totalMatchedRows}`);
+  console.log(`  Total unmatched rows:   ${totalUnmatchedRows}`);
+  console.log(`  Total mismatch rows:    ${totalMismatchRows}`);
+}
+
+async function main(): Promise<void> {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not defined in .env');
+  }
+
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const db = drizzle(pool, { schema });
 
   try {
-    const materialRows = await db
-      .select({
-        code: schema.materials.code,
-        legacyCode: schema.materials.legacyCode,
-        title: schema.materials.title,
-        unitOfMeasurement: schema.materials.unitOfMeasurement,
-      })
-      .from(schema.materials)
-      .where(isNotNull(schema.materials.legacyCode));
+    const dbMaterials = await loadDbMaterials(db);
 
-    const conversionRows = await db
-      .select({
-        materialCode: schema.materialUnitConversions.materialCode,
-        unit: schema.materialUnitConversions.unit,
-      })
-      .from(schema.materialUnitConversions);
+    console.log(`Loaded ${dbMaterials.withLegacyCount} materials with legacyCode from DB`);
+    console.log(
+      `Loaded ${dbMaterials.conversionCount} unit conversion(s) across ${dbMaterials.withAlternatesCount} material(s)`,
+    );
 
-    const alternateUnitsByCode = new Map<string, string[]>();
-    for (const row of conversionRows) {
-      let units = alternateUnitsByCode.get(row.materialCode);
-      if (!units) {
-        units = [];
-        alternateUnitsByCode.set(row.materialCode, units);
-      }
-      units.push(row.unit);
-    }
-
-    const materialsByLegacy = new Map<string, MaterialRow>();
-    for (const row of materialRows) {
-      if (!row.legacyCode) continue;
-      materialsByLegacy.set(row.legacyCode, {
-        code: row.code,
-        legacyCode: row.legacyCode,
-        title: row.title,
-        unitOfMeasurement: row.unitOfMeasurement,
-        alternateUnits: alternateUnitsByCode.get(row.code) ?? [],
-      });
-    }
-
-    const materialsWithAlternates = [...materialsByLegacy.values()].filter((m) => m.alternateUnits.length > 0).length;
-    console.log(`Loaded ${materialsByLegacy.size} materials with legacyCode from DB`);
-    console.log(`Loaded ${conversionRows.length} unit conversion(s) across ${materialsWithAlternates} material(s)`);
-    console.log(`Found ${files.length} transaction file(s)`);
-
-    // legacyCode -> raw invoice unit -> suppliers + latest invoice seen with that unit
-    const invoiceUnitsByLegacy = new Map<string, Map<string, UnitUsage>>();
-    let filesParsed = 0;
-    let rowsScanned = 0;
-    const unmatchedLegacyCodes = new Set<string>();
-
-    for (const fileName of files) {
-      const filePath = path.join(TRANSACTIONS_DIR, fileName);
-      const { rows, headerFound } = parseTransactionFile(filePath);
-
-      if (!headerFound) {
-        console.warn(`  Skipping ${fileName}: header row with 'كود الصنف' not found`);
-        continue;
-      }
-
-      filesParsed++;
-      rowsScanned += rows.length;
-      console.log(`  Parsed ${fileName}: ${rows.length} item rows`);
-
-      for (const row of rows) {
-        if (!materialsByLegacy.has(row.legacyCode)) {
-          unmatchedLegacyCodes.add(row.legacyCode);
-          continue;
-        }
-
-        let units = invoiceUnitsByLegacy.get(row.legacyCode);
-        if (!units) {
-          units = new Map();
-          invoiceUnitsByLegacy.set(row.legacyCode, units);
-        }
-
-        const invoiceUnit = row.unit || '(فارغ)';
-        let usage = units.get(invoiceUnit);
-        if (!usage) {
-          usage = { invoiceUnit, supplierNames: new Set(), lastInvoiceNumber: '', lastInvoiceTime: -1 };
-          units.set(invoiceUnit, usage);
-        }
-
-        if (row.supplierName) usage.supplierNames.add(row.supplierName);
-        if (row.invoiceNumber && row.invoiceTime >= usage.lastInvoiceTime) {
-          usage.lastInvoiceNumber = row.invoiceNumber;
-          usage.lastInvoiceTime = row.invoiceTime;
-        }
-      }
-    }
-
-    const output: OutputRow[] = [];
-    let matchedMaterials = 0;
-    let materialsWithMismatch = 0;
-
-    for (const [legacyCode, invoiceUnits] of invoiceUnitsByLegacy) {
-      matchedMaterials++;
-      const material = materialsByLegacy.get(legacyCode)!;
-      const accepted = acceptedUnitKeys(material);
-      const dbUnitArabic = formatDbUnitsArabic(material);
-
-      let hasMismatch = false;
-      for (const usage of invoiceUnits.values()) {
-        const invoiceKey = resolveUnitKey(usage.invoiceUnit);
-        // Match base unit or any material_unit_conversions alternate (incl. Arabic aliases).
-        if (invoiceKey && accepted.has(invoiceKey)) continue;
-
-        hasMismatch = true;
-        output.push({
-          legacyCode,
-          title: material.title,
-          dbUnitArabic,
-          invoiceUnit: usage.invoiceUnit,
-          supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
-          lastInvoiceNumber: usage.lastInvoiceNumber,
-        });
-      }
-      if (hasMismatch) materialsWithMismatch++;
-    }
-
-    output.sort((a, b) => a.legacyCode.localeCompare(b.legacyCode) || a.invoiceUnit.localeCompare(b.invoiceUnit));
-
-    fs.mkdirSync(OUT_DIR, { recursive: true });
-
-    try {
-      writeCsv(
-        OUT_CSV_PATH,
-        CSV_HEADERS,
-        output.map((r) => [r.legacyCode, r.title, r.dbUnitArabic, r.invoiceUnit, r.supplierNames, r.lastInvoiceNumber]),
-      );
-      console.log(`Wrote: ${OUT_CSV_PATH}`);
-    } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === 'EBUSY' || err.code === 'EPERM') {
-        console.warn(`Could not write CSV (file may be open): ${OUT_CSV_PATH}`);
-      } else {
-        throw e;
-      }
-    }
-
-    await writeExcel(OUT_XLSX_PATH, output);
-    console.log(`Wrote: ${OUT_XLSX_PATH}`);
-
-    console.log('\n========== TRANSACTION UNIT COMPARISON STATS ==========');
-    console.log(`Files parsed:                    ${filesParsed}`);
-    console.log(`Transaction rows scanned:        ${rowsScanned}`);
-    console.log(`Materials matched (in invoices): ${matchedMaterials}`);
-    console.log(`Unmatched legacy codes in files: ${unmatchedLegacyCodes.size}`);
-    if (unmatchedLegacyCodes.size > 0) {
-      console.log(`  samples: ${[...unmatchedLegacyCodes].slice(0, 10).join(', ')}`);
-    }
-    console.log(`Materials with unit mismatch:    ${materialsWithMismatch}`);
-    console.log(`Mismatch rows written:           ${output.length}`);
-    console.log('=======================================================\n');
+    await compareTransactionUnits(dbMaterials);
+    await compareMaterialCsvSources(dbMaterials);
+    console.log('');
   } catch (e) {
     const err = e as Error & { cause?: { message?: string; detail?: string } };
     console.error(err.message);
