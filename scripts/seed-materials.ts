@@ -7,6 +7,7 @@ import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import * as schema from '../src/database/schema';
 import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
+import { ensureNoUnitMismatchesBeforeSeeding } from './unit-mismatch-guard';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -226,6 +227,7 @@ function loadCsvRows(source: MaterialSource): CsvRow[] {
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
+  await ensureNoUnitMismatchesBeforeSeeding('seed:materials');
 
   const cli = parseCliArgs();
   const identifier = await promptForUserIdentifier(cli);

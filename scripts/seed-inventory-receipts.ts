@@ -11,6 +11,7 @@ import * as readline from 'node:readline/promises';
 import * as schema from '../src/database/schema';
 import * as xlsx from 'xlsx';
 import { INVENTORY_TRANSACTION_TYPES, MATERIAL_TYPES, MATERIAL_UNITS, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
+import { ensureNoUnitMismatchesBeforeSeeding } from './unit-mismatch-guard';
 
 dotenv.config();
 
@@ -422,6 +423,7 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
+  await ensureNoUnitMismatchesBeforeSeeding('seed:inventory-receipts');
 
   const cli = parseCliArgs();
   const identifier = await promptForUserIdentifier(cli);
