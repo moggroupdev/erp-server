@@ -437,8 +437,9 @@ function main(): void {
     seenTitles.add(titleKey);
 
     const qty = quantitiesByTitle.get(titleKey);
-    let unitOfMeasurement = normalizeUnit(item.unitRaw);
-    if (!unitOfMeasurement && qty) unitOfMeasurement = normalizeUnit(qty.unitOfMeasurement);
+    // Prefer unit from stock/*.xls; fall back to codes.xls when stock has none / no match
+    let unitOfMeasurement = qty ? normalizeUnit(qty.unitOfMeasurement) : '';
+    if (!unitOfMeasurement) unitOfMeasurement = normalizeUnit(item.unitRaw);
 
     if (qty) {
       matched++;
