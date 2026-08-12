@@ -14,7 +14,7 @@
     "extract:stagnant-glass": "ts-node -r tsconfig-paths/register scripts/extract-stagnant-glass.ts",
     "extract:spare-parts": "ts-node -r tsconfig-paths/register scripts/extract-spare-parts.ts",
     "extract:products": "ts-node -r tsconfig-paths/register scripts/extract-products.ts",
-    "compare:transaction-units": "ts-node -r tsconfig-paths/register scripts/compare-transaction-units.ts",
+    "compare:units": "ts-node -r tsconfig-paths/register scripts/compare-units.ts",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seed-departments.ts",
