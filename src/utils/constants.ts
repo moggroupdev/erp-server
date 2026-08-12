@@ -75,9 +75,6 @@ export const MATERIAL_UNIT_VALUES = [
   'square_meter',
   'cubic_meter',
   'liter',
-  'sheet',
-  'roll',
-  'box',
 ] as const;
 
 export const MATERIAL_UNITS = Object.fromEntries(

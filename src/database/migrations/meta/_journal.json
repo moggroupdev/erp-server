@@ -134,6 +134,13 @@
       "when": 1786449512299,
       "tag": "0018_aberrant_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786522482924,
+      "tag": "0019_shocking_warbird",
+      "breakpoints": true
     }
   ]
 }
