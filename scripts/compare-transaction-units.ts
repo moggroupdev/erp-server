@@ -10,18 +10,49 @@ import * as path from 'path';
 
 dotenv.config();
 
-/** Arabic labels mirrored from erp-app material-units.ts for comparison against invoice text. */
+function norm(value: unknown): string {
+  if (value == null) return '';
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+/** Primary Arabic labels mirrored from erp-app material-units.ts. */
 const UNIT_AR_LABELS: Record<string, string> = {
   count: 'عدد',
   kg: 'كيلوجرام',
   gram: 'جرام',
+  ton: 'طن',
   meter: 'متر',
   cm: 'سنتيمتر',
+  square_meter: 'متر²',
+  cubic_meter: 'متر³',
   liter: 'لتر',
   sheet: 'لوح',
   roll: 'لفة',
   box: 'صندوق',
 };
+
+/**
+ * Extra invoice spellings for the same enum unit. Transaction files often write
+ * kg as "كيلو" / "كيلوجرام" and square_meter as "متر 2".
+ */
+const UNIT_AR_ALIASES: Record<string, string[]> = {
+  kg: ['كيلو', 'كجم'],
+  square_meter: ['متر 2', 'م2', 'م²'],
+  cubic_meter: ['متر 3', 'م3', 'م³'],
+};
+
+/** Normalized Arabic (or English enum key) → material_unit enum value. */
+const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
+  const map = new Map<string, string>();
+  for (const [key, label] of Object.entries(UNIT_AR_LABELS)) {
+    map.set(norm(label), key);
+    map.set(norm(key), key);
+    for (const alias of UNIT_AR_ALIASES[key] ?? []) {
+      map.set(norm(alias), key);
+    }
+  }
+  return map;
+})();
 
 const TRANSACTIONS_DIR = path.join(__dirname, '../data/transactions');
 const OUT_DIR = path.join(TRANSACTIONS_DIR, 'results');
@@ -38,9 +69,12 @@ const CSV_HEADERS = [
 ] as const;
 
 type MaterialRow = {
+  code: string;
   legacyCode: string;
   title: string;
   unitOfMeasurement: string;
+  /** Alternate units from material_unit_conversions (enum keys). */
+  alternateUnits: string[];
 };
 
 type OutputRow = {
@@ -60,9 +94,22 @@ type UnitUsage = {
   lastInvoiceTime: number;
 };
 
-function norm(value: unknown): string {
-  if (value == null) return '';
-  return String(value).replace(/\s+/g, ' ').trim();
+/** Resolve an invoice/DB unit string to a material_unit enum key, if known. */
+function resolveUnitKey(raw: string): string | null {
+  const n = norm(raw);
+  if (!n || n === '(فارغ)') return null;
+  return ARABIC_TO_UNIT_KEY.get(n) ?? null;
+}
+
+/** Base unit plus alternate conversion units for a material. */
+function acceptedUnitKeys(material: MaterialRow): Set<string> {
+  return new Set([material.unitOfMeasurement, ...material.alternateUnits]);
+}
+
+/** Arabic display of accepted DB units (base first, then alternates). */
+function formatDbUnitsArabic(material: MaterialRow): string {
+  const units = [material.unitOfMeasurement, ...material.alternateUnits];
+  return units.map((u) => UNIT_AR_LABELS[u] ?? u).join('، ');
 }
 
 /** Invoice numbers are stored as numbers in some workbooks; render them without decimals. */
@@ -320,6 +367,7 @@ async function main(): Promise<void> {
   try {
     const materialRows = await db
       .select({
+        code: schema.materials.code,
         legacyCode: schema.materials.legacyCode,
         title: schema.materials.title,
         unitOfMeasurement: schema.materials.unitOfMeasurement,
@@ -327,17 +375,38 @@ async function main(): Promise<void> {
       .from(schema.materials)
       .where(isNotNull(schema.materials.legacyCode));
 
+    const conversionRows = await db
+      .select({
+        materialCode: schema.materialUnitConversions.materialCode,
+        unit: schema.materialUnitConversions.unit,
+      })
+      .from(schema.materialUnitConversions);
+
+    const alternateUnitsByCode = new Map<string, string[]>();
+    for (const row of conversionRows) {
+      let units = alternateUnitsByCode.get(row.materialCode);
+      if (!units) {
+        units = [];
+        alternateUnitsByCode.set(row.materialCode, units);
+      }
+      units.push(row.unit);
+    }
+
     const materialsByLegacy = new Map<string, MaterialRow>();
     for (const row of materialRows) {
       if (!row.legacyCode) continue;
       materialsByLegacy.set(row.legacyCode, {
+        code: row.code,
         legacyCode: row.legacyCode,
         title: row.title,
         unitOfMeasurement: row.unitOfMeasurement,
+        alternateUnits: alternateUnitsByCode.get(row.code) ?? [],
       });
     }
 
+    const materialsWithAlternates = [...materialsByLegacy.values()].filter((m) => m.alternateUnits.length > 0).length;
     console.log(`Loaded ${materialsByLegacy.size} materials with legacyCode from DB`);
+    console.log(`Loaded ${conversionRows.length} unit conversion(s) across ${materialsWithAlternates} material(s)`);
     console.log(`Found ${files.length} transaction file(s)`);
 
     // legacyCode -> raw invoice unit -> suppliers + latest invoice seen with that unit
@@ -393,22 +462,24 @@ async function main(): Promise<void> {
     for (const [legacyCode, invoiceUnits] of invoiceUnitsByLegacy) {
       matchedMaterials++;
       const material = materialsByLegacy.get(legacyCode)!;
-      const dbUnitArabic = UNIT_AR_LABELS[material.unitOfMeasurement] ?? material.unitOfMeasurement;
-      const dbNorm = norm(dbUnitArabic);
+      const accepted = acceptedUnitKeys(material);
+      const dbUnitArabic = formatDbUnitsArabic(material);
 
       let hasMismatch = false;
       for (const usage of invoiceUnits.values()) {
-        if (norm(usage.invoiceUnit) !== dbNorm) {
-          hasMismatch = true;
-          output.push({
-            legacyCode,
-            title: material.title,
-            dbUnitArabic,
-            invoiceUnit: usage.invoiceUnit,
-            supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
-            lastInvoiceNumber: usage.lastInvoiceNumber,
-          });
-        }
+        const invoiceKey = resolveUnitKey(usage.invoiceUnit);
+        // Match base unit or any material_unit_conversions alternate (incl. Arabic aliases).
+        if (invoiceKey && accepted.has(invoiceKey)) continue;
+
+        hasMismatch = true;
+        output.push({
+          legacyCode,
+          title: material.title,
+          dbUnitArabic,
+          invoiceUnit: usage.invoiceUnit,
+          supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
+          lastInvoiceNumber: usage.lastInvoiceNumber,
+        });
       }
       if (hasMismatch) materialsWithMismatch++;
     }
