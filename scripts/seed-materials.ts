@@ -69,7 +69,25 @@ type DuplicateLegacyRow = {
   materialType: MaterialType;
 };
 
-const VALID_UNITS = new Set<string>(MATERIAL_UNIT_VALUES);
+type ExistingMaterialRef = {
+  code: string;
+  unitOfMeasurement: (typeof MATERIAL_UNIT_VALUES)[number];
+};
+
+type ExistingMaterialUpdate = {
+  code: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type UnresolvableUnitRow = {
+  legacyCode: string;
+  title: string;
+  unitRaw: string;
+  reason: 'unknown-unit' | 'no-conversion';
+  materialType: MaterialType;
+};
+
 const DATA_ROOT = path.join(__dirname, '../data/materials');
 const MATERIAL_SOURCES: MaterialSource[] = [
   {
@@ -93,6 +111,36 @@ const MATERIAL_SOURCES: MaterialSource[] = [
 ];
 const BATCH_SIZE = 100;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const UNIT_AR_LABELS: Record<(typeof MATERIAL_UNIT_VALUES)[number], string> = {
+  count: 'عدد',
+  kg: 'كيلوجرام',
+  gram: 'جرام',
+  ton: 'طن',
+  meter: 'متر',
+  cm: 'سنتيمتر',
+  square_meter: 'متر²',
+  cubic_meter: 'متر³',
+  liter: 'لتر',
+};
+
+const UNIT_AR_ALIASES: Partial<Record<(typeof MATERIAL_UNIT_VALUES)[number], string[]>> = {
+  kg: ['كيلو', 'كجم'],
+  square_meter: ['متر 2', 'م2', 'م²'],
+  cubic_meter: ['متر 3', 'م3', 'م³'],
+};
+
+const ARABIC_TO_UNIT_KEY: Map<string, (typeof MATERIAL_UNIT_VALUES)[number]> = (() => {
+  const map = new Map<string, (typeof MATERIAL_UNIT_VALUES)[number]>();
+  for (const unit of MATERIAL_UNIT_VALUES) {
+    map.set(unit, unit);
+    map.set(UNIT_AR_LABELS[unit], unit);
+    for (const alias of UNIT_AR_ALIASES[unit] ?? []) {
+      map.set(alias, unit);
+    }
+  }
+  return map;
+})();
 
 function parseCliArgs(): { email?: string; id?: string } {
   try {
@@ -142,8 +190,8 @@ async function confirmProceedWithExistingMaterials(existingCount: number): Promi
   const rl = readline.createInterface({ input, output });
   try {
     console.log(`\nWarning: ${existingCount} material(s) already exist in the database.`);
-    console.log('Seeding will insert only missing materials (matched by legacyCode, or by title when legacyCode is absent).');
-    console.log('Existing rows will be left unchanged.');
+    console.log('Seeding will insert missing materials (matched by legacyCode, or by title when legacyCode is absent).');
+    console.log('Existing rows may be updated when the CSV unit is an alternate unit with a defined conversion.');
     const answer = (await rl.question('Type "yes" to continue, anything else to abort: ')).trim();
     return answer === 'yes';
   } finally {
@@ -187,11 +235,60 @@ function generateUniqueCode(existing: Set<string>): string {
   throw new Error('Failed to generate a unique 6-digit material code after 1000 attempts.');
 }
 
+function resolveMaterialUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] | null {
+  const normalized = raw.trim();
+  if (!normalized || normalized === '(فارغ)') return null;
+  return ARABIC_TO_UNIT_KEY.get(normalized) ?? null;
+}
+
+async function loadConversionFactors(db: ReturnType<typeof drizzle<typeof schema>>) {
+  const rows = await db
+    .select({
+      materialCode: schema.materialUnitConversions.materialCode,
+      unit: schema.materialUnitConversions.unit,
+      conversionFactorToBase: schema.materialUnitConversions.conversionFactorToBase,
+    })
+    .from(schema.materialUnitConversions);
+
+  const result = new Map<string, Map<(typeof MATERIAL_UNIT_VALUES)[number], number>>();
+  for (const row of rows) {
+    let unitMap = result.get(row.materialCode);
+    if (!unitMap) {
+      unitMap = new Map();
+      result.set(row.materialCode, unitMap);
+    }
+    unitMap.set(row.unit, Number(row.conversionFactorToBase));
+  }
+  return result;
+}
+
+function resolveConversionFactor({
+  baseUnit,
+  rawUnit,
+  conversions,
+}: {
+  baseUnit: (typeof MATERIAL_UNIT_VALUES)[number];
+  rawUnit: string;
+  conversions?: Map<(typeof MATERIAL_UNIT_VALUES)[number], number>;
+}): { ok: true; factor: number } | { ok: false; reason: 'unknown-unit' | 'no-conversion' } {
+  const resolvedUnit = resolveMaterialUnit(rawUnit);
+  if (!resolvedUnit) return { ok: false, reason: 'unknown-unit' };
+  if (resolvedUnit === baseUnit) return { ok: true, factor: 1 };
+
+  const factor = conversions?.get(resolvedUnit);
+  if (factor == null) return { ok: false, reason: 'no-conversion' };
+  return { ok: true, factor };
+}
+
+function toBaseValues(quantity: number, unitPrice: number, factor: number): { quantity: number; unitPrice: number } {
+  return {
+    quantity: quantity * factor,
+    unitPrice: unitPrice / factor,
+  };
+}
+
 function normalizeUnit(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return 'count';
-  if (VALID_UNITS.has(trimmed)) return trimmed;
-  return 'count';
+  return resolveMaterialUnit(raw) ?? 'count';
 }
 
 function normalizeCost(raw: string): number {
@@ -269,21 +366,24 @@ async function main() {
         code: schema.materials.code,
         legacyCode: schema.materials.legacyCode,
         title: schema.materials.title,
+        unitOfMeasurement: schema.materials.unitOfMeasurement,
       })
       .from(schema.materials);
 
     const usedCodes = new Set<string>();
-    const existingLegacyCodes = new Set<string>();
-    const existingTitlesWithoutLegacyCode = new Set<string>();
+    const existingByLegacy = new Map<string, ExistingMaterialRef>();
+    const existingByTitle = new Map<string, ExistingMaterialRef>();
     for (const row of existingMaterials) {
       usedCodes.add(row.code);
       if (row.legacyCode) {
-        existingLegacyCodes.add(row.legacyCode);
-      } else {
-        existingTitlesWithoutLegacyCode.add(row.title);
+        existingByLegacy.set(row.legacyCode, { code: row.code, unitOfMeasurement: row.unitOfMeasurement });
+      }
+      if (!existingByTitle.has(row.title)) {
+        existingByTitle.set(row.title, { code: row.code, unitOfMeasurement: row.unitOfMeasurement });
       }
     }
     console.log(`Existing materials in DB: ${existingMaterials.length}`);
+    const conversionFactorsByCode = await loadConversionFactors(db);
 
     if (!(await confirmProceedWithExistingMaterials(existingMaterials.length))) {
       console.log('Aborted.');
@@ -294,16 +394,25 @@ async function main() {
     const toInsert: (typeof schema.materials.$inferInsert)[] = [];
     const unresolved: UnresolvedRow[] = [];
     const duplicateLegacyCodes: DuplicateLegacyRow[] = [];
+    const existingUpdates: ExistingMaterialUpdate[] = [];
+    const unresolvableUnitRows: UnresolvableUnitRow[] = [];
     const seenRowKeys = new Map<string, string>(); // dedupe key -> kept title
     let skippedExisting = 0;
+    let updatedExistingBase = 0;
+    let convertedExisting = 0;
     let totalCsvRows = 0;
     const unitCounts = new Map<string, number>();
-    const typeCounts = new Map<MaterialType, { loaded: number; inserted: number; skippedExisting: number }>();
+    const typeCounts = new Map<
+      MaterialType,
+      { loaded: number; inserted: number; updatedExistingBase: number; convertedExisting: number; skippedExisting: number }
+    >();
 
     for (const { source, rows } of loadedSources) {
       const stats = typeCounts.get(source.materialType) ?? {
         loaded: 0,
         inserted: 0,
+        updatedExistingBase: 0,
+        convertedExisting: 0,
         skippedExisting: 0,
       };
       stats.loaded += rows.length;
@@ -330,15 +439,45 @@ async function main() {
         }
         seenRowKeys.set(dedupeKey, title);
 
-        if (legacyCode) {
-          if (existingLegacyCodes.has(legacyCode)) {
-            skippedExisting++;
-            stats.skippedExisting++;
+        const existingMaterial = legacyCode ? existingByLegacy.get(legacyCode) : existingByTitle.get(title);
+        if (existingMaterial) {
+          const conversionResult = resolveConversionFactor({
+            baseUnit: existingMaterial.unitOfMeasurement,
+            rawUnit: row.unitOfMeasurement ?? '',
+            conversions: conversionFactorsByCode.get(existingMaterial.code),
+          });
+
+          if (!conversionResult.ok) {
+            const { reason } = conversionResult;
+            unresolvableUnitRows.push({
+              legacyCode: legacyCode ?? '',
+              title,
+              unitRaw: row.unitOfMeasurement ?? '',
+              reason,
+              materialType: source.materialType,
+            });
             continue;
           }
-        } else if (existingTitlesWithoutLegacyCode.has(title)) {
-          skippedExisting++;
-          stats.skippedExisting++;
+
+          const quantity = normalizeQuantity(row.quantity ?? '');
+          const unitPrice = normalizeCost(row.unitPrice ?? '');
+          const baseValues =
+            conversionResult.factor === 1
+              ? { quantity, unitPrice }
+              : toBaseValues(quantity, unitPrice, conversionResult.factor);
+
+          existingUpdates.push({
+            code: existingMaterial.code,
+            quantity: baseValues.quantity,
+            unitPrice: baseValues.unitPrice,
+          });
+          if (conversionResult.factor === 1) {
+            updatedExistingBase++;
+            stats.updatedExistingBase++;
+          } else {
+            convertedExisting++;
+            stats.convertedExisting++;
+          }
           continue;
         }
 
@@ -379,9 +518,14 @@ async function main() {
       typeCounts.set(source.materialType, stats);
     }
 
-    console.log(`\nPrepared ${toInsert.length} new materials (${skippedExisting} already exist)`);
+    skippedExisting = totalCsvRows - toInsert.length - existingUpdates.length - unresolved.length - duplicateLegacyCodes.length - unresolvableUnitRows.length;
+
+    console.log(`\nPrepared ${toInsert.length} new materials (${skippedExisting} already exist without updates)`);
+    console.log(`Prepared ${updatedExistingBase} existing material update(s) using base units`);
+    console.log(`Prepared ${convertedExisting} existing material update(s) from alternate units`);
     console.log(`Skipped unresolved categories: ${unresolved.length}`);
     console.log(`Skipped duplicate legacy codes: ${duplicateLegacyCodes.length}`);
+    console.log(`Skipped rows with unresolvable units: ${unresolvableUnitRows.length}`);
 
     if (toInsert.length > 0) {
       for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
@@ -392,17 +536,40 @@ async function main() {
       console.log();
     }
 
+    for (const update of existingUpdates) {
+      await db
+        .update(schema.materials)
+        .set({
+          quantity: update.quantity,
+          unitPrice: update.unitPrice,
+          openingQuantity: update.quantity,
+          openingUnitPrice: update.unitPrice,
+        })
+        .where(eq(schema.materials.code, update.code));
+    }
+
     console.log('\n========== MATERIALS SEED STATS ==========');
     console.log(`CSV rows loaded:              ${totalCsvRows}`);
     console.log(`Inserted (new):               ${toInsert.length}`);
+    console.log(`Updated existing (base unit): ${updatedExistingBase}`);
+    console.log(`Converted existing materials: ${convertedExisting}`);
     console.log(`Skipped (already exist):      ${skippedExisting}`);
     console.log(`Skipped (unresolved category): ${unresolved.length}`);
     console.log(`Skipped (duplicate legacyCode): ${duplicateLegacyCodes.length}`);
+    console.log(`Skipped (unresolvable unit):  ${unresolvableUnitRows.length}`);
 
     console.log('\n--- Per material type ---');
     for (const materialType of MATERIAL_TYPE_VALUES) {
-      const s = typeCounts.get(materialType) ?? { loaded: 0, inserted: 0, skippedExisting: 0 };
-      console.log(`  ${materialType}: loaded=${s.loaded}, inserted=${s.inserted}, skippedExisting=${s.skippedExisting}`);
+      const s = typeCounts.get(materialType) ?? {
+        loaded: 0,
+        inserted: 0,
+        updatedExistingBase: 0,
+        convertedExisting: 0,
+        skippedExisting: 0,
+      };
+      console.log(
+        `  ${materialType}: loaded=${s.loaded}, inserted=${s.inserted}, updatedExistingBase=${s.updatedExistingBase}, convertedExisting=${s.convertedExisting}, skippedExisting=${s.skippedExisting}`,
+      );
     }
 
     console.log('\n--- Unit distribution ---');
@@ -429,6 +596,18 @@ async function main() {
       }
       if (unresolved.length > 20) {
         console.log(`  ... and ${unresolved.length - 20} more`);
+      }
+    }
+
+    if (unresolvableUnitRows.length > 0) {
+      console.log('\n--- Rows skipped because file units could not be converted ---');
+      for (const row of unresolvableUnitRows.slice(0, 20)) {
+        console.log(
+          `  [${row.materialType}] ${row.legacyCode} | ${row.title} | unit="${row.unitRaw || '(فارغ)'}" | ${row.reason}`,
+        );
+      }
+      if (unresolvableUnitRows.length > 20) {
+        console.log(`  ... and ${unresolvableUnitRows.length - 20} more`);
       }
     }
 

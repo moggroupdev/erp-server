@@ -38,16 +38,36 @@ Examples:
 const DATA_DIR = path.join(__dirname, '../data/transactions');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
-const VALID_UNITS = new Set<string>(MATERIAL_UNIT_VALUES);
-const UNIT_MAP: Record<string, (typeof MATERIAL_UNIT_VALUES)[number]> = {
-  عدد: MATERIAL_UNITS.COUNT,
-  كيلو: MATERIAL_UNITS.KG,
-  كجم: MATERIAL_UNITS.KG,
-  متر: MATERIAL_UNITS.METER,
-  count: MATERIAL_UNITS.COUNT,
-  kg: MATERIAL_UNITS.KG,
-  meter: MATERIAL_UNITS.METER,
+
+const UNIT_AR_LABELS: Record<(typeof MATERIAL_UNIT_VALUES)[number], string> = {
+  count: 'عدد',
+  kg: 'كيلوجرام',
+  gram: 'جرام',
+  ton: 'طن',
+  meter: 'متر',
+  cm: 'سنتيمتر',
+  square_meter: 'متر²',
+  cubic_meter: 'متر³',
+  liter: 'لتر',
 };
+
+const UNIT_AR_ALIASES: Partial<Record<(typeof MATERIAL_UNIT_VALUES)[number], string[]>> = {
+  kg: ['كيلو', 'كجم'],
+  square_meter: ['متر 2', 'م2', 'م²'],
+  cubic_meter: ['متر 3', 'م3', 'م³'],
+};
+
+const ARABIC_TO_UNIT_KEY: Map<string, (typeof MATERIAL_UNIT_VALUES)[number]> = (() => {
+  const map = new Map<string, (typeof MATERIAL_UNIT_VALUES)[number]>();
+  for (const unit of MATERIAL_UNIT_VALUES) {
+    map.set(unit, unit);
+    map.set(UNIT_AR_LABELS[unit], unit);
+    for (const alias of UNIT_AR_ALIASES[unit] ?? []) {
+      map.set(alias, unit);
+    }
+  }
+  return map;
+})();
 
 type WorkbookRow = {
   sourceFile: string;
@@ -80,6 +100,15 @@ type SkippedMaterial = {
   reason: string;
 };
 
+type SkippedUnitRow = {
+  sourceFile: string;
+  sourceRowNumber: number;
+  legacyCode: string;
+  title: string;
+  unitRaw: string;
+  reason: 'unknown-unit' | 'no-conversion';
+};
+
 type DuplicateOrderItemWarning = {
   groupKey: string;
   materialLegacyCode: string;
@@ -102,10 +131,63 @@ type Summary = {
   skippedPartialPermitGroups: number;
   invalidRowsSkipped: number;
   skippedRowsMissingMaterials: number;
+  skippedRowsUnresolvedUnit: number;
 };
 
 type UserIdentifier = { email?: string; id?: string };
 type DbClient = ReturnType<typeof drizzle<typeof schema>>;
+
+function resolveMaterialUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] | null {
+  const normalized = raw.trim();
+  if (!normalized || normalized === '(فارغ)') return null;
+  return ARABIC_TO_UNIT_KEY.get(normalized) ?? null;
+}
+
+async function loadConversionFactors(db: DbClient) {
+  const rows = await db
+    .select({
+      materialCode: schema.materialUnitConversions.materialCode,
+      unit: schema.materialUnitConversions.unit,
+      conversionFactorToBase: schema.materialUnitConversions.conversionFactorToBase,
+    })
+    .from(schema.materialUnitConversions);
+
+  const result = new Map<string, Map<(typeof MATERIAL_UNIT_VALUES)[number], number>>();
+  for (const row of rows) {
+    let unitMap = result.get(row.materialCode);
+    if (!unitMap) {
+      unitMap = new Map();
+      result.set(row.materialCode, unitMap);
+    }
+    unitMap.set(row.unit, Number(row.conversionFactorToBase));
+  }
+  return result;
+}
+
+function resolveConversionFactor({
+  baseUnit,
+  rawUnit,
+  conversions,
+}: {
+  baseUnit: (typeof MATERIAL_UNIT_VALUES)[number];
+  rawUnit: string;
+  conversions?: Map<(typeof MATERIAL_UNIT_VALUES)[number], number>;
+}): { ok: true; factor: number } | { ok: false; reason: 'unknown-unit' | 'no-conversion' } {
+  const resolvedUnit = resolveMaterialUnit(rawUnit);
+  if (!resolvedUnit) return { ok: false, reason: 'unknown-unit' };
+  if (resolvedUnit === baseUnit) return { ok: true, factor: 1 };
+
+  const factor = conversions?.get(resolvedUnit);
+  if (factor == null) return { ok: false, reason: 'no-conversion' };
+  return { ok: true, factor };
+}
+
+function toBaseValues(quantity: number, unitPrice: number, factor: number): { quantity: number; unitPrice: number } {
+  return {
+    quantity: quantity * factor,
+    unitPrice: unitPrice / factor,
+  };
+}
 
 function parseCliArgs(): UserIdentifier {
   try {
@@ -287,12 +369,7 @@ function isoDay(date: Date): string {
 }
 
 function normalizeUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] {
-  const trimmed = normalizeText(raw);
-  if (!trimmed) return MATERIAL_UNITS.COUNT;
-  const mapped = UNIT_MAP[trimmed];
-  if (mapped && VALID_UNITS.has(mapped)) return mapped;
-  if (VALID_UNITS.has(trimmed)) return trimmed as (typeof MATERIAL_UNIT_VALUES)[number];
-  return MATERIAL_UNITS.COUNT;
+  return resolveMaterialUnit(raw) ?? MATERIAL_UNITS.COUNT;
 }
 
 function normalizeNumber(value: unknown, label: string): number {
@@ -444,9 +521,11 @@ async function main() {
     skippedPartialPermitGroups: 0,
     invalidRowsSkipped: 0,
     skippedRowsMissingMaterials: 0,
+    skippedRowsUnresolvedUnit: 0,
   };
 
   const skippedMaterials: SkippedMaterial[] = [];
+  const skippedUnitRows: SkippedUnitRow[] = [];
   const duplicateOrderItemWarnings: DuplicateOrderItemWarning[] = [];
 
   try {
@@ -482,15 +561,22 @@ async function main() {
       .select({
         code: schema.materials.code,
         legacyCode: schema.materials.legacyCode,
+        unitOfMeasurement: schema.materials.unitOfMeasurement,
       })
       .from(schema.materials);
 
-    const materialCodeByLegacy = new Map<string, string>();
+    const materialByLegacy = new Map<string, { code: string; unitOfMeasurement: (typeof MATERIAL_UNIT_VALUES)[number] }>();
     const usedMaterialCodes = new Set<string>();
     for (const material of existingMaterials) {
       usedMaterialCodes.add(material.code);
-      if (material.legacyCode) materialCodeByLegacy.set(material.legacyCode, material.code);
+      if (material.legacyCode) {
+        materialByLegacy.set(material.legacyCode, {
+          code: material.code,
+          unitOfMeasurement: material.unitOfMeasurement,
+        });
+      }
     }
+    const conversionFactorsByCode = await loadConversionFactors(db);
 
     const supplierRows = await db
       .select({
@@ -557,10 +643,16 @@ async function main() {
           summary.suppliersCreated++;
         }
 
-        const usableRows: Array<WorkbookRow & { materialCode: string }> = [];
+        const usableRows: Array<
+          WorkbookRow & {
+            materialCode: string;
+            quantityBase: number;
+            unitPriceBase: number;
+          }
+        > = [];
         for (const row of groupRows) {
-          let materialCode = materialCodeByLegacy.get(row.materialLegacyCode);
-          if (!materialCode) {
+          let material = materialByLegacy.get(row.materialLegacyCode);
+          if (!material) {
             if (!/^1\d{7}$/.test(row.materialLegacyCode)) {
               skippedMaterials.push({
                 sourceFile: row.sourceFile,
@@ -604,14 +696,45 @@ async function main() {
                 openingQuantity: 0,
                 createdBy: user.id,
               })
-              .returning({ code: schema.materials.code });
+              .returning({
+                code: schema.materials.code,
+                unitOfMeasurement: schema.materials.unitOfMeasurement,
+              });
 
-            materialCode = createdMaterial.code;
-            materialCodeByLegacy.set(row.materialLegacyCode, materialCode);
+            material = {
+              code: createdMaterial.code,
+              unitOfMeasurement: createdMaterial.unitOfMeasurement,
+            };
+            materialByLegacy.set(row.materialLegacyCode, material);
             summary.materialsCreated++;
           }
 
-          usableRows.push({ ...row, materialCode });
+          const conversionResult = resolveConversionFactor({
+            baseUnit: material.unitOfMeasurement,
+            rawUnit: row.unitRaw,
+            conversions: conversionFactorsByCode.get(material.code),
+          });
+
+          if (!conversionResult.ok) {
+            skippedUnitRows.push({
+              sourceFile: row.sourceFile,
+              sourceRowNumber: row.sourceRowNumber,
+              legacyCode: row.materialLegacyCode,
+              title: row.title,
+              unitRaw: row.unitRaw,
+              reason: conversionResult.reason,
+            });
+            summary.skippedRowsUnresolvedUnit++;
+            continue;
+          }
+
+          const baseValues = toBaseValues(row.quantity, row.unitPrice, conversionResult.factor);
+          usableRows.push({
+            ...row,
+            materialCode: material.code,
+            quantityBase: baseValues.quantity,
+            unitPriceBase: baseValues.unitPrice,
+          });
         }
 
         if (usableRows.length === 0) return;
@@ -622,7 +745,10 @@ async function main() {
           usableRows[0].receiptDate,
         );
 
-        const orderItemGroups = new Map<string, Array<WorkbookRow & { materialCode: string }>>();
+        const orderItemGroups = new Map<
+          string,
+          Array<WorkbookRow & { materialCode: string; quantityBase: number; unitPriceBase: number }>
+        >();
         for (const row of usableRows) {
           const existing = orderItemGroups.get(row.materialCode);
           if (existing) existing.push(row);
@@ -631,8 +757,8 @@ async function main() {
 
         let totalAmount = 0;
         const mergedOrderItems = [...orderItemGroups.entries()].map(([materialCode, itemRows]) => {
-          const quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantity, 0);
-          const totalCost = itemRows.reduce((sum, row) => sum + row.quantity * row.unitPrice, 0);
+          const quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantityBase, 0);
+          const totalCost = itemRows.reduce((sum, row) => sum + row.quantityBase * row.unitPriceBase, 0);
           const unitPrice = totalCost / quantityOrdered;
 
           if (itemRows.length > 1) {
@@ -683,7 +809,10 @@ async function main() {
         summary.orderItemsCreated += createdOrderItems.length;
 
         const orderItemIdByMaterialCode = new Map(createdOrderItems.map((item) => [item.materialCode, item.id]));
-        const receiptGroups = new Map<string, Array<WorkbookRow & { materialCode: string }>>();
+        const receiptGroups = new Map<
+          string,
+          Array<WorkbookRow & { materialCode: string; quantityBase: number; unitPriceBase: number }>
+        >();
         for (const row of usableRows) {
           const existing = receiptGroups.get(row.permitNumber);
           if (existing) existing.push(row);
@@ -714,7 +843,7 @@ async function main() {
               receiptRows.map((row) => ({
                 materialPurchaseReceiptId: createdReceipt.id,
                 materialPurchaseOrderItemId: orderItemIdByMaterialCode.get(row.materialCode)!,
-                quantityReceived: row.quantity,
+                quantityReceived: row.quantityBase,
                 quantityRejected: 0,
               })),
             )
@@ -742,8 +871,8 @@ async function main() {
             receiptRows.map((row) => ({
               transactionId: createdTransaction.id,
               materialCode: row.materialCode,
-              quantity: row.quantity,
-              unitPrice: row.unitPrice,
+              quantity: row.quantityBase,
+              unitPrice: row.unitPriceBase,
             })),
           );
 
@@ -771,6 +900,7 @@ async function main() {
     console.log(`Existing permit groups skipped: ${summary.skippedExistingPermitGroups}`);
     console.log(`Partial groups skipped:         ${summary.skippedPartialPermitGroups}`);
     console.log(`Rows skipped for materials:     ${summary.skippedRowsMissingMaterials}`);
+    console.log(`Rows skipped for units:         ${summary.skippedRowsUnresolvedUnit}`);
 
     if (invalidRows.length > 0) {
       console.log('\n--- Invalid rows skipped (samples) ---');
@@ -791,6 +921,18 @@ async function main() {
       }
       if (skippedMaterials.length > 30) {
         console.log(`  ... and ${skippedMaterials.length - 30} more`);
+      }
+    }
+
+    if (skippedUnitRows.length > 0) {
+      console.log('\n--- Rows skipped because file units could not be converted ---');
+      for (const row of skippedUnitRows.slice(0, 30)) {
+        console.log(
+          `  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode} | ${row.title} | unit="${row.unitRaw || '(فارغ)'}" | ${row.reason}`,
+        );
+      }
+      if (skippedUnitRows.length > 30) {
+        console.log(`  ... and ${skippedUnitRows.length - 30} more`);
       }
     }
 

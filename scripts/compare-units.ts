@@ -26,9 +26,6 @@ const UNIT_AR_LABELS: Record<string, string> = {
   square_meter: 'متر²',
   cubic_meter: 'متر³',
   liter: 'لتر',
-  sheet: 'لوح',
-  roll: 'لفة',
-  box: 'صندوق',
 };
 
 /**
@@ -41,7 +38,7 @@ const UNIT_AR_ALIASES: Record<string, string[]> = {
   cubic_meter: ['متر 3', 'م3', 'م³'],
 };
 
-/** Normalized Arabic (or English enum key) → material_unit enum value. */
+/** Normalized Arabic (or English enum key) -> material_unit enum value. */
 const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
   const map = new Map<string, string>();
   for (const [key, label] of Object.entries(UNIT_AR_LABELS)) {
@@ -313,12 +310,7 @@ async function writeExcel(filePath: string, rows: OutputRow[], options: WriteRep
   await workbook.xlsx.writeFile(filePath);
 }
 
-async function writeReport(
-  outDir: string,
-  baseName: string,
-  rows: OutputRow[],
-  options: WriteReportOptions,
-): Promise<void> {
+async function writeReport(outDir: string, baseName: string, rows: OutputRow[], options: WriteReportOptions): Promise<void> {
   fs.mkdirSync(outDir, { recursive: true });
 
   const csvPath = path.join(outDir, `${baseName}.csv`);
@@ -326,7 +318,15 @@ async function writeReport(
 
   const headers = options.includeInvoiceColumns
     ? options.includeSourceColumn
-      ? (['المصدر', 'الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader, 'المورد', 'آخر فاتورة'] as const)
+      ? ([
+          'المصدر',
+          'الكود',
+          'اسم الصنف',
+          'الوحدة في قاعدة البيانات',
+          options.sourceUnitHeader,
+          'المورد',
+          'آخر فاتورة',
+        ] as const)
       : (['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader, 'المورد', 'آخر فاتورة'] as const)
     : options.includeSourceColumn
       ? (['المصدر', 'الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader] as const)
@@ -335,9 +335,7 @@ async function writeReport(
   const csvRows = rows.map((r) => {
     const base = [r.legacyCode, r.title, r.dbUnitArabic, r.sourceUnit];
     const withSource = options.includeSourceColumn ? [r.sourceLabel ?? '', ...base] : base;
-    return options.includeInvoiceColumns
-      ? [...withSource, r.supplierNames, r.lastInvoiceNumber]
-      : withSource;
+    return options.includeInvoiceColumns ? [...withSource, r.supplierNames, r.lastInvoiceNumber] : withSource;
   });
 
   try {
@@ -502,12 +500,12 @@ async function loadDbMaterials(db: ReturnType<typeof drizzle>): Promise<DbMateri
 
   const alternateUnitsByCode = new Map<string, string[]>();
   for (const row of conversionRows) {
-    let units = alternateUnitsByCode.get(row.materialCode);
-    if (!units) {
-      units = [];
-      alternateUnitsByCode.set(row.materialCode, units);
+    let unitList = alternateUnitsByCode.get(row.materialCode);
+    if (!unitList) {
+      unitList = [];
+      alternateUnitsByCode.set(row.materialCode, unitList);
     }
-    units.push(row.unit);
+    unitList.push(row.unit);
   }
 
   const byLegacy = new Map<string, MaterialRow>();
@@ -544,11 +542,7 @@ async function loadDbMaterials(db: ReturnType<typeof drizzle>): Promise<DbMateri
   };
 }
 
-function resolveMaterial(
-  dbMaterials: DbMaterials,
-  legacyCode: string,
-  title: string,
-): MaterialRow | null {
+function resolveMaterial(dbMaterials: DbMaterials, legacyCode: string, title: string): MaterialRow | null {
   if (legacyCode && dbMaterials.byLegacy.has(legacyCode)) {
     return dbMaterials.byLegacy.get(legacyCode)!;
   }
