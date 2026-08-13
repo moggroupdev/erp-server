@@ -19,6 +19,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { BomsModule } from './modules/boms/boms.module';
 import { InventoryTransactionsModule } from './modules/inventory-transactions/inventory-transactions.module';
 import { MaterialPurchaseOrdersModule } from './modules/material-purchase-orders/material-purchase-orders.module';
+import { LegacyInventoryTransactionsModule } from './modules/legacy-inventory-transactions/legacy-inventory-transactions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
@@ -39,6 +40,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     BomsModule,
     InventoryTransactionsModule,
     MaterialPurchaseOrdersModule,
+    LegacyInventoryTransactionsModule,
     ReportsModule,
   ],
   controllers: [AppController],

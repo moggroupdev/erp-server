@@ -47,6 +47,9 @@ export const PERMISSION_VALUES = [
   'update_product_bom',
   'read_inventory_transactions',
   'read_material_purchase_orders',
+  'add_legacy_inventory_transaction',
+  'read_legacy_inventory_transactions',
+  'update_legacy_inventory_transaction',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(

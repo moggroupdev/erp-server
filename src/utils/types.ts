@@ -10,6 +10,7 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
+  LEGACY_WORK_ORDER_TYPE_VALUES,
 } from './constants';
 import { departments, users, roles, suppliers, customers } from 'src/database/schema';
 
@@ -53,6 +54,8 @@ export type SupplierQuotationEmailStatus = (typeof SUPPLIER_QUOTATION_EMAIL_STAT
 export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES)[number];
 
 export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number];
+
+export type LegacyWorkOrderType = (typeof LEGACY_WORK_ORDER_TYPE_VALUES)[number];
 
 // ==================== ENTITIES ====================
 
