@@ -180,6 +180,21 @@ export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
   [K in Uppercase<(typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number]>]: Lowercase<K>;
 };
 
+// ==================== LEGACY_WORK_ORDER_TYPES ====================
+
+export const LEGACY_WORK_ORDER_TYPE_VALUES = [
+  'base_contract',
+  'in_warranty_maintenance',
+  'out_of_warranty_maintenance',
+  'service_contract',
+] as const;
+
+export const LEGACY_WORK_ORDER_TYPES = Object.fromEntries(
+  LEGACY_WORK_ORDER_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
+) as {
+  [K in Uppercase<(typeof LEGACY_WORK_ORDER_TYPE_VALUES)[number]>]: Lowercase<K>;
+};
+
 // ==================== MAINTENANCE_TYPES ====================
 
 export const MAINTENANCE_TYPE_VALUES = ['in_warranty', 'out_of_warranty', 'service_contract'] as const;

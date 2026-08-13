@@ -14,6 +14,7 @@ import {
   SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INVENTORY_TRANSACTION_TYPE_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
+  LEGACY_WORK_ORDER_TYPE_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
@@ -46,3 +47,5 @@ export const maintenanceTypeEnum = pgEnum('maintenance_type', MAINTENANCE_TYPE_V
 export const maintenanceServiceLocationEnum = pgEnum('maintenance_service_location', MAINTENANCE_SERVICE_LOCATION_VALUES);
 
 export const serviceContractIntervalEnum = pgEnum('service_contract_interval', SERVICE_CONTRACT_INTERVAL_VALUES);
+
+export const legacyWorkOrderTypeEnum = pgEnum('legacy_work_order_type', LEGACY_WORK_ORDER_TYPE_VALUES);
