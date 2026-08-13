@@ -10,7 +10,7 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
-  LEGACY_WORK_ORDER_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
 } from './constants';
 import { departments, users, roles, suppliers, customers } from 'src/database/schema';
 
@@ -55,7 +55,7 @@ export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES
 
 export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number];
 
-export type LegacyWorkOrderType = (typeof LEGACY_WORK_ORDER_TYPE_VALUES)[number];
+export type LegacyIssuePermitWorkOrderType = (typeof LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)[number];
 
 // ==================== ENTITIES ====================
 

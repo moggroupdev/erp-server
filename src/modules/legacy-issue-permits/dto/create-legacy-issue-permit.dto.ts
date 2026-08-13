@@ -12,11 +12,11 @@ import {
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
-import { LEGACY_WORK_ORDER_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
-import { type LegacyWorkOrderType, type ProductionSubDepartment } from 'src/utils/types';
-import { CreateLegacyInventoryTransactionItemDto } from './create-legacy-inventory-transaction-item.dto';
+import { LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { type LegacyIssuePermitWorkOrderType, type ProductionSubDepartment } from 'src/utils/types';
+import { CreateLegacyIssuePermitItemDto } from './create-legacy-issue-permit-item.dto';
 
-export class CreateLegacyInventoryTransactionDto {
+export class CreateLegacyIssuePermitDto {
   @Trim()
   @IsString()
   @IsNotEmpty()
@@ -59,10 +59,10 @@ export class CreateLegacyInventoryTransactionDto {
   @ApiPropertyOptional()
   workOrderNumber: string | null;
 
-  @IsIn(LEGACY_WORK_ORDER_TYPE_VALUES)
+  @IsIn(LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)
   @IsOptional()
-  @ApiPropertyOptional({ enum: LEGACY_WORK_ORDER_TYPE_VALUES })
-  workOrderNumberType: LegacyWorkOrderType;
+  @ApiPropertyOptional({ enum: LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES })
+  workOrderNumberType: LegacyIssuePermitWorkOrderType;
 
   @IsBoolean()
   @IsOptional()
@@ -78,7 +78,7 @@ export class CreateLegacyInventoryTransactionDto {
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => CreateLegacyInventoryTransactionItemDto)
-  @ApiProperty({ type: [CreateLegacyInventoryTransactionItemDto] })
-  items: CreateLegacyInventoryTransactionItemDto[];
+  @Type(() => CreateLegacyIssuePermitItemDto)
+  @ApiProperty({ type: [CreateLegacyIssuePermitItemDto] })
+  items: CreateLegacyIssuePermitItemDto[];
 }

@@ -15,7 +15,7 @@ export * from './offers';
 export * from './contracts';
 export * from './production-plans';
 export * from './inventory-transactions';
-export * from './legacy-inventory-transactions';
+export * from './legacy-issue-permits';
 export * from './supplier-quotation-emails';
 export * from './purchasing-materials';
 export * from './purchasing-products';

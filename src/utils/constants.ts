@@ -47,9 +47,9 @@ export const PERMISSION_VALUES = [
   'update_product_bom',
   'read_inventory_transactions',
   'read_material_purchase_orders',
-  'add_legacy_inventory_transaction',
-  'read_legacy_inventory_transactions',
-  'update_legacy_inventory_transaction',
+  'add_legacy_issue_permit',
+  'read_legacy_issue_permits',
+  'update_legacy_issue_permit',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
@@ -183,19 +183,19 @@ export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
   [K in Uppercase<(typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number]>]: Lowercase<K>;
 };
 
-// ==================== LEGACY_WORK_ORDER_TYPES ====================
+// ==================== LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPES ====================
 
-export const LEGACY_WORK_ORDER_TYPE_VALUES = [
+export const LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES = [
   'base_contract',
   'in_warranty_maintenance',
   'out_of_warranty_maintenance',
   'service_contract',
 ] as const;
 
-export const LEGACY_WORK_ORDER_TYPES = Object.fromEntries(
-  LEGACY_WORK_ORDER_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
+export const LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPES = Object.fromEntries(
+  LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES.map((type) => [type.toUpperCase(), type]),
 ) as {
-  [K in Uppercase<(typeof LEGACY_WORK_ORDER_TYPE_VALUES)[number]>]: Lowercase<K>;
+  [K in Uppercase<(typeof LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== MAINTENANCE_TYPES ====================

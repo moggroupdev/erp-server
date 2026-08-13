@@ -4,7 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit } from 'src/utils/types';
 
-export class CreateLegacyInventoryTransactionItemDto {
+export class CreateLegacyIssuePermitItemDto {
   @Trim()
   @IsString()
   @IsNotEmpty()

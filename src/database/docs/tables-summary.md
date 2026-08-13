@@ -80,8 +80,8 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | production_plan_item_notes                  | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | inventory_transactions                      | uuid        | IVT  | NO                | YES       | YES (NOT NULL) |
 | inventory_transaction_items                 | uuid        | —    | NO                | NO        | NO             |
-| legacy_inventory_transactions               | uuid        | —    | isCancelled flag  | YES       | YES (NOT NULL) |
-| legacy_inventory_transaction_items          | uuid        | —    | NO                | NO        | NO             |
+| legacy_issue_permits                        | uuid        | —    | isCancelled flag  | YES       | YES (NOT NULL) |
+| legacy_issue_permit_items                   | uuid        | —    | NO                | NO        | NO             |
 | login_history                               | uuid        | —    | NO                | YES       | NO             |
 | product_units                               | uuid        | —    | NO                | YES       | YES (NOT NULL) |
 | product_purchase_orders                     | uuid        | PPO  | cancelledAt field | YES       | YES (NOT NULL) |
