@@ -31,6 +31,10 @@ export class CreateLegacyInventoryTransactionDto {
 
   @IsDateString()
   @ApiProperty()
+  issueOrderDate: string;
+
+  @IsDateString()
+  @ApiProperty()
   date: string;
 
   @IsUuidString()

@@ -22,7 +22,12 @@ export class LegacyInventoryTransactionsService {
     return await this.db.transaction(async (tx) => {
       const [transaction] = await tx
         .insert(legacyInventoryTransactions)
-        .values({ ...header, date: new Date(header.date), createdBy: user.id })
+        .values({
+          ...header,
+          date: new Date(header.date),
+          issueOrderDate: new Date(header.issueOrderDate),
+          createdBy: user.id,
+        })
         .returning();
 
       const insertedItems = await tx
@@ -75,11 +80,15 @@ export class LegacyInventoryTransactionsService {
   }
 
   public async updateHeader(id: string, updateDto: UpdateLegacyInventoryTransactionDto) {
-    const { date, ...rest } = updateDto;
+    const { date, issueOrderDate, ...rest } = updateDto;
 
     const [updated] = await this.db
       .update(legacyInventoryTransactions)
-      .set({ ...rest, ...(date !== undefined ? { date: new Date(date) } : {}) })
+      .set({
+        ...rest,
+        ...(date !== undefined ? { date: new Date(date) } : {}),
+        ...(issueOrderDate !== undefined ? { issueOrderDate: new Date(issueOrderDate) } : {}),
+      })
       .where(eq(legacyInventoryTransactions.id, id))
       .returning();
 
