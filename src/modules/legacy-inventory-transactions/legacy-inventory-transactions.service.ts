@@ -73,7 +73,7 @@ export class LegacyInventoryTransactionsService {
 
     if (!transaction)
       throw new NotFoundException(
-        translate(`Legacy inventory transaction with ID ${id} does not exist.`, `لا توجد حركة مخزون قديمة بالمعرف ${id}.`),
+        translate(`Legacy inventory transaction with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return transaction;
@@ -94,7 +94,7 @@ export class LegacyInventoryTransactionsService {
 
     if (!updated)
       throw new NotFoundException(
-        translate(`Legacy inventory transaction with ID ${id} does not exist.`, `لا توجد حركة مخزون قديمة بالمعرف ${id}.`),
+        translate(`Legacy inventory transaction with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return updated;
@@ -113,7 +113,7 @@ export class LegacyInventoryTransactionsService {
       throw new NotFoundException(
         translate(
           `Legacy inventory transaction item with ID ${itemId} does not exist for transaction ${transactionId}.`,
-          `لا يوجد بند حركة مخزون قديمة بالمعرف ${itemId} للمعاملة ${transactionId}.`,
+          `لا يوجد بند أذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
         ),
       );
 
