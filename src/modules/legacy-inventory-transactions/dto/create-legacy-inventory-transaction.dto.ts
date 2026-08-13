@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsDateString, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
 import { LEGACY_WORK_ORDER_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
@@ -49,6 +59,11 @@ export class CreateLegacyInventoryTransactionDto {
   @IsOptional()
   @ApiPropertyOptional({ enum: LEGACY_WORK_ORDER_TYPE_VALUES })
   workOrderNumberType: LegacyWorkOrderType;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional()
+  isCancelled: boolean;
 
   @TrimToNull()
   @IsString()
