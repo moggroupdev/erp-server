@@ -3,7 +3,7 @@ import { pgTable, uuid, text, timestamp, boolean, index, foreignKey } from 'driz
 import {
   createdAt,
   numeric,
-  positiveQuantityCheck,
+  positiveNullableQuantityCheck,
   productionSubDepartmentEnum,
   legacyIssuePermitWorkOrderTypeEnum,
   materialUnitEnum,
@@ -56,11 +56,9 @@ export const legacyIssuePermitItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     issuePermitId: uuid('issue_permit_id').notNull(),
-    materialCode: text('material_code')
-      .notNull()
-      .references(() => materials.code),
-    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(),
-    quantity: numeric('quantity').notNull(),
+    materialCode: text('material_code').references(() => materials.code),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'),
+    quantity: numeric('quantity'),
     notes: text('notes'),
   },
   (table) => [
@@ -71,7 +69,7 @@ export const legacyIssuePermitItems = pgTable(
     }),
     index('legacy_issue_permit_items_issue_permit_id_idx').on(table.issuePermitId),
     index('legacy_issue_permit_items_material_code_idx').on(table.materialCode),
-    positiveQuantityCheck('legacy_issue_permit_items_quantity_positive', table.quantity),
+    positiveNullableQuantityCheck('legacy_issue_permit_items_quantity_positive', table.quantity),
   ],
 );
 
