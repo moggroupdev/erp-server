@@ -79,7 +79,7 @@ export class LegacyIssuePermitsService {
 
     if (!transaction)
       throw new NotFoundException(
-        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
+        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return transaction;
@@ -100,7 +100,7 @@ export class LegacyIssuePermitsService {
 
     if (!updated)
       throw new NotFoundException(
-        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
+        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return updated;
@@ -116,7 +116,7 @@ export class LegacyIssuePermitsService {
       throw new NotFoundException(
         translate(
           `Legacy issue permit with ID ${transactionId} does not exist.`,
-          `لا يوجد أذن صرف مرحلي بالمعرف ${transactionId}.`,
+          `لا يوجد إذن صرف مرحلي بالمعرف ${transactionId}.`,
         ),
       );
 
@@ -143,7 +143,7 @@ export class LegacyIssuePermitsService {
       throw new NotFoundException(
         translate(
           `Legacy issue permit item with ID ${itemId} does not exist for transaction ${transactionId}.`,
-          `لا يوجد بند أذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
+          `لا يوجد بند إذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
         ),
       );
 
