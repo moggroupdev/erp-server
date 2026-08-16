@@ -6,6 +6,7 @@ import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateLegacyIssuePermitDto } from './dto/create-legacy-issue-permit.dto';
+import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit-item.dto';
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
 
@@ -102,6 +103,25 @@ export class LegacyIssuePermitsService {
       );
 
     return updated;
+  }
+
+  public async addItem(transactionId: string, createDto: CreateLegacyIssuePermitItemDto) {
+    const transaction = await this.db.query.legacyIssuePermits.findFirst({
+      where: eq(legacyIssuePermits.id, transactionId),
+      columns: { id: true },
+    });
+
+    if (!transaction)
+      throw new NotFoundException(
+        translate(`Legacy issue permit with ID ${transactionId} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${transactionId}.`),
+      );
+
+    const [inserted] = await this.db
+      .insert(legacyIssuePermitItems)
+      .values({ ...createDto, issuePermitId: transactionId })
+      .returning();
+
+    return inserted;
   }
 
   public async updateItem(transactionId: string, itemId: string, updateDto: UpdateLegacyIssuePermitItemDto) {
