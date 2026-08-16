@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -76,7 +75,6 @@ export class CreateLegacyIssuePermitDto {
   notes: string | null;
 
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateLegacyIssuePermitItemDto)
   @ApiProperty({ type: [CreateLegacyIssuePermitItemDto] })

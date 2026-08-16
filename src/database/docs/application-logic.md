@@ -75,6 +75,11 @@ All sources live on the header — one source event per transaction; items only 
 - A production issue is scoped to one `production_plan_item_id` (one unit + stage) per transaction
 - Each item's `material_code` must belong to the header source (e.g. a line of the linked purchase receipt, a `maintenance_order_materials` row of the linked maintenance order, or the plan item's product BOM)
 
+### Warehouse (legacy issue permits)
+
+- `legacy_issue_permit_items.sequence_order` — sequential display order within a permit; assigned from create-payload array order (`index + 1`), `max + 1` when appending an item, or `index + 1` from a full item-id list on reorder
+- `legacy_issue_permit_items.material_code` — optional; empty items are allowed. When set, `unit_of_measurement_selected` and `quantity` are required (create, add, and update)
+
 ### Purchasing
 
 - Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered`

@@ -1,13 +1,15 @@
-import { and, eq } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { legacyIssuePermitItems, legacyIssuePermits } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateLegacyIssuePermitDto } from './dto/create-legacy-issue-permit.dto';
+import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit-item.dto';
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
+import { ReorderLegacyIssuePermitItemsDto } from './dto/reorder-legacy-issue-permit-items.dto';
 
 @Injectable()
 export class LegacyIssuePermitsService {
@@ -30,9 +32,15 @@ export class LegacyIssuePermitsService {
         })
         .returning();
 
+      if (items.length === 0) {
+        return { ...transaction, items: [] };
+      }
+
+      for (const item of items) this.assertMaterialRequiresUnitAndQuantity(item);
+
       const insertedItems = await tx
         .insert(legacyIssuePermitItems)
-        .values(items.map((item) => ({ ...item, issuePermitId: transaction.id })))
+        .values(items.map((item, index) => ({ ...item, issuePermitId: transaction.id, sequenceOrder: index + 1 })))
         .returning();
 
       return { ...transaction, items: insertedItems };
@@ -56,6 +64,7 @@ export class LegacyIssuePermitsService {
         creator: { columns: { id: true, name: true } },
         createdBy: { columns: { id: true, name: true } },
         items: {
+          orderBy: [asc(legacyIssuePermitItems.sequenceOrder)],
           with: {
             material: {
               columns: {
@@ -73,7 +82,7 @@ export class LegacyIssuePermitsService {
 
     if (!transaction)
       throw new NotFoundException(
-        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
+        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return transaction;
@@ -94,28 +103,122 @@ export class LegacyIssuePermitsService {
 
     if (!updated)
       throw new NotFoundException(
-        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${id}.`),
+        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
       );
 
     return updated;
   }
 
+  public async addItem(transactionId: string, createDto: CreateLegacyIssuePermitItemDto) {
+    const transaction = await this.db.query.legacyIssuePermits.findFirst({
+      where: eq(legacyIssuePermits.id, transactionId),
+      columns: { id: true },
+    });
+
+    if (!transaction)
+      throw new NotFoundException(
+        translate(
+          `Legacy issue permit with ID ${transactionId} does not exist.`,
+          `لا يوجد إذن صرف مرحلي بالمعرف ${transactionId}.`,
+        ),
+      );
+
+    this.assertMaterialRequiresUnitAndQuantity(createDto);
+
+    const [seq] = await this.db
+      .select({ maxSequenceOrder: sql<number>`coalesce(max(${legacyIssuePermitItems.sequenceOrder}), 0)` })
+      .from(legacyIssuePermitItems)
+      .where(eq(legacyIssuePermitItems.issuePermitId, transactionId));
+
+    const [inserted] = await this.db
+      .insert(legacyIssuePermitItems)
+      .values({ ...createDto, issuePermitId: transactionId, sequenceOrder: Number(seq?.maxSequenceOrder ?? 0) + 1 })
+      .returning();
+
+    return inserted;
+  }
+
+  public async reorderItems(transactionId: string, reorderDto: ReorderLegacyIssuePermitItemsDto) {
+    const { itemIds } = reorderDto;
+
+    const transaction = await this.db.query.legacyIssuePermits.findFirst({
+      where: eq(legacyIssuePermits.id, transactionId),
+      columns: { id: true },
+    });
+
+    if (!transaction)
+      throw new NotFoundException(
+        translate(
+          `Legacy issue permit with ID ${transactionId} does not exist.`,
+          `لا يوجد إذن صرف مرحلي بالمعرف ${transactionId}.`,
+        ),
+      );
+
+    const existing = await this.db.query.legacyIssuePermitItems.findMany({
+      where: eq(legacyIssuePermitItems.issuePermitId, transactionId),
+      columns: { id: true },
+    });
+
+    if (existing.length === 0)
+      throw new BadRequestException(
+        translate(
+          `Legacy issue permit with ID ${transactionId} has no items to reorder.`,
+          `لا توجد بنود لإعادة ترتيبها لإذن الصرف المرحلي بالمعرف ${transactionId}.`,
+        ),
+      );
+
+    if (new Set(itemIds).size !== itemIds.length)
+      throw new BadRequestException(
+        translate(
+          'Item IDs in the reorder payload must be unique.',
+          'يجب أن تكون معرفات البنود في طلب إعادة الترتيب فريدة.',
+        ),
+      );
+
+    const existingIds = new Set(existing.map((item) => item.id));
+    if (itemIds.length !== existing.length || itemIds.some((id) => !existingIds.has(id)))
+      throw new BadRequestException(
+        translate(
+          'Reorder payload must include every item of this permit exactly once.',
+          'يجب أن يتضمن طلب إعادة الترتيب كل بنود هذا الإذن مرة واحدة فقط.',
+        ),
+      );
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .update(legacyIssuePermitItems)
+        .set({ sequenceOrder: sql`${legacyIssuePermitItems.sequenceOrder} + 1000000` })
+        .where(eq(legacyIssuePermitItems.issuePermitId, transactionId));
+
+      const updated: (typeof legacyIssuePermitItems.$inferSelect)[] = [];
+      for (const [index, itemId] of itemIds.entries()) {
+        const [row] = await tx
+          .update(legacyIssuePermitItems)
+          .set({ sequenceOrder: index + 1 })
+          .where(and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)))
+          .returning();
+        updated.push(row);
+      }
+
+      return updated.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+    });
+  }
+
   public async updateItem(transactionId: string, itemId: string, updateDto: UpdateLegacyIssuePermitItemDto) {
     const existing = await this.db.query.legacyIssuePermitItems.findFirst({
-      where: and(
-        eq(legacyIssuePermitItems.id, itemId),
-        eq(legacyIssuePermitItems.issuePermitId, transactionId),
-      ),
-      columns: { id: true },
+      where: and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)),
     });
 
     if (!existing)
       throw new NotFoundException(
         translate(
           `Legacy issue permit item with ID ${itemId} does not exist for transaction ${transactionId}.`,
-          `لا يوجد بند أذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
+          `لا يوجد بند إذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
         ),
       );
+
+    const nextItem = { ...existing, ...updateDto };
+    this.assertMaterialRequiresUnitAndQuantity(nextItem);
 
     const [updated] = await this.db
       .update(legacyIssuePermitItems)
@@ -124,5 +227,33 @@ export class LegacyIssuePermitsService {
       .returning();
 
     return updated;
+  }
+
+  // ============================== PRIVATE METHODS ==============================
+
+  private assertMaterialRequiresUnitAndQuantity(item: {
+    materialCode?: string | null;
+    unitOfMeasurementSelected?: string | null;
+    quantity?: number | string | null;
+  }) {
+    if (!item.materialCode) return;
+
+    if (!item.unitOfMeasurementSelected) {
+      throw new BadRequestException(
+        translate(
+          `Please select the unit for material ${item.materialCode}.`,
+          `يرجى اختيار الوحدة للمادة ${item.materialCode}.`,
+        ),
+      );
+    }
+
+    if (item.quantity == null || item.quantity === '' || Number(item.quantity) <= 0) {
+      throw new BadRequestException(
+        translate(
+          `Please enter a positive quantity for material ${item.materialCode}.`,
+          `يرجى إدخال كمية موجبة للمادة ${item.materialCode}.`,
+        ),
+      );
+    }
   }
 }

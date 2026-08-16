@@ -1,24 +1,26 @@
-import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TrimToNull } from 'src/utils/decorators';
+import { IsIn, IsNumber, IsOptional, IsPositive, IsString, ValidateIf } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit } from 'src/utils/types';
 
 export class CreateLegacyIssuePermitItemDto {
-  @Trim()
+  @TrimToNull()
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty()
-  materialCode: string;
+  @IsOptional()
+  @ApiPropertyOptional()
+  materialCode: string | null;
 
+  @ValidateIf((o: CreateLegacyIssuePermitItemDto) => !!o.materialCode)
   @IsIn(MATERIAL_UNIT_VALUES)
-  @ApiProperty({ enum: MATERIAL_UNIT_VALUES })
-  unitOfMeasurementSelected: MaterialUnit;
+  @ApiPropertyOptional({ enum: MATERIAL_UNIT_VALUES, nullable: true })
+  unitOfMeasurementSelected: MaterialUnit | null;
 
+  @ValidateIf((o: CreateLegacyIssuePermitItemDto) => !!o.materialCode)
   @IsNumber()
   @IsPositive()
-  @ApiProperty()
-  quantity: number;
+  @ApiPropertyOptional({ nullable: true })
+  quantity: number | null;
 
   @TrimToNull()
   @IsString()

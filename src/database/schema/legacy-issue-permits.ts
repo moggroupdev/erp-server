@@ -1,10 +1,11 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, index, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, index, foreignKey, integer, unique } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
-  positiveQuantityCheck,
-  productionSubDepartmentEnum,
+    positiveNullableQuantityCheck,
+    positiveQuantityCheck,
+    productionSubDepartmentEnum,
   legacyIssuePermitWorkOrderTypeEnum,
   materialUnitEnum,
 } from './common';
@@ -56,11 +57,10 @@ export const legacyIssuePermitItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     issuePermitId: uuid('issue_permit_id').notNull(),
-    materialCode: text('material_code')
-      .notNull()
-      .references(() => materials.code),
-    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(),
-    quantity: numeric('quantity').notNull(),
+    sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Sequential display order within the permit
+    materialCode: text('material_code').references(() => materials.code), // @APP_CHECKED - When set, unit_of_measurement_selected and quantity are required
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Required when material_code is set
+    quantity: numeric('quantity'), // @APP_CHECKED - Required when material_code is set
     notes: text('notes'),
   },
   (table) => [
@@ -69,9 +69,11 @@ export const legacyIssuePermitItems = pgTable(
       columns: [table.issuePermitId],
       foreignColumns: [legacyIssuePermits.id],
     }),
+    unique('legacy_issue_permit_items_permit_sequence_unique').on(table.issuePermitId, table.sequenceOrder),
     index('legacy_issue_permit_items_issue_permit_id_idx').on(table.issuePermitId),
     index('legacy_issue_permit_items_material_code_idx').on(table.materialCode),
-    positiveQuantityCheck('legacy_issue_permit_items_quantity_positive', table.quantity),
+    positiveNullableQuantityCheck('legacy_issue_permit_items_quantity_positive', table.quantity),
+    positiveQuantityCheck('legacy_issue_permit_items_sequence_order_positive', table.sequenceOrder),
   ],
 );
 
