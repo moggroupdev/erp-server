@@ -30,6 +30,10 @@ export class LegacyIssuePermitsService {
         })
         .returning();
 
+      if (items.length === 0) {
+        return { ...transaction, items: [] };
+      }
+
       const insertedItems = await tx
         .insert(legacyIssuePermitItems)
         .values(items.map((item) => ({ ...item, issuePermitId: transaction.id })))
