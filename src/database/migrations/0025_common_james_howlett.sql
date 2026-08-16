@@ -1,0 +1,3 @@
+ALTER TABLE "legacy_issue_permit_items" DROP CONSTRAINT "legacy_issue_permit_items_sequence_order_positive";--> statement-breakpoint
+ALTER TABLE "legacy_issue_permit_items" ALTER COLUMN "sequence_order" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "legacy_issue_permit_items" ADD CONSTRAINT "legacy_issue_permit_items_sequence_order_positive" CHECK ("legacy_issue_permit_items"."sequence_order" > 0);

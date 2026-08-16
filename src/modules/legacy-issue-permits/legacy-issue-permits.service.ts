@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { legacyIssuePermitItems, legacyIssuePermits } from 'src/database/schema';
@@ -37,7 +37,7 @@ export class LegacyIssuePermitsService {
 
       const insertedItems = await tx
         .insert(legacyIssuePermitItems)
-        .values(items.map((item) => ({ ...item, issuePermitId: transaction.id })))
+        .values(items.map((item, index) => ({ ...item, issuePermitId: transaction.id, sequenceOrder: index + 1 })))
         .returning();
 
       return { ...transaction, items: insertedItems };
@@ -61,6 +61,7 @@ export class LegacyIssuePermitsService {
         creator: { columns: { id: true, name: true } },
         createdBy: { columns: { id: true, name: true } },
         items: {
+          orderBy: [asc(legacyIssuePermitItems.sequenceOrder)],
           with: {
             material: {
               columns: {
@@ -113,12 +114,20 @@ export class LegacyIssuePermitsService {
 
     if (!transaction)
       throw new NotFoundException(
-        translate(`Legacy issue permit with ID ${transactionId} does not exist.`, `لا يوجد أذن صرف مرحلي بالمعرف ${transactionId}.`),
+        translate(
+          `Legacy issue permit with ID ${transactionId} does not exist.`,
+          `لا يوجد أذن صرف مرحلي بالمعرف ${transactionId}.`,
+        ),
       );
+
+    const [seq] = await this.db
+      .select({ maxSequenceOrder: sql<number>`coalesce(max(${legacyIssuePermitItems.sequenceOrder}), 0)` })
+      .from(legacyIssuePermitItems)
+      .where(eq(legacyIssuePermitItems.issuePermitId, transactionId));
 
     const [inserted] = await this.db
       .insert(legacyIssuePermitItems)
-      .values({ ...createDto, issuePermitId: transactionId })
+      .values({ ...createDto, issuePermitId: transactionId, sequenceOrder: Number(seq?.maxSequenceOrder ?? 0) + 1 })
       .returning();
 
     return inserted;
@@ -126,10 +135,7 @@ export class LegacyIssuePermitsService {
 
   public async updateItem(transactionId: string, itemId: string, updateDto: UpdateLegacyIssuePermitItemDto) {
     const existing = await this.db.query.legacyIssuePermitItems.findFirst({
-      where: and(
-        eq(legacyIssuePermitItems.id, itemId),
-        eq(legacyIssuePermitItems.issuePermitId, transactionId),
-      ),
+      where: and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)),
       columns: { id: true },
     });
 

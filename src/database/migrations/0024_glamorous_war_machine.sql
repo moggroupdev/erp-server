@@ -1,0 +1,3 @@
+ALTER TABLE "legacy_issue_permit_items" ADD COLUMN "sequence_order" integer;--> statement-breakpoint
+ALTER TABLE "legacy_issue_permit_items" ADD CONSTRAINT "legacy_issue_permit_items_permit_sequence_unique" UNIQUE("issue_permit_id","sequence_order");--> statement-breakpoint
+ALTER TABLE "legacy_issue_permit_items" ADD CONSTRAINT "legacy_issue_permit_items_sequence_order_positive" CHECK ("legacy_issue_permit_items"."sequence_order" IS NULL OR "legacy_issue_permit_items"."sequence_order" > 0);

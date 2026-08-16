@@ -1,10 +1,11 @@
 import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, index, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, boolean, index, foreignKey, integer, unique } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
-  positiveNullableQuantityCheck,
-  productionSubDepartmentEnum,
+    positiveNullableQuantityCheck,
+    positiveQuantityCheck,
+    productionSubDepartmentEnum,
   legacyIssuePermitWorkOrderTypeEnum,
   materialUnitEnum,
 } from './common';
@@ -56,6 +57,7 @@ export const legacyIssuePermitItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     issuePermitId: uuid('issue_permit_id').notNull(),
+    sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Sequential display order within the permit
     materialCode: text('material_code').references(() => materials.code),
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'),
     quantity: numeric('quantity'),
@@ -67,9 +69,11 @@ export const legacyIssuePermitItems = pgTable(
       columns: [table.issuePermitId],
       foreignColumns: [legacyIssuePermits.id],
     }),
+    unique('legacy_issue_permit_items_permit_sequence_unique').on(table.issuePermitId, table.sequenceOrder),
     index('legacy_issue_permit_items_issue_permit_id_idx').on(table.issuePermitId),
     index('legacy_issue_permit_items_material_code_idx').on(table.materialCode),
     positiveNullableQuantityCheck('legacy_issue_permit_items_quantity_positive', table.quantity),
+    positiveQuantityCheck('legacy_issue_permit_items_sequence_order_positive', table.sequenceOrder),
   ],
 );
 
