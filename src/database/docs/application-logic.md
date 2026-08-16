@@ -77,7 +77,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Warehouse (legacy issue permits)
 
-- `legacy_issue_permit_items.sequence_order` — sequential display order within a permit; assigned from create-payload array order (`index + 1`) or `max + 1` when appending an item
+- `legacy_issue_permit_items.sequence_order` — sequential display order within a permit; assigned from create-payload array order (`index + 1`), `max + 1` when appending an item, or `index + 1` from a full item-id list on reorder
 
 ### Purchasing
 

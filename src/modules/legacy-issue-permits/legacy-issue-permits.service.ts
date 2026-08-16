@@ -1,5 +1,5 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { legacyIssuePermitItems, legacyIssuePermits } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
@@ -9,6 +9,7 @@ import { CreateLegacyIssuePermitDto } from './dto/create-legacy-issue-permit.dto
 import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit-item.dto';
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
+import { ReorderLegacyIssuePermitItemsDto } from './dto/reorder-legacy-issue-permit-items.dto';
 
 @Injectable()
 export class LegacyIssuePermitsService {
@@ -131,6 +132,69 @@ export class LegacyIssuePermitsService {
       .returning();
 
     return inserted;
+  }
+
+  public async reorderItems(transactionId: string, reorderDto: ReorderLegacyIssuePermitItemsDto) {
+    const { itemIds } = reorderDto;
+
+    const transaction = await this.db.query.legacyIssuePermits.findFirst({
+      where: eq(legacyIssuePermits.id, transactionId),
+      columns: { id: true },
+    });
+
+    if (!transaction)
+      throw new NotFoundException(
+        translate(
+          `Legacy issue permit with ID ${transactionId} does not exist.`,
+          `لا يوجد إذن صرف مرحلي بالمعرف ${transactionId}.`,
+        ),
+      );
+
+    const existing = await this.db.query.legacyIssuePermitItems.findMany({
+      where: eq(legacyIssuePermitItems.issuePermitId, transactionId),
+      columns: { id: true },
+    });
+
+    if (existing.length === 0)
+      throw new BadRequestException(
+        translate(
+          `Legacy issue permit with ID ${transactionId} has no items to reorder.`,
+          `لا توجد بنود لإعادة ترتيبها لإذن الصرف المرحلي بالمعرف ${transactionId}.`,
+        ),
+      );
+
+    if (new Set(itemIds).size !== itemIds.length)
+      throw new BadRequestException(
+        translate('Item IDs in the reorder payload must be unique.', 'يجب أن تكون معرفات البنود في طلب إعادة الترتيب فريدة.'),
+      );
+
+    const existingIds = new Set(existing.map((item) => item.id));
+    if (itemIds.length !== existing.length || itemIds.some((id) => !existingIds.has(id)))
+      throw new BadRequestException(
+        translate(
+          'Reorder payload must include every item of this permit exactly once.',
+          'يجب أن يتضمن طلب إعادة الترتيب كل بنود هذا الإذن مرة واحدة فقط.',
+        ),
+      );
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .update(legacyIssuePermitItems)
+        .set({ sequenceOrder: sql`${legacyIssuePermitItems.sequenceOrder} + 1000000` })
+        .where(eq(legacyIssuePermitItems.issuePermitId, transactionId));
+
+      const updated: (typeof legacyIssuePermitItems.$inferSelect)[] = [];
+      for (const [index, itemId] of itemIds.entries()) {
+        const [row] = await tx
+          .update(legacyIssuePermitItems)
+          .set({ sequenceOrder: index + 1 })
+          .where(and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)))
+          .returning();
+        updated.push(row);
+      }
+
+      return updated.sort((a, b) => a.sequenceOrder - b.sequenceOrder);
+    });
   }
 
   public async updateItem(transactionId: string, itemId: string, updateDto: UpdateLegacyIssuePermitItemDto) {
