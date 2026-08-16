@@ -36,6 +36,8 @@ export class LegacyIssuePermitsService {
         return { ...transaction, items: [] };
       }
 
+      for (const item of items) this.assertMaterialRequiresUnitAndQuantity(item);
+
       const insertedItems = await tx
         .insert(legacyIssuePermitItems)
         .values(items.map((item, index) => ({ ...item, issuePermitId: transaction.id, sequenceOrder: index + 1 })))
@@ -121,6 +123,8 @@ export class LegacyIssuePermitsService {
         ),
       );
 
+    this.assertMaterialRequiresUnitAndQuantity(createDto);
+
     const [seq] = await this.db
       .select({ maxSequenceOrder: sql<number>`coalesce(max(${legacyIssuePermitItems.sequenceOrder}), 0)` })
       .from(legacyIssuePermitItems)
@@ -165,7 +169,10 @@ export class LegacyIssuePermitsService {
 
     if (new Set(itemIds).size !== itemIds.length)
       throw new BadRequestException(
-        translate('Item IDs in the reorder payload must be unique.', 'يجب أن تكون معرفات البنود في طلب إعادة الترتيب فريدة.'),
+        translate(
+          'Item IDs in the reorder payload must be unique.',
+          'يجب أن تكون معرفات البنود في طلب إعادة الترتيب فريدة.',
+        ),
       );
 
     const existingIds = new Set(existing.map((item) => item.id));
@@ -200,7 +207,6 @@ export class LegacyIssuePermitsService {
   public async updateItem(transactionId: string, itemId: string, updateDto: UpdateLegacyIssuePermitItemDto) {
     const existing = await this.db.query.legacyIssuePermitItems.findFirst({
       where: and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)),
-      columns: { id: true },
     });
 
     if (!existing)
@@ -211,6 +217,9 @@ export class LegacyIssuePermitsService {
         ),
       );
 
+    const nextItem = { ...existing, ...updateDto };
+    this.assertMaterialRequiresUnitAndQuantity(nextItem);
+
     const [updated] = await this.db
       .update(legacyIssuePermitItems)
       .set(updateDto)
@@ -218,5 +227,33 @@ export class LegacyIssuePermitsService {
       .returning();
 
     return updated;
+  }
+
+  // ============================== PRIVATE METHODS ==============================
+
+  private assertMaterialRequiresUnitAndQuantity(item: {
+    materialCode?: string | null;
+    unitOfMeasurementSelected?: string | null;
+    quantity?: number | string | null;
+  }) {
+    if (!item.materialCode) return;
+
+    if (!item.unitOfMeasurementSelected) {
+      throw new BadRequestException(
+        translate(
+          `Please select the unit for material ${item.materialCode}.`,
+          `يرجى اختيار الوحدة للمادة ${item.materialCode}.`,
+        ),
+      );
+    }
+
+    if (item.quantity == null || item.quantity === '' || Number(item.quantity) <= 0) {
+      throw new BadRequestException(
+        translate(
+          `Please enter a positive quantity for material ${item.materialCode}.`,
+          `يرجى إدخال كمية موجبة للمادة ${item.materialCode}.`,
+        ),
+      );
+    }
   }
 }

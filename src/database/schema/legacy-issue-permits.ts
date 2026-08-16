@@ -58,9 +58,9 @@ export const legacyIssuePermitItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     issuePermitId: uuid('issue_permit_id').notNull(),
     sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Sequential display order within the permit
-    materialCode: text('material_code').references(() => materials.code),
-    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'),
-    quantity: numeric('quantity'),
+    materialCode: text('material_code').references(() => materials.code), // @APP_CHECKED - When set, unit_of_measurement_selected and quantity are required
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Required when material_code is set
+    quantity: numeric('quantity'), // @APP_CHECKED - Required when material_code is set
     notes: text('notes'),
   },
   (table) => [
