@@ -91,6 +91,8 @@ type OutputRow = {
   lastInvoiceNumber: string;
   /** Present on combined material CSV mismatch rows. */
   sourceLabel?: string;
+  /** Transaction workbook names this mismatch was found in. */
+  fileNames?: string;
 };
 
 type DbMaterials = {
@@ -105,6 +107,7 @@ type WriteReportOptions = {
   sourceUnitHeader: string;
   includeInvoiceColumns: boolean;
   includeSourceColumn: boolean;
+  includeFileNameColumn: boolean;
   excelTitle: string;
 };
 
@@ -114,6 +117,7 @@ type UnitUsage = {
   supplierNames: Set<string>;
   lastInvoiceNumber: string;
   lastInvoiceTime: number;
+  fileNames: Set<string>;
 };
 
 /** Resolve a raw unit string to a material_unit enum key, if known. */
@@ -245,6 +249,10 @@ async function writeExcel(filePath: string, rows: OutputRow[], options: WriteRep
     );
   }
 
+  if (options.includeFileNameColumn) {
+    columns.push({ header: 'اسم الملف', key: 'fileNames', width: 32 });
+  }
+
   sheet.columns = columns;
 
   const thinBorder: Partial<ExcelJS.Borders> = {
@@ -275,6 +283,7 @@ async function writeExcel(filePath: string, rows: OutputRow[], options: WriteRep
       sourceUnit: row.sourceUnit,
       supplierNames: row.supplierNames,
       lastInvoiceNumber: row.lastInvoiceNumber,
+      fileNames: row.fileNames ?? '',
     });
     excelRow.height = 22;
     excelRow.eachCell((cell, colNumber) => {
@@ -316,26 +325,19 @@ async function writeReport(outDir: string, baseName: string, rows: OutputRow[], 
   const csvPath = path.join(outDir, `${baseName}.csv`);
   const xlsxPath = path.join(outDir, `${baseName}.xlsx`);
 
-  const headers = options.includeInvoiceColumns
-    ? options.includeSourceColumn
-      ? ([
-          'المصدر',
-          'الكود',
-          'اسم الصنف',
-          'الوحدة في قاعدة البيانات',
-          options.sourceUnitHeader,
-          'المورد',
-          'آخر فاتورة',
-        ] as const)
-      : (['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader, 'المورد', 'آخر فاتورة'] as const)
-    : options.includeSourceColumn
-      ? (['المصدر', 'الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader] as const)
-      : (['الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader] as const);
+  const headers: string[] = [];
+  if (options.includeSourceColumn) headers.push('المصدر');
+  headers.push('الكود', 'اسم الصنف', 'الوحدة في قاعدة البيانات', options.sourceUnitHeader);
+  if (options.includeInvoiceColumns) headers.push('المورد', 'آخر فاتورة');
+  if (options.includeFileNameColumn) headers.push('اسم الملف');
 
   const csvRows = rows.map((r) => {
-    const base = [r.legacyCode, r.title, r.dbUnitArabic, r.sourceUnit];
-    const withSource = options.includeSourceColumn ? [r.sourceLabel ?? '', ...base] : base;
-    return options.includeInvoiceColumns ? [...withSource, r.supplierNames, r.lastInvoiceNumber] : withSource;
+    const cells: string[] = [];
+    if (options.includeSourceColumn) cells.push(r.sourceLabel ?? '');
+    cells.push(r.legacyCode, r.title, r.dbUnitArabic, r.sourceUnit);
+    if (options.includeInvoiceColumns) cells.push(r.supplierNames, r.lastInvoiceNumber);
+    if (options.includeFileNameColumn) cells.push(r.fileNames ?? '');
+    return cells;
   });
 
   try {
@@ -605,10 +607,17 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
       const invoiceUnit = row.unit || '(فارغ)';
       let usage = units.get(invoiceUnit);
       if (!usage) {
-        usage = { invoiceUnit, supplierNames: new Set(), lastInvoiceNumber: '', lastInvoiceTime: -1 };
+        usage = {
+          invoiceUnit,
+          supplierNames: new Set(),
+          lastInvoiceNumber: '',
+          lastInvoiceTime: -1,
+          fileNames: new Set(),
+        };
         units.set(invoiceUnit, usage);
       }
 
+      usage.fileNames.add(fileName);
       if (row.supplierName) usage.supplierNames.add(row.supplierName);
       if (row.invoiceNumber && row.invoiceTime >= usage.lastInvoiceTime) {
         usage.lastInvoiceNumber = row.invoiceNumber;
@@ -638,6 +647,7 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
         sourceUnit: usage.invoiceUnit,
         supplierNames: [...usage.supplierNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
         lastInvoiceNumber: usage.lastInvoiceNumber,
+        fileNames: [...usage.fileNames].sort((a, b) => a.localeCompare(b, 'ar')).join('، '),
       });
     }
     if (hasMismatch) materialsWithMismatch++;
@@ -649,6 +659,7 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
     sourceUnitHeader: 'الوحدة في الفواتير',
     includeInvoiceColumns: true,
     includeSourceColumn: false,
+    includeFileNameColumn: true,
     excelTitle: 'اختلاف وحدات القياس بين قاعدة البيانات والفواتير',
   });
 
@@ -739,6 +750,7 @@ async function compareMaterialCsvSources(dbMaterials: DbMaterials): Promise<void
     sourceUnitHeader: 'الوحدة في ملف الجرد',
     includeInvoiceColumns: false,
     includeSourceColumn: true,
+    includeFileNameColumn: false,
     excelTitle: 'اختلاف وحدات القياس بين قاعدة البيانات وملفات المواد',
   });
 
