@@ -15,7 +15,7 @@ export const EGYPT_COUNTRY_ID = 'f1dd27d6-ac02-5671-97b2-0679193340c4';
 export const PERMISSION_VALUES = [
   'add_user',
   'read_users',
-  'read_assignable_users',
+  'lookup_users',
   'update_user',
   'delete_user',
   'add_role',

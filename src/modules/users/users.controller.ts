@@ -31,14 +31,14 @@ export class UsersController {
     return this.usersService.list(query);
   }
 
-  // Search non-admin users for assignment (e.g. creator). Separate from read_users so it can be granted without full user-list access.
-  @Get('assignable')
+  // Search non-admin users to fill a field (e.g. creator). Separate from read_users so it can be granted without full user-list access.
+  @Get('lookup')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_ASSIGNABLE_USERS)
+  @AllowedPermission(PERMISSIONS.LOOKUP_USERS)
   @ApiBearerAuth()
   @ApiListQueries()
-  listAssignable(@Query() query: QueryParams) {
-    return this.usersService.listAssignable(query);
+  lookup(@Query() query: QueryParams) {
+    return this.usersService.lookup(query);
   }
 
   @Get(':id')

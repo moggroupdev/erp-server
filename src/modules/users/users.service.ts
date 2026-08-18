@@ -69,7 +69,7 @@ export class UsersService {
     });
   }
 
-  public async listAssignable(queryParams: QueryParams) {
+  public async lookup(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(users, queryParams, {
       filtering: true,
       searchableFields: ['name', 'code', 'email', 'phone'],
