@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'read_assignable_users' BEFORE 'update_user';

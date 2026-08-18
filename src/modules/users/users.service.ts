@@ -69,6 +69,18 @@ export class UsersService {
     });
   }
 
+  public async lookup(queryParams: QueryParams) {
+    return await this.queryBuilderService.execute(users, queryParams, {
+      filtering: true,
+      searchableFields: ['name', 'code', 'email', 'phone'],
+      fieldLimiting: true,
+      sorting: true,
+      pagination: true,
+      columns: { password: false },
+      additionalConditions: [isNull(users.deletedAt), eq(users.isAdmin, false)],
+    });
+  }
+
   // We allow the `get` method to return a deleted user too
   public async get(id: string) {
     const user = await this.db.query.users.findFirst({

@@ -31,6 +31,16 @@ export class UsersController {
     return this.usersService.list(query);
   }
 
+  // Search non-admin users to fill a field (e.g. creator). Separate from read_users so it can be granted without full user-list access.
+  @Get('lookup')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.LOOKUP_USERS)
+  @ApiBearerAuth()
+  @ApiListQueries()
+  lookup(@Query() query: QueryParams) {
+    return this.usersService.lookup(query);
+  }
+
   @Get(':id')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_USERS)
