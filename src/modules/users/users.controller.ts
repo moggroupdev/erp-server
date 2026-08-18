@@ -31,6 +31,16 @@ export class UsersController {
     return this.usersService.list(query);
   }
 
+  // Search non-admin users for assignment (e.g. creator). Separate from read_users so it can be granted without full user-list access.
+  @Get('assignable')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_ASSIGNABLE_USERS)
+  @ApiBearerAuth()
+  @ApiListQueries()
+  listAssignable(@Query() query: QueryParams) {
+    return this.usersService.listAssignable(query);
+  }
+
   @Get(':id')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_USERS)

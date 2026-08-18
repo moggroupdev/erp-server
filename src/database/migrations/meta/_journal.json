@@ -183,6 +183,13 @@
       "when": 1786877790853,
       "tag": "0025_common_james_howlett",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787030074135,
+      "tag": "0026_demonic_pixie",
+      "breakpoints": true
     }
   ]
 }
