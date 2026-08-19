@@ -1,8 +1,8 @@
 {
-  "exportedAt": "2026-08-19T05:46:23.633Z",
-  "count": 1985,
-  "materialsWithUnitConversions": 86,
-  "totalUnitConversions": 148,
+  "exportedAt": "2026-08-19T08:04:38.071Z",
+  "count": 1990,
+  "materialsWithUnitConversions": 91,
+  "totalUnitConversions": 158,
   "materials": [
     {
       "code": "100909",
@@ -5816,6 +5816,33 @@
       "minimumStock": null,
       "createdAt": "2026-07-20T05:09:35.848Z",
       "unitConversions": []
+    },
+    {
+      "code": "257358",
+      "legacyCode": "11404011",
+      "title": "خوصه حديد 3 متر 40×50",
+      "description": null,
+      "subCategoryId": "8dbdf633-809d-4c64-bc23-2b154d04eab3",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T07:58:42.821Z",
+      "unitConversions": [
+        {
+          "id": "2aca1b23-6570-4768-8086-50eba79d3bd0",
+          "unit": "kg",
+          "conversionFactorToBase": 0.021231
+        },
+        {
+          "id": "56925650-cae9-46e2-82ab-3ce2006073a2",
+          "unit": "ton",
+          "conversionFactorToBase": 21.231
+        }
+      ]
     },
     {
       "code": "257779",
@@ -18851,6 +18878,33 @@
       "unitConversions": []
     },
     {
+      "code": "613011",
+      "legacyCode": "11404010",
+      "title": "خوصه حديد 3 متر 10×40",
+      "description": null,
+      "subCategoryId": "8dbdf633-809d-4c64-bc23-2b154d04eab3",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T07:58:26.860Z",
+      "unitConversions": [
+        {
+          "id": "0dca8207-906c-40be-8c21-9bda5af20774",
+          "unit": "kg",
+          "conversionFactorToBase": 0.106157
+        },
+        {
+          "id": "a77e435b-26ef-4008-bda2-da812672e3d7",
+          "unit": "ton",
+          "conversionFactorToBase": 106.157
+        }
+      ]
+    },
+    {
       "code": "613919",
       "legacyCode": "10209073",
       "title": "ستار هواء 150 سم",
@@ -22990,6 +23044,33 @@
       ]
     },
     {
+      "code": "732783",
+      "legacyCode": "11404009",
+      "title": "خوصه حديد 3 متر 10×30",
+      "description": null,
+      "subCategoryId": "8dbdf633-809d-4c64-bc23-2b154d04eab3",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T07:58:11.984Z",
+      "unitConversions": [
+        {
+          "id": "9371663e-495d-4d10-aef3-cc887aa47cc7",
+          "unit": "kg",
+          "conversionFactorToBase": 0.142857
+        },
+        {
+          "id": "166a564e-f443-4ba1-9f1c-100c238659bd",
+          "unit": "ton",
+          "conversionFactorToBase": 142.857
+        }
+      ]
+    },
+    {
       "code": "732884",
       "legacyCode": "11302004",
       "title": "ماسورة SST لميع 25مم × 1.25 مم × 6 م",
@@ -23125,6 +23206,33 @@
           "id": "afb95667-97ed-4e6a-8c9f-424c85ab571d",
           "unit": "ton",
           "conversionFactorToBase": 62.5
+        }
+      ]
+    },
+    {
+      "code": "738005",
+      "legacyCode": "11404008",
+      "title": "خوصه حديد 3 متر 15×30",
+      "description": null,
+      "subCategoryId": "8dbdf633-809d-4c64-bc23-2b154d04eab3",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T07:57:58.668Z",
+      "unitConversions": [
+        {
+          "id": "d70f78e1-83e3-485c-8b2a-2acab8c3969c",
+          "unit": "kg",
+          "conversionFactorToBase": 0.09434
+        },
+        {
+          "id": "ade47150-13fb-4f5b-affa-2ab05f819f3e",
+          "unit": "ton",
+          "conversionFactorToBase": 94.34
         }
       ]
     },
@@ -28041,6 +28149,33 @@
       "minimumStock": null,
       "createdAt": "2026-07-20T05:09:35.865Z",
       "unitConversions": []
+    },
+    {
+      "code": "873034",
+      "legacyCode": "11404012",
+      "title": "خوصه حديد 3 متر 20×40",
+      "description": null,
+      "subCategoryId": "8dbdf633-809d-4c64-bc23-2b154d04eab3",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T07:57:01.432Z",
+      "unitConversions": [
+        {
+          "id": "14252314-3d68-4c45-a8de-b45cfbd50235",
+          "unit": "kg",
+          "conversionFactorToBase": 0.053079
+        },
+        {
+          "id": "8c011973-fd66-4b5d-b274-7fbac9f47b77",
+          "unit": "ton",
+          "conversionFactorToBase": 53.079
+        }
+      ]
     },
     {
       "code": "873149",
