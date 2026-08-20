@@ -39,6 +39,7 @@ export const PERMISSION_VALUES = [
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
   'read_material_reports',
+  'read_material_purchasing_reports',
   'add_product',
   'read_products',
   'update_product',
