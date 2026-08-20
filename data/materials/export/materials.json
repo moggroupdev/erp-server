@@ -1,8 +1,8 @@
 {
-  "exportedAt": "2026-08-19T08:04:38.071Z",
-  "count": 1990,
-  "materialsWithUnitConversions": 91,
-  "totalUnitConversions": 158,
+  "exportedAt": "2026-08-19T12:34:45.522Z",
+  "count": 1992,
+  "materialsWithUnitConversions": 93,
+  "totalUnitConversions": 162,
   "materials": [
     {
       "code": "100909",
@@ -15411,6 +15411,33 @@
       "minimumStock": null,
       "createdAt": "2026-07-20T05:09:35.757Z",
       "unitConversions": []
+    },
+    {
+      "code": "509487",
+      "legacyCode": "11301081",
+      "title": "لوح 1.5 مم SST مصنفر مغلف 1.25 × 2 م",
+      "description": null,
+      "subCategoryId": "35c4b0a5-66df-43a7-bd0c-ba78d966a3b0",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T12:30:29.636Z",
+      "unitConversions": [
+        {
+          "id": "4e5447cf-61b2-4fb3-8489-a05346e03b46",
+          "unit": "kg",
+          "conversionFactorToBase": 0.033333
+        },
+        {
+          "id": "fc18b38d-65b3-4b7b-bd9b-4745a575d589",
+          "unit": "ton",
+          "conversionFactorToBase": 33.333
+        }
+      ]
     },
     {
       "code": "509920",
@@ -32660,6 +32687,33 @@
       "minimumStock": null,
       "createdAt": "2026-07-20T05:09:35.865Z",
       "unitConversions": []
+    },
+    {
+      "code": "997594",
+      "legacyCode": "11301080",
+      "title": "لوح 1.8 مم SST مصنفر 125 ×200",
+      "description": null,
+      "subCategoryId": "35c4b0a5-66df-43a7-bd0c-ba78d966a3b0",
+      "materialType": "raw_materials",
+      "unitOfMeasurement": "count",
+      "unitPrice": 0,
+      "quantity": 0,
+      "openingUnitPrice": 0,
+      "openingQuantity": 0,
+      "minimumStock": null,
+      "createdAt": "2026-08-19T12:05:50.989Z",
+      "unitConversions": [
+        {
+          "id": "48958cb2-8e61-40d2-bd0e-e195bb177a7e",
+          "unit": "kg",
+          "conversionFactorToBase": 0.027778
+        },
+        {
+          "id": "78c40a4a-a1e1-4587-9425-0affec011428",
+          "unit": "ton",
+          "conversionFactorToBase": 27.778
+        }
+      ]
     },
     {
       "code": "998268",
