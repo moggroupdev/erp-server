@@ -53,8 +53,10 @@ export class PurchasingMaterialsReportsService {
 
     const rows = await this.db
       .select({
+        orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
         orderDate: materialPurchaseOrders.createdAt,
+        supplierId: suppliers.id,
         supplierName: suppliers.name,
         unitPrice: materialPurchaseOrderItems.unitPrice,
         quantityOrdered: materialPurchaseOrderItems.quantityOrdered,
@@ -66,8 +68,10 @@ export class PurchasingMaterialsReportsService {
       .orderBy(asc(materialPurchaseOrders.createdAt));
 
     const entries = rows.map((r) => ({
+      orderId: r.orderId,
       orderCode: r.orderCode,
       orderDate: r.orderDate,
+      supplierId: r.supplierId,
       supplierName: r.supplierName,
       unitPrice: Number(r.unitPrice),
       quantityOrdered: Number(r.quantityOrdered),
@@ -235,6 +239,8 @@ export class PurchasingMaterialsReportsService {
       .select({
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
+        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+        supplierId: suppliers.id,
         supplierName: suppliers.name,
         totalAmount: materialPurchaseOrders.totalAmount,
         createdAt: materialPurchaseOrders.createdAt,
@@ -249,6 +255,8 @@ export class PurchasingMaterialsReportsService {
     return rows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
+      legacyInvoiceNumber: r.legacyInvoiceNumber,
+      supplierId: r.supplierId,
       supplierName: r.supplierName,
       totalAmount: Number(r.totalAmount),
       createdAt: r.createdAt,
