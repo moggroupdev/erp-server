@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialPurchaseOrderItems, materialPurchaseOrders } from 'src/database/schema';
+import { materialCategoryMains, materialCategorySubs, materialPurchaseOrderItems, materialPurchaseOrders } from 'src/database/schema';
 import { materials } from 'src/database/schema';
 import { suppliers } from 'src/database/schema';
 import { translate } from 'src/utils/i18n/translate';
@@ -21,15 +21,16 @@ export class PurchasingMaterialsReportsService {
     const groupBy = this.parseGroupBy(params.groupBy);
     const dateRange = this.buildDateRange(params.from, params.to);
 
-    const [overview, byPeriod, bySupplier, byMaterial, topOrders] = await Promise.all([
+    const [overview, byPeriod, bySupplier, byMaterial, byMainCategory, topOrders] = await Promise.all([
       this.getOverview(dateRange),
       this.getByPeriod(dateRange, groupBy),
       this.getBySupplier(dateRange, TOP_SUPPLIERS_LIMIT),
       this.getByMaterial(dateRange, TOP_MATERIALS_LIMIT),
+      this.getByMainCategory(dateRange),
       this.getTopOrders(dateRange, TOP_ORDERS_LIMIT),
     ]);
 
-    return { overview, byPeriod, bySupplier, byMaterial, topOrders };
+    return { overview, byPeriod, bySupplier, byMaterial, byMainCategory, topOrders };
   }
 
   public async getPriceHistory(params: { materialCode: string; from?: string; to?: string }) {
@@ -229,6 +230,35 @@ export class PurchasingMaterialsReportsService {
       totalSpend: Number(r.totalSpend),
       totalQuantity: Number(r.totalQuantity),
       avgUnitPrice: Number(r.totalQuantity) > 0 ? Number(r.totalSpend) / Number(r.totalQuantity) : 0,
+    }));
+  }
+
+  private async getByMainCategory(dateRange: { from?: Date; to?: Date }) {
+    const where = this.notCancelledWithDateRange(dateRange);
+
+    const rows = await this.db
+      .select({
+        mainCategoryId: materialCategoryMains.id,
+        mainCategoryTitle: materialCategoryMains.title,
+        materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
+        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
+      .where(where)
+      .groupBy(materialCategoryMains.id, materialCategoryMains.title)
+      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`));
+
+    return rows.map((r) => ({
+      mainCategoryId: r.mainCategoryId,
+      mainCategoryTitle: r.mainCategoryTitle,
+      materialCount: Number(r.materialCount),
+      totalQuantity: Number(r.totalQuantity),
+      totalSpend: Number(r.totalSpend),
     }));
   }
 
