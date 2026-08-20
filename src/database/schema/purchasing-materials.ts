@@ -4,6 +4,7 @@ import {
   createdAt,
   numeric,
   nonNegativeQuantityCheck,
+  nonNegativeNullableQuantityCheck,
   positiveQuantityCheck,
   positiveNullableQuantityCheck,
 } from './common';
@@ -19,6 +20,13 @@ export const materialPurchaseOrders = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPO-00000001
     legacyInvoiceNumber: text('legacy_invoice_number'), // Legacy invoice number from historical seeded receipts
+    legacyInvoiceIssuedAt: timestamp('legacy_invoice_issued_at', { withTimezone: true }),
+    legacyInvoiceSellerTaxNumber: text('legacy_invoice_seller_tax_number'),
+    legacyInvoiceTotalPurchases: numeric('legacy_invoice_total_purchases'),
+    legacyInvoiceTotalDiscount: numeric('legacy_invoice_total_discount'),
+    legacyInvoiceVatAmount: numeric('legacy_invoice_vat_amount'),
+    legacyInvoiceWithholdingTaxAmount: numeric('legacy_invoice_withholding_tax_amount'),
+    legacyInvoiceTotalAmount: numeric('legacy_invoice_total_amount'),
     supplierId: uuid('supplier_id')
       .notNull()
       .references(() => suppliers.id),
@@ -39,6 +47,14 @@ export const materialPurchaseOrders = pgTable(
     index('mpo_created_by_idx').on(table.createdBy),
     check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
+    nonNegativeNullableQuantityCheck('mpo_legacy_invoice_total_purchases_non_negative', table.legacyInvoiceTotalPurchases),
+    nonNegativeNullableQuantityCheck('mpo_legacy_invoice_total_discount_non_negative', table.legacyInvoiceTotalDiscount),
+    nonNegativeNullableQuantityCheck('mpo_legacy_invoice_vat_amount_non_negative', table.legacyInvoiceVatAmount),
+    nonNegativeNullableQuantityCheck(
+      'mpo_legacy_invoice_withholding_tax_amount_non_negative',
+      table.legacyInvoiceWithholdingTaxAmount,
+    ),
+    nonNegativeNullableQuantityCheck('mpo_legacy_invoice_total_amount_non_negative', table.legacyInvoiceTotalAmount),
   ],
 );
 
