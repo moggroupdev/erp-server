@@ -24,4 +24,16 @@ export class PurchasingMaterialsReportsController {
   getPriceHistory(@Query('materialCode') materialCode: string, @Query('from') from?: string, @Query('to') to?: string) {
     return this.service.getPriceHistory({ materialCode, from, to });
   }
+
+  @Get('category-stats')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @ApiBearerAuth()
+  getCategoryStats(
+    @Query('mainCategoryId') mainCategoryId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.getCategoryStats({ mainCategoryId, from, to });
+  }
 }
