@@ -25,6 +25,9 @@ Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
 
+All inserts run in a single database transaction. If any insert fails, the
+entire seed run is rolled back.
+
 Options:
   -e, --email <email>  Existing user email stamped as createdBy / receivedBy
   -i, --id <uuid>      Existing user ID stamped as createdBy / receivedBy
@@ -608,23 +611,28 @@ async function main() {
       else orderGroups.set(groupKey, [row]);
     }
 
-    let processedGroups = 0;
-    for (const [groupKey, groupRows] of orderGroups) {
-      const permitNumbers = [...new Set(groupRows.map((row) => row.permitNumber))];
-      const existingPermits = permitNumbers.filter((permitNumber) => existingPermitNumbers.has(permitNumber));
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
 
-      if (existingPermits.length === permitNumbers.length) {
-        summary.skippedExistingPermitGroups++;
-        continue;
-      }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-      if (existingPermits.length > 0) {
-        summary.skippedPartialPermitGroups++;
-        console.log(`Skipping partially seeded order group ${groupKey}; existing permits: ${existingPermits.join(', ')}`);
-        continue;
-      }
+      let processedGroups = 0;
+      for (const [groupKey, groupRows] of orderGroups) {
+        const permitNumbers = [...new Set(groupRows.map((row) => row.permitNumber))];
+        const existingPermits = permitNumbers.filter((permitNumber) => existingPermitNumbers.has(permitNumber));
 
-      await db.transaction(async (tx) => {
+        if (existingPermits.length === permitNumbers.length) {
+          summary.skippedExistingPermitGroups++;
+          continue;
+        }
+
+        if (existingPermits.length > 0) {
+          summary.skippedPartialPermitGroups++;
+          console.log(`Skipping partially seeded order group ${groupKey}; existing permits: ${existingPermits.join(', ')}`);
+          continue;
+        }
+
         const supplierName = groupRows[0].supplierName;
         let supplierId = supplierIdByName.get(supplierName);
 
@@ -879,11 +887,11 @@ async function main() {
           summary.inventoryTransactionItemsCreated += receiptRows.length;
           void createdInventoryItems;
         }
-      });
 
-      processedGroups++;
-      process.stdout.write(`\rProcessed ${processedGroups} / ${orderGroups.size} order groups`);
-    }
+        processedGroups++;
+        process.stdout.write(`\rProcessed ${processedGroups} / ${orderGroups.size} order groups`);
+      }
+    });
 
     console.log();
     console.log('\n========== INVENTORY RECEIPTS SEED STATS ==========');
@@ -955,6 +963,7 @@ async function main() {
     console.error(err.message);
     if (err.cause?.message) console.error(`Cause: ${err.cause.message}`);
     if (err.cause?.detail) console.error(`Detail: ${err.cause.detail}`);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();
