@@ -38,7 +38,7 @@ const UNIT_MAP: Record<string, string> = {
   kg: 'kg',
 };
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '../..');
 const STOCK_PATH = path.join(
   ROOT,
   'data/materials/raw-materials/stock/special-case/راكد الزجاج.xls',

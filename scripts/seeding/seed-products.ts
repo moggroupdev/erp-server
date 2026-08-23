@@ -4,8 +4,8 @@ import { eq, sql } from 'drizzle-orm';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import * as schema from '../src/database/schema';
-import { PRODUCT_SOURCE_TYPE_VALUES } from '../src/utils/constants';
+import * as schema from '../../src/database/schema';
+import { PRODUCT_SOURCE_TYPE_VALUES } from '../../src/utils/constants';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -175,7 +175,7 @@ async function main() {
     const user = await resolveUser(db, identifier);
     console.log(`Using createdBy: ${user.name} <${user.email ?? 'no email'}> (${user.id})`);
 
-    const productsPath = path.join(__dirname, '../data/products/results/clean-products.json');
+    const productsPath = path.join(__dirname, '../../data/products/results/clean-products.json');
     if (!fs.existsSync(productsPath)) {
       throw new Error(`Products JSON not found: ${productsPath}\nRun npm run extract:products first.`);
     }

@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,7 +26,7 @@ async function main() {
   try {
     console.log('Seeding Countries...');
 
-    const countriesCsvPath = path.join(__dirname, '../data/locations/countries.csv');
+    const countriesCsvPath = path.join(__dirname, '../../data/locations/countries.csv');
     const countriesData = fs.readFileSync(countriesCsvPath, 'utf-8');
     const countriesRows = parse<CountryCsvRow>(countriesData, { columns: true, skip_empty_lines: true });
 
@@ -37,7 +37,7 @@ async function main() {
       nameAr: country.name_ar,
     }));
 
-    const governoratesCsvPath = path.join(__dirname, '../data/locations/governorates.csv');
+    const governoratesCsvPath = path.join(__dirname, '../../data/locations/governorates.csv');
     const governoratesData = fs.readFileSync(governoratesCsvPath, 'utf-8');
     const governoratesLines = governoratesData.trim().split('\n');
 
@@ -51,7 +51,7 @@ async function main() {
       if (id && nameEn && nameAr) governoratesToInsert.push({ id, nameEn, nameAr });
     }
 
-    const citiesCsvPath = path.join(__dirname, '../data/locations/cities.csv');
+    const citiesCsvPath = path.join(__dirname, '../../data/locations/cities.csv');
     const citiesData = fs.readFileSync(citiesCsvPath, 'utf-8');
     const citiesLines = citiesData.trim().split('\n');
 

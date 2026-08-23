@@ -8,10 +8,10 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'node:readline/promises';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as xlsx from 'xlsx';
-import { INVENTORY_TRANSACTION_TYPES, MATERIAL_TYPES, MATERIAL_UNITS, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
-import { ensureNoUnitMismatchesBeforeSeeding } from './unit-mismatch-guard';
+import { INVENTORY_TRANSACTION_TYPES, MATERIAL_TYPES, MATERIAL_UNITS, MATERIAL_UNIT_VALUES } from '../../src/utils/constants';
+import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 
 dotenv.config();
 
@@ -38,7 +38,7 @@ Examples:
   npm run seed:inventory-receipts -- --email admin@example.com
   npm run seed:inventory-receipts -- --id 00000000-0000-0000-0000-000000000001`;
 
-const DATA_DIR = path.join(__dirname, '../data/transactions');
+const DATA_DIR = path.join(__dirname, '../../data/transactions');
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
 

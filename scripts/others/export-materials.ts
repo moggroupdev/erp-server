@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { isNull } from 'drizzle-orm';
 import { parseArgs } from 'node:util';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -53,7 +53,7 @@ type ExportPayload = {
   materials: MaterialExport[];
 };
 
-const DEFAULT_OUT = path.join(__dirname, '../data/materials/export/materials.json');
+const DEFAULT_OUT = path.join(__dirname, '../../data/materials/export/materials.json');
 
 function toNumber(value: string | number | null | undefined): number | null {
   if (value == null) return null;

@@ -5,9 +5,9 @@ import { parse } from 'csv-parse/sync';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import * as schema from '../src/database/schema';
-import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
-import { ensureNoUnitMismatchesBeforeSeeding } from './unit-mismatch-guard';
+import * as schema from '../../src/database/schema';
+import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../../src/utils/constants';
+import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -88,7 +88,7 @@ type UnresolvableUnitRow = {
   materialType: MaterialType;
 };
 
-const DATA_ROOT = path.join(__dirname, '../data/materials');
+const DATA_ROOT = path.join(__dirname, '../../data/materials');
 const MATERIAL_SOURCES: MaterialSource[] = [
   {
     label: 'raw-materials',

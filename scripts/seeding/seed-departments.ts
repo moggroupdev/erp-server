@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -57,7 +57,7 @@ async function main() {
   try {
     console.log('Seeding Departments...');
 
-    const departmentsCsvPath = path.join(__dirname, '../data/departments.csv');
+    const departmentsCsvPath = path.join(__dirname, '../../data/departments.csv');
     const departmentsData = fs.readFileSync(departmentsCsvPath, 'utf-8');
     const rows = parse<DepartmentCsvRow>(departmentsData, { columns: true, skip_empty_lines: true });
 

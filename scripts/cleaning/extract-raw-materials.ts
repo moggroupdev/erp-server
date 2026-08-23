@@ -39,7 +39,7 @@ const UNIT_MAP: Record<string, string> = {
   كجم: 'kg',
 };
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '../..');
 const CODES_PATH = path.join(ROOT, 'data/materials/raw-materials/codes.xls');
 const QUANTITIES_DIR = path.join(ROOT, 'data/materials/raw-materials/stock');
 const CATEGORIES_PATH = path.join(ROOT, 'data/categories/materials.json');

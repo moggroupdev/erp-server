@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { parse } from 'csv-parse/sync';
 import * as xlsx from 'xlsx';
 import ExcelJS from 'exceljs';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -51,25 +51,25 @@ const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
   return map;
 })();
 
-const TRANSACTIONS_DIR = path.join(__dirname, '../data/transactions');
+const TRANSACTIONS_DIR = path.join(__dirname, '../../data/transactions');
 const TRANSACTIONS_OUT_DIR = path.join(TRANSACTIONS_DIR, '_unit-mismatches');
-const MATERIALS_OUT_DIR = path.join(__dirname, '../data/materials/_unit-mismatches');
+const MATERIALS_OUT_DIR = path.join(__dirname, '../../data/materials/_unit-mismatches');
 
 const MATERIAL_CSV_SOURCES = [
   {
     label: 'raw-materials',
     sourceLabel: 'مواد خام',
-    filePath: path.join(__dirname, '../data/materials/raw-materials/results/clean-raw-materials.csv'),
+    filePath: path.join(__dirname, '../../data/materials/raw-materials/results/clean-raw-materials.csv'),
   },
   {
     label: 'stagnant-glass',
     sourceLabel: 'زجاج راكد',
-    filePath: path.join(__dirname, '../data/materials/raw-materials/results/clean-stagnant-glass.csv'),
+    filePath: path.join(__dirname, '../../data/materials/raw-materials/results/clean-stagnant-glass.csv'),
   },
   {
     label: 'spare-parts',
     sourceLabel: 'قطع غيار',
-    filePath: path.join(__dirname, '../data/materials/spare-parts/results/clean-spare-parts.csv'),
+    filePath: path.join(__dirname, '../../data/materials/spare-parts/results/clean-spare-parts.csv'),
   },
 ] as const;
 

@@ -5,7 +5,7 @@ import { parseArgs } from 'node:util';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as xlsx from 'xlsx';
 
 dotenv.config();
@@ -24,7 +24,7 @@ Options:
 Examples:
   npm run seed:invoice-totals`;
 
-const DATA_FILE = path.join(__dirname, '../data/invoices/totals.xlsx');
+const DATA_FILE = path.join(__dirname, '../../data/invoices/totals.xlsx');
 
 type InvoiceTotalRow = {
   sourceRowNumber: number;
