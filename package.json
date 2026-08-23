@@ -25,6 +25,7 @@
     "seed:invoice-totals": "ts-node -r tsconfig-paths/register scripts/seeding/seed-invoice-totals.ts",
     "seed:products": "ts-node -r tsconfig-paths/register scripts/seeding/seed-products.ts",
     "create:first-admin": "ts-node -r tsconfig-paths/register scripts/others/create-first-admin.ts",
+    "delete:purchasing-inventory": "ts-node -r tsconfig-paths/register scripts/others/delete-purchasing-inventory.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\""
   },
