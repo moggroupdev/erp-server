@@ -37,7 +37,6 @@ type InvoiceTotalRow = {
   sourceFileName: string | null;
   supplierNameHint: string | null;
   issuedAt: Date | null;
-  sellerTaxNumber: string | null;
   totalPurchases: number;
   totalDiscount: number;
   vatAmount: number;
@@ -227,7 +226,6 @@ function loadWorkbookRows(): {
   const fileNameIdx = findColumnIndex(header, ['اسم الملف']);
   const invoiceNumberIdx = findColumnIndex(header, ['رقم الفاتورة']);
   const issuedAtIdx = findColumnIndex(header, ['تاريخ الإصدار']);
-  const sellerTaxNumberIdx = findColumnIndex(header, ['الرقم الضريبي للبائع']);
   const totalPurchasesIdx = findColumnIndex(header, ['اجمالي المشتريات (ج.م)']);
   const totalDiscountIdx = findColumnIndex(header, ['اجمالي الخصم (ج.م)']);
   const vatAmountIdx = findColumnIndex(header, ['ضريبه القيمه المضافه (ج.م)']);
@@ -237,7 +235,6 @@ function loadWorkbookRows(): {
   const requiredIndices = [
     invoiceNumberIdx,
     issuedAtIdx,
-    sellerTaxNumberIdx,
     totalPurchasesIdx,
     totalDiscountIdx,
     vatAmountIdx,
@@ -286,7 +283,6 @@ function loadWorkbookRows(): {
         sourceFileName,
         supplierNameHint,
         issuedAt: parseIssuedAt(rawRow[issuedAtIdx]),
-        sellerTaxNumber: normalizeText(rawRow[sellerTaxNumberIdx]) || null,
         totalPurchases,
         totalDiscount,
         vatAmount,
@@ -539,7 +535,6 @@ async function main() {
           .update(schema.materialPurchaseOrders)
           .set({
             legacyInvoiceIssuedAt: workbookRow.issuedAt,
-            legacyInvoiceSellerTaxNumber: workbookRow.sellerTaxNumber,
             legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
             legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
             legacyInvoiceVatAmount: workbookRow.vatAmount,
