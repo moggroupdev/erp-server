@@ -13,6 +13,9 @@ const TOP_SUPPLIERS_LIMIT = 10;
 const TOP_MATERIALS_LIMIT = 10;
 const TOP_ORDERS_LIMIT = 10;
 
+const invoiceTotalPurchases = sql`coalesce(${materialPurchaseOrders.legacyInvoiceTotalPurchases}, ${materialPurchaseOrders.totalAmount})`;
+const allocatedInvoiceSpend = sql`${invoiceTotalPurchases} * (${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}) / nullif(${materialPurchaseOrders.totalAmount}, 0)`;
+
 @Injectable()
 export class PurchasingMaterialsReportsService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
@@ -158,14 +161,14 @@ export class PurchasingMaterialsReportsService {
 
     const [row] = await this.db
       .select({
-        totalSpend: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.cancelledAt} is null then ${materialPurchaseOrders.totalAmount} else 0 end), 0)`,
+        totalSpend: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.cancelledAt} is null then ${invoiceTotalPurchases} else 0 end), 0)`,
         totalOrders: sql<number>`count(*) filter (where ${materialPurchaseOrders.cancelledAt} is null)`,
         completedCount: sql<number>`count(*) filter (where ${materialPurchaseOrders.completedAt} is not null and ${materialPurchaseOrders.cancelledAt} is null)`,
-        completedAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.completedAt} is not null and ${materialPurchaseOrders.cancelledAt} is null then ${materialPurchaseOrders.totalAmount} else 0 end), 0)`,
+        completedAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.completedAt} is not null and ${materialPurchaseOrders.cancelledAt} is null then ${invoiceTotalPurchases} else 0 end), 0)`,
         openCount: sql<number>`count(*) filter (where ${materialPurchaseOrders.completedAt} is null and ${materialPurchaseOrders.cancelledAt} is null)`,
-        openAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.completedAt} is null and ${materialPurchaseOrders.cancelledAt} is null then ${materialPurchaseOrders.totalAmount} else 0 end), 0)`,
+        openAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.completedAt} is null and ${materialPurchaseOrders.cancelledAt} is null then ${invoiceTotalPurchases} else 0 end), 0)`,
         cancelledCount: sql<number>`count(*) filter (where ${materialPurchaseOrders.cancelledAt} is not null)`,
-        cancelledAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.cancelledAt} is not null then ${materialPurchaseOrders.totalAmount} else 0 end), 0)`,
+        cancelledAmount: sql<number>`coalesce(sum(case when ${materialPurchaseOrders.cancelledAt} is not null then ${invoiceTotalPurchases} else 0 end), 0)`,
       })
       .from(materialPurchaseOrders)
       .where(allWhere);
@@ -193,7 +196,7 @@ export class PurchasingMaterialsReportsService {
     const rows = await this.db
       .select({
         period: bucket.as('period'),
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrders.totalAmount}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${invoiceTotalPurchases}), 0)`,
         orderCount: count(),
       })
       .from(materialPurchaseOrders)
@@ -217,14 +220,14 @@ export class PurchasingMaterialsReportsService {
         supplierId: suppliers.id,
         supplierCode: suppliers.code,
         supplierName: suppliers.name,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrders.totalAmount}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${invoiceTotalPurchases}), 0)`,
         orderCount: count(),
       })
       .from(materialPurchaseOrders)
       .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
       .where(where)
       .groupBy(suppliers.id, suppliers.code, suppliers.name)
-      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrders.totalAmount}), 0)`))
+      .orderBy(desc(sql`coalesce(sum(${invoiceTotalPurchases}), 0)`))
       .limit(limit);
 
     return rows.map((r) => ({
@@ -245,7 +248,7 @@ export class PurchasingMaterialsReportsService {
         materialCode: materialPurchaseOrderItems.materialCode,
         materialTitle: materials.title,
         unitOfMeasurement: materials.unitOfMeasurement,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
         totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -253,7 +256,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
       .where(where)
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
-      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`))
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
       .limit(limit);
 
     return rows.map((r) => ({
@@ -275,7 +278,7 @@ export class PurchasingMaterialsReportsService {
         mainCategoryTitle: materialCategoryMains.title,
         materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
         totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -284,7 +287,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
       .where(where)
       .groupBy(materialCategoryMains.id, materialCategoryMains.title)
-      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`));
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
 
     return rows.map((r) => ({
       mainCategoryId: r.mainCategoryId,
@@ -305,14 +308,14 @@ export class PurchasingMaterialsReportsService {
         legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
-        totalAmount: materialPurchaseOrders.totalAmount,
+        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
         createdAt: materialPurchaseOrders.createdAt,
         completedAt: materialPurchaseOrders.completedAt,
       })
       .from(materialPurchaseOrders)
       .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
       .where(where)
-      .orderBy(desc(materialPurchaseOrders.totalAmount))
+      .orderBy(desc(invoiceTotalPurchases))
       .limit(limit);
 
     return rows.map((r) => ({
@@ -321,7 +324,7 @@ export class PurchasingMaterialsReportsService {
       legacyInvoiceNumber: r.legacyInvoiceNumber,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
-      totalAmount: Number(r.totalAmount),
+      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
     }));
@@ -330,7 +333,7 @@ export class PurchasingMaterialsReportsService {
   private async getCategoryOverview(where: SQL) {
     const [row] = await this.db
       .select({
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
         totalOrders: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
       })
       .from(materialPurchaseOrderItems)
@@ -355,7 +358,7 @@ export class PurchasingMaterialsReportsService {
         supplierId: suppliers.id,
         supplierCode: suppliers.code,
         supplierName: suppliers.name,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
         orderCount: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
       })
       .from(materialPurchaseOrderItems)
@@ -365,7 +368,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
       .where(where)
       .groupBy(suppliers.id, suppliers.code, suppliers.name)
-      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`))
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
       .limit(limit);
 
     return rows.map((r) => ({
@@ -385,7 +388,7 @@ export class PurchasingMaterialsReportsService {
         supplierCode: suppliers.code,
         supplierName: suppliers.name,
         invoiceCount: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -414,7 +417,7 @@ export class PurchasingMaterialsReportsService {
         legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
-        totalAmount: materialPurchaseOrders.totalAmount,
+        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
         createdAt: materialPurchaseOrders.createdAt,
         completedAt: materialPurchaseOrders.completedAt,
       })
@@ -430,6 +433,7 @@ export class PurchasingMaterialsReportsService {
         materialPurchaseOrders.legacyInvoiceNumber,
         suppliers.id,
         suppliers.name,
+        materialPurchaseOrders.legacyInvoiceTotalPurchases,
         materialPurchaseOrders.totalAmount,
         materialPurchaseOrders.createdAt,
         materialPurchaseOrders.completedAt,
@@ -443,7 +447,7 @@ export class PurchasingMaterialsReportsService {
       legacyInvoiceNumber: r.legacyInvoiceNumber,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
-      totalAmount: Number(r.totalAmount),
+      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
     }));
@@ -455,7 +459,7 @@ export class PurchasingMaterialsReportsService {
         materialCode: materialPurchaseOrderItems.materialCode,
         materialTitle: materials.title,
         unitOfMeasurement: materials.unitOfMeasurement,
-        totalSpend: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
         totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -464,7 +468,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
       .where(where)
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
-      .orderBy(desc(sql`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`))
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
       .limit(limit);
 
     return rows.map((r) => ({
