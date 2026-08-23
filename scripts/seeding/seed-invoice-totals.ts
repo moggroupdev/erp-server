@@ -16,7 +16,12 @@ Seeds legacy e-invoice tax totals from:
   data/invoices/totals.xlsx
 
 Matches workbook rows to material_purchase_orders by legacy_invoice_number.
-Only updates when an invoice number maps to exactly one workbook row and exactly one DB order.
+legacy_invoice_number is unique per supplier, not globally:
+  - Unique invoice number in both the workbook and the DB → match by invoice number
+  - Duplicated invoice number → disambiguate by the supplier linked to the MPO,
+    using the supplier name embedded in اسم الملف
+
+Unresolved or conflicting rows are logged and skipped.
 
 Options:
   -h, --help  Show this help
@@ -29,6 +34,8 @@ const DATA_FILE = path.join(__dirname, '../../data/invoices/totals.xlsx');
 type InvoiceTotalRow = {
   sourceRowNumber: number;
   invoiceNumber: string;
+  sourceFileName: string | null;
+  supplierNameHint: string | null;
   issuedAt: Date | null;
   sellerTaxNumber: string | null;
   totalPurchases: number;
@@ -38,21 +45,40 @@ type InvoiceTotalRow = {
   totalAmount: number;
 };
 
+type DbOrder = {
+  id: string;
+  code: string;
+  invoiceNumber: string;
+  supplierId: string;
+  supplierName: string;
+};
+
 type InvalidRow = {
   sourceRowNumber: number;
   reason: string;
   invoiceNumber?: string;
 };
 
+type Problem = {
+  level: 'warning' | 'error';
+  message: string;
+};
+
+type Match = {
+  workbookRow: InvoiceTotalRow;
+  order: DbOrder;
+  method: 'invoice' | 'invoice+supplier';
+};
+
 type Summary = {
   rowsLoaded: number;
   incompleteRowsSkipped: number;
   invalidRowsSkipped: number;
-  ambiguousWorkbookInvoiceNumbers: number;
-  ambiguousDbInvoiceNumbers: number;
-  matchedAndUpdated: number;
+  matchedByInvoice: number;
+  matchedByInvoiceAndSupplier: number;
   unmatchedInWorkbook: number;
   unmatchedInDb: number;
+  unresolvedDuplicates: number;
 };
 
 function parseCliArgs(): void {
@@ -92,6 +118,33 @@ function normalizeIdentifier(value: unknown): string {
   }
 
   return trimmed;
+}
+
+function normalizeSupplierName(value: unknown): string {
+  return normalizeText(value)
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه');
+}
+
+function extractSupplierFromFileName(fileName: string): string | null {
+  const withoutExt = fileName.replace(/\.pdf$/i, '');
+  const match = withoutExt.match(/^(.*?)(?:\s*ل?رقم\s*الفاتور[هة]?)/);
+  const name = normalizeText(match?.[1]);
+  return name || null;
+}
+
+function supplierNamesMatch(left: string, right: string): boolean {
+  const a = normalizeSupplierName(left);
+  const b = normalizeSupplierName(right);
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+function resolveOrdersBySupplier(hint: string, candidates: DbOrder[]): DbOrder[] {
+  const exact = candidates.filter((order) => normalizeSupplierName(order.supplierName) === normalizeSupplierName(hint));
+  if (exact.length > 0) return exact;
+  return candidates.filter((order) => supplierNamesMatch(order.supplierName, hint));
 }
 
 function normalizeNumber(value: unknown, label: string): number {
@@ -156,6 +209,7 @@ function loadWorkbookRows(): {
   rows: InvoiceTotalRow[];
   invalidRows: InvalidRow[];
   incompleteRows: InvalidRow[];
+  missingFileNameColumn: boolean;
 } {
   if (!fs.existsSync(DATA_FILE)) {
     throw new Error(`Invoice totals file not found: ${DATA_FILE}`);
@@ -170,6 +224,7 @@ function loadWorkbookRows(): {
   }
 
   const header = rawRows[0];
+  const fileNameIdx = findColumnIndex(header, ['اسم الملف']);
   const invoiceNumberIdx = findColumnIndex(header, ['رقم الفاتورة']);
   const issuedAtIdx = findColumnIndex(header, ['تاريخ الإصدار']);
   const sellerTaxNumberIdx = findColumnIndex(header, ['الرقم الضريبي للبائع']);
@@ -222,14 +277,16 @@ function loadWorkbookRows(): {
         throw new Error('Financial amounts must be non-negative');
       }
 
-      const sellerTaxNumber = normalizeText(rawRow[sellerTaxNumberIdx]) || null;
-      const issuedAt = parseIssuedAt(rawRow[issuedAtIdx]);
+      const sourceFileName = fileNameIdx >= 0 ? normalizeText(rawRow[fileNameIdx]) || null : null;
+      const supplierNameHint = sourceFileName ? extractSupplierFromFileName(sourceFileName) : null;
 
       rows.push({
         sourceRowNumber: i + 1,
         invoiceNumber,
-        issuedAt,
-        sellerTaxNumber,
+        sourceFileName,
+        supplierNameHint,
+        issuedAt: parseIssuedAt(rawRow[issuedAtIdx]),
+        sellerTaxNumber: normalizeText(rawRow[sellerTaxNumberIdx]) || null,
         totalPurchases,
         totalDiscount,
         vatAmount,
@@ -245,7 +302,135 @@ function loadWorkbookRows(): {
     }
   }
 
-  return { rows, invalidRows, incompleteRows };
+  return { rows, invalidRows, incompleteRows, missingFileNameColumn: fileNameIdx < 0 };
+}
+
+function formatWorkbookRow(row: InvoiceTotalRow): string {
+  const supplier = row.supplierNameHint ?? '(no supplier in filename)';
+  const fileName = row.sourceFileName ?? '(no filename)';
+  return `invoice=${row.invoiceNumber} | supplier=${supplier} | row ${row.sourceRowNumber} | file=${fileName}`;
+}
+
+function formatOrder(order: DbOrder): string {
+  return `invoice=${order.invoiceNumber} | supplier=${order.supplierName} | ${order.code}`;
+}
+
+function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matches: Match[]; problems: Problem[] } {
+  const problems: Problem[] = [];
+  const matches: Match[] = [];
+
+  const workbookByInvoice = new Map<string, InvoiceTotalRow[]>();
+  for (const row of rows) {
+    const existing = workbookByInvoice.get(row.invoiceNumber);
+    if (existing) existing.push(row);
+    else workbookByInvoice.set(row.invoiceNumber, [row]);
+  }
+
+  const dbByInvoice = new Map<string, DbOrder[]>();
+  for (const order of orders) {
+    const existing = dbByInvoice.get(order.invoiceNumber);
+    if (existing) existing.push(order);
+    else dbByInvoice.set(order.invoiceNumber, [order]);
+  }
+
+  const usedWorkbookRows = new Set<number>();
+  const usedOrderIds = new Set<string>();
+
+  for (const [invoiceNumber, workbookGroup] of workbookByInvoice) {
+    const dbGroup = dbByInvoice.get(invoiceNumber) ?? [];
+
+    if (workbookGroup.length === 1 && dbGroup.length === 1) {
+      const workbookRow = workbookGroup[0];
+      const order = dbGroup[0];
+      matches.push({ workbookRow, order, method: 'invoice' });
+      usedWorkbookRows.add(workbookRow.sourceRowNumber);
+      usedOrderIds.add(order.id);
+
+      if (workbookRow.supplierNameHint && !supplierNamesMatch(workbookRow.supplierNameHint, order.supplierName)) {
+        problems.push({
+          level: 'warning',
+          message: `Invoice ${invoiceNumber} matched by number only, but filename supplier "${workbookRow.supplierNameHint}" does not match MPO supplier "${order.supplierName}" (${order.code}, row ${workbookRow.sourceRowNumber}).`,
+        });
+      }
+      continue;
+    }
+
+    const remainingWorkbook = workbookGroup.filter((row) => !usedWorkbookRows.has(row.sourceRowNumber));
+    const remainingOrders = dbGroup.filter((order) => !usedOrderIds.has(order.id));
+
+    if (remainingWorkbook.length === 0 && remainingOrders.length === 0) continue;
+
+    const claimedOrderIds = new Set<string>();
+
+    for (const workbookRow of remainingWorkbook) {
+      if (!workbookRow.supplierNameHint) {
+        problems.push({
+          level: 'error',
+          message: `Cannot resolve duplicate invoice ${invoiceNumber} without a supplier in اسم الملف (${formatWorkbookRow(workbookRow)}).`,
+        });
+        usedWorkbookRows.add(workbookRow.sourceRowNumber);
+        continue;
+      }
+
+      const resolved = resolveOrdersBySupplier(workbookRow.supplierNameHint, remainingOrders);
+
+      if (resolved.length === 0) {
+        problems.push({
+          level: 'error',
+          message: `No MPO for ${formatWorkbookRow(workbookRow)}. DB orders with this invoice: ${
+            remainingOrders.length > 0 ? remainingOrders.map((order) => order.supplierName).join(', ') : '(none)'
+          }.`,
+        });
+        usedWorkbookRows.add(workbookRow.sourceRowNumber);
+        continue;
+      }
+
+      if (resolved.length > 1) {
+        problems.push({
+          level: 'error',
+          message: `Invoice ${invoiceNumber} + supplier "${workbookRow.supplierNameHint}" matches multiple MPOs: ${resolved
+            .map((order) => order.code)
+            .join(', ')} (row ${workbookRow.sourceRowNumber}).`,
+        });
+        usedWorkbookRows.add(workbookRow.sourceRowNumber);
+        continue;
+      }
+
+      const order = resolved[0];
+      if (claimedOrderIds.has(order.id)) {
+        problems.push({
+          level: 'error',
+          message: `Multiple workbook rows map to the same MPO ${order.code} for invoice ${invoiceNumber} / supplier "${order.supplierName}" (row ${workbookRow.sourceRowNumber}).`,
+        });
+        usedWorkbookRows.add(workbookRow.sourceRowNumber);
+        continue;
+      }
+
+      claimedOrderIds.add(order.id);
+      matches.push({ workbookRow, order, method: 'invoice+supplier' });
+      usedWorkbookRows.add(workbookRow.sourceRowNumber);
+      usedOrderIds.add(order.id);
+    }
+  }
+
+  for (const row of rows) {
+    if (!usedWorkbookRows.has(row.sourceRowNumber) && !matches.some((match) => match.workbookRow.sourceRowNumber === row.sourceRowNumber)) {
+      problems.push({
+        level: 'error',
+        message: `Workbook row has no matching MPO: ${formatWorkbookRow(row)}.`,
+      });
+    }
+  }
+
+  for (const order of orders) {
+    if (usedOrderIds.has(order.id)) continue;
+    problems.push({
+      level: 'error',
+      message: `DB order has no matching workbook row: ${formatOrder(order)}.`,
+    });
+  }
+
+  return { matches, problems };
 }
 
 async function main() {
@@ -260,21 +445,16 @@ async function main() {
     rowsLoaded: 0,
     incompleteRowsSkipped: 0,
     invalidRowsSkipped: 0,
-    ambiguousWorkbookInvoiceNumbers: 0,
-    ambiguousDbInvoiceNumbers: 0,
-    matchedAndUpdated: 0,
+    matchedByInvoice: 0,
+    matchedByInvoiceAndSupplier: 0,
     unmatchedInWorkbook: 0,
     unmatchedInDb: 0,
+    unresolvedDuplicates: 0,
   };
-
-  const ambiguousWorkbookNumbers: string[] = [];
-  const ambiguousDbNumbers: string[] = [];
-  const unmatchedWorkbookNumbers: string[] = [];
-  const unmatchedDbNumbers: string[] = [];
 
   try {
     console.log(`Reading invoice totals from ${DATA_FILE}`);
-    const { rows, invalidRows, incompleteRows } = loadWorkbookRows();
+    const { rows, invalidRows, incompleteRows, missingFileNameColumn } = loadWorkbookRows();
     summary.rowsLoaded = rows.length;
     summary.incompleteRowsSkipped = incompleteRows.length;
     summary.invalidRowsSkipped = invalidRows.length;
@@ -287,21 +467,13 @@ async function main() {
       console.log(`Skipped ${invalidRows.length} invalid row(s) during parsing`);
     }
 
-    const workbookByInvoice = new Map<string, InvoiceTotalRow[]>();
-    for (const row of rows) {
-      const existing = workbookByInvoice.get(row.invoiceNumber);
-      if (existing) existing.push(row);
-      else workbookByInvoice.set(row.invoiceNumber, [row]);
-    }
+    const problems: Problem[] = [];
 
-    const uniqueWorkbookRows = new Map<string, InvoiceTotalRow>();
-    for (const [invoiceNumber, group] of workbookByInvoice) {
-      if (group.length === 1) {
-        uniqueWorkbookRows.set(invoiceNumber, group[0]);
-      } else {
-        summary.ambiguousWorkbookInvoiceNumbers++;
-        ambiguousWorkbookNumbers.push(invoiceNumber);
-      }
+    if (missingFileNameColumn) {
+      problems.push({
+        level: 'warning',
+        message: 'Column اسم الملف was not found. Duplicate invoice numbers cannot be resolved by supplier.',
+      });
     }
 
     const orderRows = await db
@@ -309,57 +481,59 @@ async function main() {
         id: schema.materialPurchaseOrders.id,
         code: schema.materialPurchaseOrders.code,
         legacyInvoiceNumber: schema.materialPurchaseOrders.legacyInvoiceNumber,
+        supplierId: schema.materialPurchaseOrders.supplierId,
+        supplierName: schema.suppliers.name,
       })
       .from(schema.materialPurchaseOrders)
+      .innerJoin(schema.suppliers, eq(schema.materialPurchaseOrders.supplierId, schema.suppliers.id))
       .where(isNotNull(schema.materialPurchaseOrders.legacyInvoiceNumber));
 
-    const dbByInvoice = new Map<string, Array<{ id: string; code: string }>>();
+    const orders: DbOrder[] = [];
     for (const order of orderRows) {
       const invoiceNumber = normalizeIdentifier(order.legacyInvoiceNumber);
-      if (!invoiceNumber) continue;
-
-      const existing = dbByInvoice.get(invoiceNumber);
-      if (existing) existing.push({ id: order.id, code: order.code });
-      else dbByInvoice.set(invoiceNumber, [{ id: order.id, code: order.code }]);
-    }
-
-    const uniqueDbOrders = new Map<string, { id: string; code: string }>();
-    for (const [invoiceNumber, group] of dbByInvoice) {
-      if (group.length === 1) {
-        uniqueDbOrders.set(invoiceNumber, group[0]);
-      } else {
-        summary.ambiguousDbInvoiceNumbers++;
-        ambiguousDbNumbers.push(invoiceNumber);
+      if (!invoiceNumber) {
+        problems.push({
+          level: 'warning',
+          message: `MPO ${order.code} has a blank legacy invoice number after normalization; skipped.`,
+        });
+        continue;
       }
+
+      orders.push({
+        id: order.id,
+        code: order.code,
+        invoiceNumber,
+        supplierId: order.supplierId,
+        supplierName: order.supplierName,
+      });
     }
 
-    const invoiceNumbersToUpdate: string[] = [];
-    for (const invoiceNumber of uniqueWorkbookRows.keys()) {
-      if (uniqueDbOrders.has(invoiceNumber)) {
-        invoiceNumbersToUpdate.push(invoiceNumber);
-      } else if (!dbByInvoice.has(invoiceNumber)) {
-        summary.unmatchedInWorkbook++;
-        unmatchedWorkbookNumbers.push(invoiceNumber);
-      }
-    }
+    const { matches, problems: matchProblems } = matchRowsToOrders(rows, orders);
+    problems.push(...matchProblems);
 
-    for (const invoiceNumber of uniqueDbOrders.keys()) {
-      if (!workbookByInvoice.has(invoiceNumber)) {
+    for (const problem of matchProblems) {
+      if (problem.level !== 'error') continue;
+      if (problem.message.startsWith('DB order has no matching workbook row')) {
         summary.unmatchedInDb++;
-        unmatchedDbNumbers.push(invoiceNumber);
+      } else if (
+        problem.message.startsWith('Workbook row has no matching MPO') ||
+        problem.message.startsWith('No MPO for')
+      ) {
+        summary.unmatchedInWorkbook++;
+      } else {
+        summary.unresolvedDuplicates++;
       }
     }
 
-    console.log(`Updating ${invoiceNumbersToUpdate.length} matched order(s)...`);
+    console.log(`Updating ${matches.length} matched order(s)...`);
     console.log('Writing all updates in one database transaction. A failure rolls back the entire run.');
 
     await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL statement_timeout = 0`);
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-      for (const invoiceNumber of invoiceNumbersToUpdate) {
-        const workbookRow = uniqueWorkbookRows.get(invoiceNumber)!;
-        const order = uniqueDbOrders.get(invoiceNumber)!;
+      for (const match of matches) {
+        const { workbookRow, order, method } = match;
 
         await tx
           .update(schema.materialPurchaseOrders)
@@ -374,74 +548,46 @@ async function main() {
           })
           .where(eq(schema.materialPurchaseOrders.id, order.id));
 
-        summary.matchedAndUpdated++;
+        if (method === 'invoice') summary.matchedByInvoice++;
+        else summary.matchedByInvoiceAndSupplier++;
       }
     });
 
     console.log('\n========== INVOICE TOTALS SEED STATS ==========');
-    console.log(`Workbook rows loaded:              ${summary.rowsLoaded}`);
-    console.log(`Incomplete rows skipped:          ${summary.incompleteRowsSkipped}`);
-    console.log(`Invalid rows skipped:             ${summary.invalidRowsSkipped}`);
-    console.log(`Ambiguous workbook invoice #s:    ${summary.ambiguousWorkbookInvoiceNumbers}`);
-    console.log(`Ambiguous DB invoice #s:          ${summary.ambiguousDbInvoiceNumbers}`);
-    console.log(`Matched & updated:                ${summary.matchedAndUpdated}`);
-    console.log(`Unmatched in workbook (no DB):    ${summary.unmatchedInWorkbook}`);
-    console.log(`Unmatched in DB (no workbook):    ${summary.unmatchedInDb}`);
+    console.log(`Workbook rows loaded:                 ${summary.rowsLoaded}`);
+    console.log(`Incomplete rows skipped:             ${summary.incompleteRowsSkipped}`);
+    console.log(`Invalid rows skipped:                ${summary.invalidRowsSkipped}`);
+    console.log(`Matched by invoice number:           ${summary.matchedByInvoice}`);
+    console.log(`Matched by invoice + supplier:       ${summary.matchedByInvoiceAndSupplier}`);
+    console.log(`Unmatched in workbook (no DB):       ${summary.unmatchedInWorkbook}`);
+    console.log(`Unmatched in DB (no workbook):       ${summary.unmatchedInDb}`);
+    console.log(`Unresolved duplicate invoice rows:   ${summary.unresolvedDuplicates}`);
 
     if (incompleteRows.length > 0) {
       console.log('\n--- Incomplete rows skipped ---');
-      for (const row of incompleteRows.slice(0, 20)) {
+      for (const row of incompleteRows) {
         console.log(`  row ${row.sourceRowNumber}: invoice=${row.invoiceNumber ?? '(none)'} | ${row.reason}`);
       }
-      if (incompleteRows.length > 20) console.log(`  ... and ${incompleteRows.length - 20} more`);
     }
 
     if (invalidRows.length > 0) {
       console.log('\n--- Invalid rows skipped ---');
-      for (const row of invalidRows.slice(0, 20)) {
+      for (const row of invalidRows) {
         console.log(`  row ${row.sourceRowNumber}: invoice=${row.invoiceNumber ?? '(none)'} | ${row.reason}`);
       }
-      if (invalidRows.length > 20) console.log(`  ... and ${invalidRows.length - 20} more`);
     }
 
-    if (ambiguousWorkbookNumbers.length > 0) {
-      console.log('\n--- Ambiguous invoice numbers in workbook (skipped) ---');
-      for (const invoiceNumber of ambiguousWorkbookNumbers.slice(0, 30)) {
-        console.log(`  ${invoiceNumber}`);
-      }
-      if (ambiguousWorkbookNumbers.length > 30) {
-        console.log(`  ... and ${ambiguousWorkbookNumbers.length - 30} more`);
-      }
+    const warnings = problems.filter((problem) => problem.level === 'warning');
+    const errors = problems.filter((problem) => problem.level === 'error');
+
+    if (warnings.length > 0) {
+      console.log('\n--- Warnings ---');
+      for (const problem of warnings) console.log(`  ${problem.message}`);
     }
 
-    if (ambiguousDbNumbers.length > 0) {
-      console.log('\n--- Ambiguous invoice numbers in DB (skipped) ---');
-      for (const invoiceNumber of ambiguousDbNumbers.slice(0, 30)) {
-        console.log(`  ${invoiceNumber}`);
-      }
-      if (ambiguousDbNumbers.length > 30) {
-        console.log(`  ... and ${ambiguousDbNumbers.length - 30} more`);
-      }
-    }
-
-    if (unmatchedWorkbookNumbers.length > 0) {
-      console.log('\n--- Invoice numbers in workbook with no DB order ---');
-      for (const invoiceNumber of unmatchedWorkbookNumbers.slice(0, 30)) {
-        console.log(`  ${invoiceNumber}`);
-      }
-      if (unmatchedWorkbookNumbers.length > 30) {
-        console.log(`  ... and ${unmatchedWorkbookNumbers.length - 30} more`);
-      }
-    }
-
-    if (unmatchedDbNumbers.length > 0) {
-      console.log('\n--- Invoice numbers in DB with no workbook row ---');
-      for (const invoiceNumber of unmatchedDbNumbers.slice(0, 30)) {
-        console.log(`  ${invoiceNumber}`);
-      }
-      if (unmatchedDbNumbers.length > 30) {
-        console.log(`  ... and ${unmatchedDbNumbers.length - 30} more`);
-      }
+    if (errors.length > 0) {
+      console.log('\n--- Problems (not updated) ---');
+      for (const problem of errors) console.log(`  ${problem.message}`);
     }
 
     console.log('================================================');
