@@ -1,4 +1,4 @@
-import { eq, isNotNull } from 'drizzle-orm';
+import { eq, isNotNull, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { parseArgs } from 'node:util';
@@ -351,26 +351,32 @@ async function main() {
     }
 
     console.log(`Updating ${invoiceNumbersToUpdate.length} matched order(s)...`);
+    console.log('Writing all updates in one database transaction. A failure rolls back the entire run.');
 
-    for (const invoiceNumber of invoiceNumbersToUpdate) {
-      const workbookRow = uniqueWorkbookRows.get(invoiceNumber)!;
-      const order = uniqueDbOrders.get(invoiceNumber)!;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-      await db
-        .update(schema.materialPurchaseOrders)
-        .set({
-          legacyInvoiceIssuedAt: workbookRow.issuedAt,
-          legacyInvoiceSellerTaxNumber: workbookRow.sellerTaxNumber,
-          legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
-          legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
-          legacyInvoiceVatAmount: workbookRow.vatAmount,
-          legacyInvoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
-          legacyInvoiceTotalAmount: workbookRow.totalAmount,
-        })
-        .where(eq(schema.materialPurchaseOrders.id, order.id));
+      for (const invoiceNumber of invoiceNumbersToUpdate) {
+        const workbookRow = uniqueWorkbookRows.get(invoiceNumber)!;
+        const order = uniqueDbOrders.get(invoiceNumber)!;
 
-      summary.matchedAndUpdated++;
-    }
+        await tx
+          .update(schema.materialPurchaseOrders)
+          .set({
+            legacyInvoiceIssuedAt: workbookRow.issuedAt,
+            legacyInvoiceSellerTaxNumber: workbookRow.sellerTaxNumber,
+            legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
+            legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
+            legacyInvoiceVatAmount: workbookRow.vatAmount,
+            legacyInvoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
+            legacyInvoiceTotalAmount: workbookRow.totalAmount,
+          })
+          .where(eq(schema.materialPurchaseOrders.id, order.id));
+
+        summary.matchedAndUpdated++;
+      }
+    });
 
     console.log('\n========== INVOICE TOTALS SEED STATS ==========');
     console.log(`Workbook rows loaded:              ${summary.rowsLoaded}`);
@@ -445,6 +451,7 @@ async function main() {
     console.error(err.message);
     if (err.cause?.message) console.error(`Cause: ${err.cause.message}`);
     if (err.cause?.detail) console.error(`Detail: ${err.cause.detail}`);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();

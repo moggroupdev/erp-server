@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
@@ -262,43 +262,50 @@ async function main() {
       return;
     }
 
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+
     const insertedCodes: string[] = [];
-    for (let i = 0; i < productsToInsert.length; i += BATCH_SIZE) {
-      const batch = productsToInsert.slice(i, i + BATCH_SIZE);
-      const result = await db.insert(schema.products).values(batch).returning({ code: schema.products.code });
-      for (const row of result) insertedCodes.push(row.code);
-      process.stdout.write(
-        `\rInserted ${Math.min(i + BATCH_SIZE, productsToInsert.length)} / ${productsToInsert.length} products`,
-      );
-    }
-    console.log();
-
     const dimensionsToInsert: (typeof schema.productDimensions.$inferInsert)[] = [];
-    for (let i = 0; i < insertedCodes.length; i++) {
-      const code = insertedCodes[i];
-      for (const dim of dimensionsByProductIndex[i]) {
-        dimensionsToInsert.push({
-          productCode: code,
-          length: dim.length,
-          depth: dim.depth,
-          diameter: dim.diameter,
-          height: dim.height,
-          isDefault: dim.isDefault,
-          createdBy: user.id,
-        });
-      }
-    }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-    if (dimensionsToInsert.length > 0) {
-      for (let i = 0; i < dimensionsToInsert.length; i += BATCH_SIZE) {
-        const batch = dimensionsToInsert.slice(i, i + BATCH_SIZE);
-        await db.insert(schema.productDimensions).values(batch);
+      for (let i = 0; i < productsToInsert.length; i += BATCH_SIZE) {
+        const batch = productsToInsert.slice(i, i + BATCH_SIZE);
+        const result = await tx.insert(schema.products).values(batch).returning({ code: schema.products.code });
+        for (const row of result) insertedCodes.push(row.code);
         process.stdout.write(
-          `\rInserted ${Math.min(i + BATCH_SIZE, dimensionsToInsert.length)} / ${dimensionsToInsert.length} dimensions`,
+          `\rInserted ${Math.min(i + BATCH_SIZE, productsToInsert.length)} / ${productsToInsert.length} products`,
         );
       }
       console.log();
-    }
+
+      for (let i = 0; i < insertedCodes.length; i++) {
+        const code = insertedCodes[i];
+        for (const dim of dimensionsByProductIndex[i]) {
+          dimensionsToInsert.push({
+            productCode: code,
+            length: dim.length,
+            depth: dim.depth,
+            diameter: dim.diameter,
+            height: dim.height,
+            isDefault: dim.isDefault,
+            createdBy: user.id,
+          });
+        }
+      }
+
+      if (dimensionsToInsert.length > 0) {
+        for (let i = 0; i < dimensionsToInsert.length; i += BATCH_SIZE) {
+          const batch = dimensionsToInsert.slice(i, i + BATCH_SIZE);
+          await tx.insert(schema.productDimensions).values(batch);
+          process.stdout.write(
+            `\rInserted ${Math.min(i + BATCH_SIZE, dimensionsToInsert.length)} / ${dimensionsToInsert.length} dimensions`,
+          );
+        }
+        console.log();
+      }
+    });
 
     console.log('\n========== PRODUCTS SEED STATS ==========');
     console.log(`JSON products loaded:            ${cleanProducts.length}`);
@@ -314,6 +321,7 @@ async function main() {
     console.error(err.message);
     if (err.cause?.message) console.error(`Cause: ${err.cause.message}`);
     if (err.cause?.detail) console.error(`Detail: ${err.cause.detail}`);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();
