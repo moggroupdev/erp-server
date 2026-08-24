@@ -145,6 +145,44 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getSupplierStats(params: { supplierId: string; from?: string; to?: string; groupBy?: string }) {
+    const [supplier] = await this.db
+      .select({ id: suppliers.id, code: suppliers.code, name: suppliers.name })
+      .from(suppliers)
+      .where(eq(suppliers.id, params.supplierId))
+      .limit(1);
+
+    if (!supplier) {
+      throw new NotFoundException(
+        translate(`Supplier with ID ${params.supplierId} does not exist.`, `لا يوجد مورد بالمعرف ${params.supplierId}.`),
+      );
+    }
+
+    const groupBy = this.parseGroupBy(params.groupBy);
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const scopedWhere = and(
+      this.notCancelledWithDateRange(dateRange),
+      eq(materialPurchaseOrders.supplierId, params.supplierId),
+    )!;
+
+    const [overview, byPeriod, supplierCategories, supplierOrders, supplierMaterials] = await Promise.all([
+      this.getSupplierOverview(scopedWhere),
+      this.getSupplierByPeriod(scopedWhere, groupBy),
+      this.getSupplierByMainCategory(scopedWhere),
+      this.getSupplierOrders(scopedWhere),
+      this.getSupplierMaterials(scopedWhere),
+    ]);
+
+    return {
+      supplier,
+      overview,
+      byPeriod,
+      categories: supplierCategories,
+      orders: supplierOrders,
+      materials: supplierMaterials,
+    };
+  }
+
   // ============================== PRIVATE METHODS ==============================
 
   private parseGroupBy(value?: string): GroupBy {
@@ -482,6 +520,130 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
       .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .where(where)
+      .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
+
+    return rows.map((r) => ({
+      materialCode: r.materialCode,
+      materialTitle: r.materialTitle,
+      unitOfMeasurement: r.unitOfMeasurement,
+      totalSpend: Number(r.totalSpend),
+      totalQuantity: Number(r.totalQuantity),
+      avgUnitPrice: Number(r.totalQuantity) > 0 ? Number(r.totalSpend) / Number(r.totalQuantity) : 0,
+    }));
+  }
+
+  private async getSupplierOverview(where: SQL) {
+    const [row] = await this.db
+      .select({
+        totalSpend: sql<number>`coalesce(sum(${invoiceTotalPurchases}), 0)`,
+        totalOrders: count(),
+      })
+      .from(materialPurchaseOrders)
+      .where(where);
+
+    const totalSpend = Number(row?.totalSpend ?? 0);
+    const totalOrders = Number(row?.totalOrders ?? 0);
+
+    return {
+      totalSpend,
+      totalOrders,
+      avgOrderValue: totalOrders > 0 ? totalSpend / totalOrders : 0,
+    };
+  }
+
+  private async getSupplierByPeriod(where: SQL, groupBy: GroupBy) {
+    const bucket = sql<string>`date_trunc('${sql.raw(groupBy)}', ${materialPurchaseOrders.createdAt})`;
+
+    const rows = await this.db
+      .select({
+        period: bucket.as('period'),
+        totalSpend: sql<number>`coalesce(sum(${invoiceTotalPurchases}), 0)`,
+        orderCount: count(),
+      })
+      .from(materialPurchaseOrders)
+      .where(where)
+      .groupBy(sql`period`)
+      .orderBy(sql`period`);
+
+    return rows.map((r) => ({
+      period: r.period,
+      totalSpend: Number(r.totalSpend),
+      orderCount: Number(r.orderCount),
+      avgOrderValue: Number(r.orderCount) > 0 ? Number(r.totalSpend) / Number(r.orderCount) : 0,
+    }));
+  }
+
+  private async getSupplierByMainCategory(where: SQL) {
+    const rows = await this.db
+      .select({
+        mainCategoryId: materialCategoryMains.id,
+        mainCategoryTitle: materialCategoryMains.title,
+        materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
+        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
+      .where(where)
+      .groupBy(materialCategoryMains.id, materialCategoryMains.title)
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
+
+    return rows.map((r) => ({
+      mainCategoryId: r.mainCategoryId,
+      mainCategoryTitle: r.mainCategoryTitle,
+      materialCount: Number(r.materialCount),
+      totalQuantity: Number(r.totalQuantity),
+      totalSpend: Number(r.totalSpend),
+    }));
+  }
+
+  private async getSupplierOrders(where: SQL) {
+    const rows = await this.db
+      .select({
+        orderId: materialPurchaseOrders.id,
+        orderCode: materialPurchaseOrders.code,
+        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+        legacyInvoiceIssuedAt: materialPurchaseOrders.legacyInvoiceIssuedAt,
+        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
+        createdAt: materialPurchaseOrders.createdAt,
+        completedAt: materialPurchaseOrders.completedAt,
+      })
+      .from(materialPurchaseOrders)
+      .where(where)
+      .orderBy(desc(materialPurchaseOrders.legacyInvoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
+
+    const orderIds = rows.map((r) => r.orderId);
+    const legacyByOrderId = await this.getInventoryTransactionLegacyNumbersByOrderIds(orderIds);
+
+    return rows.map((r) => ({
+      orderId: r.orderId,
+      orderCode: r.orderCode,
+      legacyInvoiceNumber: r.legacyInvoiceNumber,
+      legacyInvoiceIssuedAt: r.legacyInvoiceIssuedAt,
+      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
+      createdAt: r.createdAt,
+      completedAt: r.completedAt,
+      inventoryTransactionLegacyNumbers: legacyByOrderId.get(r.orderId) ?? [],
+    }));
+  }
+
+  private async getSupplierMaterials(where: SQL) {
+    const rows = await this.db
+      .select({
+        materialCode: materialPurchaseOrderItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
       .where(where)
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
       .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));

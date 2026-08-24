@@ -36,4 +36,17 @@ export class PurchasingMaterialsReportsController {
   ) {
     return this.service.getCategoryStats({ mainCategoryId, from, to });
   }
+
+  @Get('supplier-stats')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @ApiBearerAuth()
+  getSupplierStats(
+    @Query('supplierId') supplierId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('groupBy') groupBy?: string,
+  ) {
+    return this.service.getSupplierStats({ supplierId, from, to, groupBy });
+  }
 }
