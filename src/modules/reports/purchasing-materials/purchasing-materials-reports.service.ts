@@ -1,9 +1,16 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialCategoryMains, materialCategorySubs, materialPurchaseOrderItems, materialPurchaseOrders } from 'src/database/schema';
-import { materials } from 'src/database/schema';
-import { suppliers } from 'src/database/schema';
+import {
+  inventoryTransactions,
+  materialCategoryMains,
+  materialCategorySubs,
+  materialPurchaseOrderItems,
+  materialPurchaseOrders,
+  materialPurchaseReceipts,
+  materials,
+  suppliers,
+} from 'src/database/schema';
 import { translate } from 'src/utils/i18n/translate';
 
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
@@ -117,15 +124,20 @@ export class PurchasingMaterialsReportsService {
       eq(materialCategorySubs.mainCategoryId, params.mainCategoryId),
     )!;
 
-    const [overview, bySupplier, topSuppliersByInvoiceCount, latestInvoices, topMaterials] = await Promise.all([
+    const [overview, categorySuppliers, categoryOrders, categoryMaterials] = await Promise.all([
       this.getCategoryOverview(scopedWhere),
-      this.getCategoryBySupplier(scopedWhere, TOP_SUPPLIERS_LIMIT),
-      this.getCategoryTopSuppliersByInvoiceCount(scopedWhere, TOP_SUPPLIERS_LIMIT),
-      this.getCategoryLatestInvoices(scopedWhere, TOP_ORDERS_LIMIT),
-      this.getCategoryTopMaterials(scopedWhere, TOP_MATERIALS_LIMIT),
+      this.getCategoryBySupplier(scopedWhere),
+      this.getCategoryOrders(scopedWhere),
+      this.getCategoryTopMaterials(scopedWhere),
     ]);
 
-    return { category, overview, bySupplier, topSuppliersByInvoiceCount, latestInvoices, topMaterials };
+    return {
+      category,
+      overview,
+      suppliers: categorySuppliers,
+      orders: categoryOrders,
+      materials: categoryMaterials,
+    };
   }
 
   // ============================== PRIVATE METHODS ==============================
@@ -352,7 +364,7 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
-  private async getCategoryBySupplier(where: SQL, limit: number) {
+  private async getCategoryBySupplier(where: SQL) {
     const rows = await this.db
       .select({
         supplierId: suppliers.id,
@@ -368,8 +380,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
       .where(where)
       .groupBy(suppliers.id, suppliers.code, suppliers.name)
-      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
-      .limit(limit);
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
 
     return rows.map((r) => ({
       supplierId: r.supplierId,
@@ -381,40 +392,13 @@ export class PurchasingMaterialsReportsService {
     }));
   }
 
-  private async getCategoryTopSuppliersByInvoiceCount(where: SQL, limit: number) {
-    const rows = await this.db
-      .select({
-        supplierId: suppliers.id,
-        supplierCode: suppliers.code,
-        supplierName: suppliers.name,
-        invoiceCount: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
-        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
-      })
-      .from(materialPurchaseOrderItems)
-      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
-      .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
-      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
-      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
-      .where(where)
-      .groupBy(suppliers.id, suppliers.code, suppliers.name)
-      .orderBy(desc(sql`count(distinct ${materialPurchaseOrders.id})`))
-      .limit(limit);
-
-    return rows.map((r) => ({
-      supplierId: r.supplierId,
-      supplierCode: r.supplierCode,
-      supplierName: r.supplierName,
-      invoiceCount: Number(r.invoiceCount),
-      totalSpend: Number(r.totalSpend),
-    }));
-  }
-
-  private async getCategoryLatestInvoices(where: SQL, limit: number) {
+  private async getCategoryOrders(where: SQL) {
     const rows = await this.db
       .select({
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
         legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+        legacyInvoiceIssuedAt: materialPurchaseOrders.legacyInvoiceIssuedAt,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
         legacyInvoiceTotalPurchases: invoiceTotalPurchases,
@@ -431,6 +415,7 @@ export class PurchasingMaterialsReportsService {
         materialPurchaseOrders.id,
         materialPurchaseOrders.code,
         materialPurchaseOrders.legacyInvoiceNumber,
+        materialPurchaseOrders.legacyInvoiceIssuedAt,
         suppliers.id,
         suppliers.name,
         materialPurchaseOrders.legacyInvoiceTotalPurchases,
@@ -438,22 +423,49 @@ export class PurchasingMaterialsReportsService {
         materialPurchaseOrders.createdAt,
         materialPurchaseOrders.completedAt,
       )
-      .orderBy(desc(materialPurchaseOrders.createdAt))
-      .limit(limit);
+      .orderBy(desc(materialPurchaseOrders.legacyInvoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
+
+    const orderIds = rows.map((r) => r.orderId);
+    const legacyByOrderId = await this.getInventoryTransactionLegacyNumbersByOrderIds(orderIds);
 
     return rows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
       legacyInvoiceNumber: r.legacyInvoiceNumber,
+      legacyInvoiceIssuedAt: r.legacyInvoiceIssuedAt,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
       legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
+      inventoryTransactionLegacyNumbers: legacyByOrderId.get(r.orderId) ?? [],
     }));
   }
 
-  private async getCategoryTopMaterials(where: SQL, limit: number) {
+  private async getInventoryTransactionLegacyNumbersByOrderIds(orderIds: string[]) {
+    const legacyByOrderId = new Map<string, string[]>();
+    if (orderIds.length === 0) return legacyByOrderId;
+
+    const rows = await this.db
+      .select({
+        orderId: materialPurchaseReceipts.materialPurchaseOrderId,
+        legacyNumber: inventoryTransactions.legacyNumber,
+      })
+      .from(materialPurchaseReceipts)
+      .innerJoin(inventoryTransactions, eq(inventoryTransactions.materialPurchaseReceiptId, materialPurchaseReceipts.id))
+      .where(and(inArray(materialPurchaseReceipts.materialPurchaseOrderId, orderIds), isNotNull(inventoryTransactions.legacyNumber)));
+
+    for (const row of rows) {
+      if (!row.legacyNumber) continue;
+      const existing = legacyByOrderId.get(row.orderId) ?? [];
+      if (!existing.includes(row.legacyNumber)) existing.push(row.legacyNumber);
+      legacyByOrderId.set(row.orderId, existing);
+    }
+
+    return legacyByOrderId;
+  }
+
+  private async getCategoryTopMaterials(where: SQL) {
     const rows = await this.db
       .select({
         materialCode: materialPurchaseOrderItems.materialCode,
@@ -468,8 +480,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
       .where(where)
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
-      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
-      .limit(limit);
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
 
     return rows.map((r) => ({
       materialCode: r.materialCode,
