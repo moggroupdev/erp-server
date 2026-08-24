@@ -20,8 +20,13 @@ const TOP_SUPPLIERS_LIMIT = 10;
 const TOP_MATERIALS_LIMIT = 10;
 const TOP_ORDERS_LIMIT = 10;
 
-const invoiceTotalPurchases = sql`coalesce(${materialPurchaseOrders.legacyInvoiceTotalPurchases}, ${materialPurchaseOrders.totalAmount})`;
-const allocatedInvoiceSpend = sql`${invoiceTotalPurchases} * (${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}) / nullif(${materialPurchaseOrders.totalAmount}, 0)`;
+const invoiceTotalPurchases = sql`coalesce(${materialPurchaseOrders.legacyInvoiceTotalPurchases}, 0)`;
+const orderLinesTotal = sql`(
+  select coalesce(sum(i.quantity_ordered * i.unit_price), 0)
+  from material_purchase_order_items i
+  where i.material_purchase_order_id = ${materialPurchaseOrders.id}
+)`;
+const allocatedInvoiceSpend = sql`${invoiceTotalPurchases} * (${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}) / nullif(${orderLinesTotal}, 0)`;
 
 @Injectable()
 export class PurchasingMaterialsReportsService {
@@ -419,7 +424,6 @@ export class PurchasingMaterialsReportsService {
         suppliers.id,
         suppliers.name,
         materialPurchaseOrders.legacyInvoiceTotalPurchases,
-        materialPurchaseOrders.totalAmount,
         materialPurchaseOrders.createdAt,
         materialPurchaseOrders.completedAt,
       )
