@@ -129,8 +129,9 @@ export class PurchasingMaterialsReportsService {
       eq(materialCategorySubs.mainCategoryId, params.mainCategoryId),
     )!;
 
-    const [overview, categorySuppliers, categoryOrders, categoryMaterials] = await Promise.all([
+    const [overview, categorySubCategories, categorySuppliers, categoryOrders, categoryMaterials] = await Promise.all([
       this.getCategoryOverview(scopedWhere),
+      this.getCategoryBySubCategory(scopedWhere),
       this.getCategoryBySupplier(scopedWhere),
       this.getCategoryOrders(scopedWhere),
       this.getCategoryTopMaterials(scopedWhere),
@@ -139,6 +140,7 @@ export class PurchasingMaterialsReportsService {
     return {
       category,
       overview,
+      subCategories: categorySubCategories,
       suppliers: categorySuppliers,
       orders: categoryOrders,
       materials: categoryMaterials,
@@ -165,19 +167,22 @@ export class PurchasingMaterialsReportsService {
       eq(materialPurchaseOrders.supplierId, params.supplierId),
     )!;
 
-    const [overview, byPeriod, supplierCategories, supplierOrders, supplierMaterials] = await Promise.all([
-      this.getSupplierOverview(scopedWhere),
-      this.getSupplierByPeriod(scopedWhere, groupBy),
-      this.getSupplierByMainCategory(scopedWhere),
-      this.getSupplierOrders(scopedWhere),
-      this.getSupplierMaterials(scopedWhere),
-    ]);
+    const [overview, byPeriod, supplierCategories, supplierSubCategories, supplierOrders, supplierMaterials] =
+      await Promise.all([
+        this.getSupplierOverview(scopedWhere),
+        this.getSupplierByPeriod(scopedWhere, groupBy),
+        this.getSupplierByMainCategory(scopedWhere),
+        this.getSupplierBySubCategory(scopedWhere),
+        this.getSupplierOrders(scopedWhere),
+        this.getSupplierMaterials(scopedWhere),
+      ]);
 
     return {
       supplier,
       overview,
       byPeriod,
       categories: supplierCategories,
+      subCategories: supplierSubCategories,
       orders: supplierOrders,
       materials: supplierMaterials,
     };
@@ -407,6 +412,32 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  private async getCategoryBySubCategory(where: SQL) {
+    const rows = await this.db
+      .select({
+        subCategoryId: materialCategorySubs.id,
+        subCategoryTitle: materialCategorySubs.title,
+        materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
+        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .where(where)
+      .groupBy(materialCategorySubs.id, materialCategorySubs.title)
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
+
+    return rows.map((r) => ({
+      subCategoryId: r.subCategoryId,
+      subCategoryTitle: r.subCategoryTitle,
+      materialCount: Number(r.materialCount),
+      totalQuantity: Number(r.totalQuantity),
+      totalSpend: Number(r.totalSpend),
+    }));
+  }
+
   private async getCategoryBySupplier(where: SQL) {
     const rows = await this.db
       .select({
@@ -596,6 +627,42 @@ export class PurchasingMaterialsReportsService {
     return rows.map((r) => ({
       mainCategoryId: r.mainCategoryId,
       mainCategoryTitle: r.mainCategoryTitle,
+      materialCount: Number(r.materialCount),
+      totalQuantity: Number(r.totalQuantity),
+      totalSpend: Number(r.totalSpend),
+    }));
+  }
+
+  private async getSupplierBySubCategory(where: SQL) {
+    const rows = await this.db
+      .select({
+        mainCategoryId: materialCategoryMains.id,
+        mainCategoryTitle: materialCategoryMains.title,
+        subCategoryId: materialCategorySubs.id,
+        subCategoryTitle: materialCategorySubs.title,
+        materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
+        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+      .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
+      .where(where)
+      .groupBy(
+        materialCategoryMains.id,
+        materialCategoryMains.title,
+        materialCategorySubs.id,
+        materialCategorySubs.title,
+      )
+      .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
+
+    return rows.map((r) => ({
+      mainCategoryId: r.mainCategoryId,
+      mainCategoryTitle: r.mainCategoryTitle,
+      subCategoryId: r.subCategoryId,
+      subCategoryTitle: r.subCategoryTitle,
       materialCount: Number(r.materialCount),
       totalQuantity: Number(r.totalQuantity),
       totalSpend: Number(r.totalSpend),
