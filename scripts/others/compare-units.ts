@@ -52,6 +52,7 @@ const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
 })();
 
 const TRANSACTIONS_DIR = path.join(__dirname, '../../data/transactions');
+const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
 const TRANSACTIONS_OUT_DIR = path.join(TRANSACTIONS_DIR, '_unit-mismatches');
 const MATERIALS_OUT_DIR = path.join(__dirname, '../../data/materials/_unit-mismatches');
 
@@ -562,17 +563,15 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
     throw new Error(`Transactions directory not found: ${TRANSACTIONS_DIR}`);
   }
 
-  const files = fs
-    .readdirSync(TRANSACTIONS_DIR)
-    .filter((f) => f.toLowerCase().endsWith('.xlsx'))
-    .sort();
-
-  if (files.length === 0) {
-    throw new Error(`No .xlsx files found in ${TRANSACTIONS_DIR}`);
+  const sourcePath = path.join(TRANSACTIONS_DIR, TRANSACTIONS_SOURCE_FILE);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Transactions source file not found: ${sourcePath}`);
   }
 
+  const files = [TRANSACTIONS_SOURCE_FILE];
+
   console.log(`\n--- Transaction invoices ---`);
-  console.log(`Found ${files.length} transaction file(s)`);
+  console.log(`Using source file: ${TRANSACTIONS_SOURCE_FILE}`);
 
   const invoiceUnitsByLegacy = new Map<string, Map<string, UnitUsage>>();
   let filesParsed = 0;

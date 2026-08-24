@@ -17,8 +17,10 @@ dotenv.config();
 
 const USAGE = `Usage: npm run seed:inventory-receipts [-- --email <email> | --id <uuid>]
 
-Seeds historical goods-receipt workbooks from every .xlsx file in:
-  data/transactions/
+Seeds historical goods-receipt data from the merged workbook:
+  data/transactions/all.xlsx
+
+Other .xlsx files in that folder are ignored.
 
 Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
 
@@ -39,6 +41,7 @@ Examples:
   npm run seed:inventory-receipts -- --id 00000000-0000-0000-0000-000000000001`;
 
 const DATA_DIR = path.join(__dirname, '../../data/transactions');
+const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
 
@@ -355,16 +358,12 @@ function listTransactionWorkbooks(): string[] {
     throw new Error(`Transactions directory not found: ${DATA_DIR}`);
   }
 
-  const files = fs
-    .readdirSync(DATA_DIR)
-    .filter((fileName) => fileName.toLowerCase().endsWith('.xlsx') && !fileName.startsWith('~$'))
-    .sort((a, b) => a.localeCompare(b, 'ar'));
-
-  if (files.length === 0) {
-    throw new Error(`No .xlsx files found in ${DATA_DIR}`);
+  const sourcePath = path.join(DATA_DIR, TRANSACTIONS_SOURCE_FILE);
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Transactions source file not found: ${sourcePath}`);
   }
 
-  return files;
+  return [TRANSACTIONS_SOURCE_FILE];
 }
 
 function isoDay(date: Date): string {
