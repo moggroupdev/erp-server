@@ -321,7 +321,7 @@ export class PurchasingMaterialsReportsService {
       .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`))
       .limit(limit);
 
-    return rows.map((r) => ({
+    const mapped = rows.map((r) => ({
       materialCode: r.materialCode,
       materialTitle: r.materialTitle,
       unitOfMeasurement: r.unitOfMeasurement,
@@ -329,6 +329,8 @@ export class PurchasingMaterialsReportsService {
       totalQuantity: Number(r.totalQuantity),
       avgUnitPrice: Number(r.totalQuantity) > 0 ? Number(r.totalSpend) / Number(r.totalQuantity) : 0,
     }));
+
+    return this.attachUnitConversions(mapped);
   }
 
   private async getByMainCategory(dateRange: { from?: Date; to?: Date }) {
