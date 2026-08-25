@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'print_suppliers_list' BEFORE 'add_customer';
