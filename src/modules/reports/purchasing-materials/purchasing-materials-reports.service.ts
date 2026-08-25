@@ -9,8 +9,10 @@ import {
   materialPurchaseOrders,
   materialPurchaseReceipts,
   materials,
+  materialUnitConversions,
   suppliers,
 } from 'src/database/schema';
+import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
 import { translate } from 'src/utils/i18n/translate';
 
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
@@ -555,7 +557,7 @@ export class PurchasingMaterialsReportsService {
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
       .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
 
-    return rows.map((r) => ({
+    const mapped = rows.map((r) => ({
       materialCode: r.materialCode,
       materialTitle: r.materialTitle,
       unitOfMeasurement: r.unitOfMeasurement,
@@ -563,6 +565,8 @@ export class PurchasingMaterialsReportsService {
       totalQuantity: Number(r.totalQuantity),
       avgUnitPrice: Number(r.totalQuantity) > 0 ? Number(r.totalSpend) / Number(r.totalQuantity) : 0,
     }));
+
+    return this.attachUnitConversions(mapped);
   }
 
   private async getSupplierOverview(where: SQL) {
@@ -715,13 +719,48 @@ export class PurchasingMaterialsReportsService {
       .groupBy(materialPurchaseOrderItems.materialCode, materials.title, materials.unitOfMeasurement)
       .orderBy(desc(sql`coalesce(sum(${allocatedInvoiceSpend}), 0)`));
 
-    return rows.map((r) => ({
+    const mapped = rows.map((r) => ({
       materialCode: r.materialCode,
       materialTitle: r.materialTitle,
       unitOfMeasurement: r.unitOfMeasurement,
       totalSpend: Number(r.totalSpend),
       totalQuantity: Number(r.totalQuantity),
       avgUnitPrice: Number(r.totalQuantity) > 0 ? Number(r.totalSpend) / Number(r.totalQuantity) : 0,
+    }));
+
+    return this.attachUnitConversions(mapped);
+  }
+
+  private async attachUnitConversions<T extends { materialCode: string }>(
+    rows: T[],
+  ): Promise<(T & { unitConversions: MaterialUnitConversionSummary[] })[]> {
+    if (rows.length === 0) return [];
+
+    const codes = [...new Set(rows.map((row) => row.materialCode))];
+    const conversions = await this.db
+      .select({
+        id: materialUnitConversions.id,
+        materialCode: materialUnitConversions.materialCode,
+        unit: materialUnitConversions.unit,
+        conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+      })
+      .from(materialUnitConversions)
+      .where(inArray(materialUnitConversions.materialCode, codes));
+
+    const byCode = new Map<string, MaterialUnitConversionSummary[]>();
+    for (const conversion of conversions) {
+      const list = byCode.get(conversion.materialCode) ?? [];
+      list.push({
+        id: conversion.id,
+        unit: conversion.unit,
+        conversionFactorToBase: Number(conversion.conversionFactorToBase),
+      });
+      byCode.set(conversion.materialCode, list);
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      unitConversions: byCode.get(row.materialCode) ?? [],
     }));
   }
 }
