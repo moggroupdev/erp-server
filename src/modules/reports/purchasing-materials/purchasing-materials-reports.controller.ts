@@ -37,6 +37,18 @@ export class PurchasingMaterialsReportsController {
     return this.service.getCategoryStats({ mainCategoryId, from, to });
   }
 
+  @Get('subcategory-stats')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @ApiBearerAuth()
+  getSubCategoryStats(
+    @Query('subCategoryId') subCategoryId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.getSubCategoryStats({ subCategoryId, from, to });
+  }
+
   @Get('supplier-stats')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)

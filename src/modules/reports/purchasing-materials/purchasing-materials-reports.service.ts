@@ -149,6 +149,50 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getSubCategoryStats(params: { subCategoryId: string; from?: string; to?: string }) {
+    const [subCategory] = await this.db
+      .select({
+        id: materialCategorySubs.id,
+        title: materialCategorySubs.title,
+        mainCategoryId: materialCategoryMains.id,
+        mainCategoryTitle: materialCategoryMains.title,
+      })
+      .from(materialCategorySubs)
+      .innerJoin(materialCategoryMains, eq(materialCategorySubs.mainCategoryId, materialCategoryMains.id))
+      .where(eq(materialCategorySubs.id, params.subCategoryId))
+      .limit(1);
+
+    if (!subCategory) {
+      throw new NotFoundException(
+        translate(
+          `Material subcategory with ID ${params.subCategoryId} does not exist.`,
+          `لا توجد فئة مواد فرعية بالمعرف ${params.subCategoryId}.`,
+        ),
+      );
+    }
+
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const scopedWhere = and(
+      this.notCancelledWithDateRange(dateRange),
+      eq(materials.subCategoryId, params.subCategoryId),
+    )!;
+
+    const [overview, categorySuppliers, categoryOrders, categoryMaterials] = await Promise.all([
+      this.getCategoryOverview(scopedWhere),
+      this.getCategoryBySupplier(scopedWhere),
+      this.getCategoryOrders(scopedWhere),
+      this.getCategoryTopMaterials(scopedWhere),
+    ]);
+
+    return {
+      subCategory,
+      overview,
+      suppliers: categorySuppliers,
+      orders: categoryOrders,
+      materials: categoryMaterials,
+    };
+  }
+
   public async getSupplierStats(params: { supplierId: string; from?: string; to?: string; groupBy?: string }) {
     const [supplier] = await this.db
       .select({ id: suppliers.id, code: suppliers.code, name: suppliers.name })
