@@ -622,6 +622,7 @@ async function main() {
   const skippedUnitRows: SkippedUnitRow[] = [];
   const duplicateOrderItemWarnings: DuplicateOrderItemWarning[] = [];
   const noCodeMaterialEvents: NoCodeMaterialEvent[] = [];
+  const skippedExistingPermitGroups: Array<{ groupKey: string; permitNumbers: string[] }> = [];
 
   try {
     const user = await resolveUser(db, identifier);
@@ -726,6 +727,10 @@ async function main() {
 
         if (existingPermits.length === permitNumbers.length) {
           summary.skippedExistingPermitGroups++;
+          skippedExistingPermitGroups.push({ groupKey, permitNumbers });
+          console.log(
+            `Skipping already-seeded order group ${groupKey}; existing permits: ${permitNumbers.join(', ')}`,
+          );
           continue;
         }
 
@@ -1068,6 +1073,13 @@ async function main() {
     console.log(`Partial groups skipped:         ${summary.skippedPartialPermitGroups}`);
     console.log(`Rows skipped for materials:     ${summary.skippedRowsMissingMaterials}`);
     console.log(`Rows skipped for units:         ${summary.skippedRowsUnresolvedUnit}`);
+
+    if (skippedExistingPermitGroups.length > 0) {
+      console.log('\n--- Existing permit groups skipped ---');
+      for (const skipped of skippedExistingPermitGroups) {
+        console.log(`  ${skipped.groupKey} | permits=${skipped.permitNumbers.join(', ')}`);
+      }
+    }
 
     if (invalidRows.length > 0) {
       console.log('\n--- Invalid rows skipped (samples) ---');
