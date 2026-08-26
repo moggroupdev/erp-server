@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { parseArgs } from 'node:util';
@@ -22,6 +22,10 @@ Seeds historical goods-receipt data from the merged workbook:
 
 Other .xlsx files in that folder are ignored.
 
+Rows with an empty material code (كود الصنف) are kept: they are matched to an
+existing material by exact normalized title, or created without a legacy code
+under a reserved Misc subcategory (main 99 / sub 01) if no title match exists.
+
 Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
@@ -44,6 +48,17 @@ const DATA_DIR = path.join(__dirname, '../../data/transactions');
 const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
+
+/** Reserved category for materials created from workbook rows that have no legacy code. */
+const MISC_MAIN_LEGACY_CODE = '99';
+const MISC_SUB_LEGACY_CODE = '01';
+const MISC_MAIN_TITLE = 'متفرقات - بدون كود قديم';
+const MISC_SUB_TITLE = 'غير مصنف';
+
+type MaterialRef = {
+  code: string;
+  unitOfMeasurement: (typeof MATERIAL_UNIT_VALUES)[number];
+};
 
 const UNIT_AR_LABELS: Record<(typeof MATERIAL_UNIT_VALUES)[number], string> = {
   count: 'عدد',
@@ -123,6 +138,14 @@ type DuplicateOrderItemWarning = {
   unitPrices: number[];
 };
 
+type NoCodeMaterialEvent = {
+  sourceFile: string;
+  sourceRowNumber: number;
+  title: string;
+  materialCode: string;
+  action: 'matched-by-name' | 'created';
+};
+
 type Summary = {
   rowsLoaded: number;
   ordersCreated: number;
@@ -138,6 +161,8 @@ type Summary = {
   invalidRowsSkipped: number;
   skippedRowsMissingMaterials: number;
   skippedRowsUnresolvedUnit: number;
+  noCodeRowsMatchedByName: number;
+  noCodeMaterialsCreated: number;
 };
 
 type UserIdentifier = { email?: string; id?: string };
@@ -271,6 +296,67 @@ function generateUniqueMaterialCode(existing: Set<string>): string {
   }
 
   throw new Error('Failed to generate a unique 6-digit material code after 1000 attempts.');
+}
+
+/**
+ * Find or create the reserved Misc main+sub category used for materials
+ * seeded from workbook rows that have no legacy code.
+ */
+async function ensureMiscSubcategory(
+  tx: Parameters<Parameters<DbClient['transaction']>[0]>[0],
+  subcategoryByLegacyPair: Map<string, string>,
+): Promise<string> {
+  const pairKey = `${MISC_MAIN_LEGACY_CODE}:${MISC_SUB_LEGACY_CODE}`;
+  const cached = subcategoryByLegacyPair.get(pairKey);
+  if (cached) return cached;
+
+  let mainId: string | undefined;
+  const [existingMain] = await tx
+    .select({ id: schema.materialCategoryMains.id })
+    .from(schema.materialCategoryMains)
+    .where(eq(schema.materialCategoryMains.legacyCode, MISC_MAIN_LEGACY_CODE))
+    .limit(1);
+
+  if (existingMain) {
+    mainId = existingMain.id;
+  } else {
+    const [createdMain] = await tx
+      .insert(schema.materialCategoryMains)
+      .values({
+        legacyCode: MISC_MAIN_LEGACY_CODE,
+        title: MISC_MAIN_TITLE,
+      })
+      .returning({ id: schema.materialCategoryMains.id });
+    mainId = createdMain.id;
+  }
+
+  const [existingSub] = await tx
+    .select({ id: schema.materialCategorySubs.id })
+    .from(schema.materialCategorySubs)
+    .where(
+      and(
+        eq(schema.materialCategorySubs.mainCategoryId, mainId),
+        eq(schema.materialCategorySubs.legacyCode, MISC_SUB_LEGACY_CODE),
+      ),
+    )
+    .limit(1);
+
+  if (existingSub) {
+    subcategoryByLegacyPair.set(pairKey, existingSub.id);
+    return existingSub.id;
+  }
+
+  const [createdSub] = await tx
+    .insert(schema.materialCategorySubs)
+    .values({
+      legacyCode: MISC_SUB_LEGACY_CODE,
+      title: MISC_SUB_TITLE,
+      mainCategoryId: mainId,
+    })
+    .returning({ id: schema.materialCategorySubs.id });
+
+  subcategoryByLegacyPair.set(pairKey, createdSub.id);
+  return createdSub.id;
 }
 
 function normalizeText(value: unknown): string {
@@ -452,10 +538,11 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
     for (let i = headerRowIndex + 1; i < rawRows.length; i++) {
       const rawRow = rawRows[i];
       const materialLegacyCode = normalizeIdentifier(rawRow[materialCodeIdx]);
-      if (!materialLegacyCode) continue;
+      const title = normalizeText(rawRow[titleIdx]);
+      // Skip completely blank rows; keep rows that have a title but no material code.
+      if (!materialLegacyCode && !title) continue;
 
       try {
-        const title = normalizeText(rawRow[titleIdx]);
         const supplierName = normalizeText(rawRow[supplierNameIdx]);
         const invoiceNumber = normalizeIdentifier(rawRow[invoiceNumberIdx]);
         const permitNumber = normalizeIdentifier(rawRow[permitNumberIdx]);
@@ -490,8 +577,8 @@ function loadWorkbookRows(): { rows: WorkbookRow[]; invalidRows: InvalidRow[] } 
           sourceFile: fileName,
           sourceRowNumber: i + 1,
           reason: (error as Error).message,
-          materialLegacyCode,
-          title: normalizeText(rawRow[titleIdx]),
+          materialLegacyCode: materialLegacyCode || undefined,
+          title: title || undefined,
         });
       }
     }
@@ -524,11 +611,14 @@ async function main() {
     invalidRowsSkipped: 0,
     skippedRowsMissingMaterials: 0,
     skippedRowsUnresolvedUnit: 0,
+    noCodeRowsMatchedByName: 0,
+    noCodeMaterialsCreated: 0,
   };
 
   const skippedMaterials: SkippedMaterial[] = [];
   const skippedUnitRows: SkippedUnitRow[] = [];
   const duplicateOrderItemWarnings: DuplicateOrderItemWarning[] = [];
+  const noCodeMaterialEvents: NoCodeMaterialEvent[] = [];
 
   try {
     const user = await resolveUser(db, identifier);
@@ -563,19 +653,27 @@ async function main() {
       .select({
         code: schema.materials.code,
         legacyCode: schema.materials.legacyCode,
+        title: schema.materials.title,
         unitOfMeasurement: schema.materials.unitOfMeasurement,
       })
       .from(schema.materials);
 
-    const materialByLegacy = new Map<string, { code: string; unitOfMeasurement: (typeof MATERIAL_UNIT_VALUES)[number] }>();
+    const materialByLegacy = new Map<string, MaterialRef>();
+    const materialByTitle = new Map<string, MaterialRef>();
     const usedMaterialCodes = new Set<string>();
     for (const material of existingMaterials) {
       usedMaterialCodes.add(material.code);
+      const ref: MaterialRef = {
+        code: material.code,
+        unitOfMeasurement: material.unitOfMeasurement,
+      };
       if (material.legacyCode) {
-        materialByLegacy.set(material.legacyCode, {
-          code: material.code,
-          unitOfMeasurement: material.unitOfMeasurement,
-        });
+        materialByLegacy.set(material.legacyCode, ref);
+      }
+      const titleKey = normalizeText(material.title);
+      // First match wins when duplicate titles exist in the DB.
+      if (titleKey && !materialByTitle.has(titleKey)) {
+        materialByTitle.set(titleKey, ref);
       }
     }
     const conversionFactorsByCode = await loadConversionFactors(db);
@@ -615,6 +713,8 @@ async function main() {
     await db.transaction(async (tx) => {
       await tx.execute(sql`SET LOCAL statement_timeout = 0`);
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
+
+      const miscSubCategoryId = await ensureMiscSubcategory(tx, subcategoryByLegacyPair);
 
       let processedGroups = 0;
       for (const [groupKey, groupRows] of orderGroups) {
@@ -658,62 +758,119 @@ async function main() {
           }
         > = [];
         for (const row of groupRows) {
-          let material = materialByLegacy.get(row.materialLegacyCode);
-          if (!material) {
-            if (!/^1\d{7}$/.test(row.materialLegacyCode)) {
-              skippedMaterials.push({
+          let material: MaterialRef | undefined;
+
+          if (!row.materialLegacyCode) {
+            const titleKey = normalizeText(row.title);
+            material = materialByTitle.get(titleKey);
+
+            if (material) {
+              summary.noCodeRowsMatchedByName++;
+              noCodeMaterialEvents.push({
                 sourceFile: row.sourceFile,
                 sourceRowNumber: row.sourceRowNumber,
-                legacyCode: row.materialLegacyCode,
                 title: row.title,
-                reason: 'Legacy material code must be 8 digits and start with 1',
+                materialCode: material.code,
+                action: 'matched-by-name',
               });
-              summary.skippedRowsMissingMaterials++;
-              continue;
-            }
+            } else {
+              const [createdMaterial] = await tx
+                .insert(schema.materials)
+                .values({
+                  code: generateUniqueMaterialCode(usedMaterialCodes),
+                  legacyCode: null,
+                  title: row.title,
+                  subCategoryId: miscSubCategoryId,
+                  materialType: MATERIAL_TYPES.RAW_MATERIALS,
+                  unitOfMeasurement: normalizeUnit(row.unitRaw),
+                  unitPrice: 0,
+                  quantity: 0,
+                  openingUnitPrice: 0,
+                  openingQuantity: 0,
+                  createdBy: user.id,
+                })
+                .returning({
+                  code: schema.materials.code,
+                  unitOfMeasurement: schema.materials.unitOfMeasurement,
+                });
 
-            const mainCategoryLegacyCode = row.materialLegacyCode.slice(1, 3);
-            const subCategoryLegacyCode = row.materialLegacyCode.slice(3, 5);
-            const subCategoryId = subcategoryByLegacyPair.get(`${mainCategoryLegacyCode}:${subCategoryLegacyCode}`);
-
-            if (!subCategoryId) {
-              skippedMaterials.push({
+              material = {
+                code: createdMaterial.code,
+                unitOfMeasurement: createdMaterial.unitOfMeasurement,
+              };
+              materialByTitle.set(titleKey, material);
+              summary.materialsCreated++;
+              summary.noCodeMaterialsCreated++;
+              noCodeMaterialEvents.push({
                 sourceFile: row.sourceFile,
                 sourceRowNumber: row.sourceRowNumber,
-                legacyCode: row.materialLegacyCode,
                 title: row.title,
-                reason: `No material subcategory found for ${mainCategoryLegacyCode}/${subCategoryLegacyCode}`,
+                materialCode: material.code,
+                action: 'created',
               });
-              summary.skippedRowsMissingMaterials++;
-              continue;
             }
+          } else {
+            material = materialByLegacy.get(row.materialLegacyCode);
+            if (!material) {
+              if (!/^1\d{7}$/.test(row.materialLegacyCode)) {
+                skippedMaterials.push({
+                  sourceFile: row.sourceFile,
+                  sourceRowNumber: row.sourceRowNumber,
+                  legacyCode: row.materialLegacyCode,
+                  title: row.title,
+                  reason: 'Legacy material code must be 8 digits and start with 1',
+                });
+                summary.skippedRowsMissingMaterials++;
+                continue;
+              }
 
-            const [createdMaterial] = await tx
-              .insert(schema.materials)
-              .values({
-                code: generateUniqueMaterialCode(usedMaterialCodes),
-                legacyCode: row.materialLegacyCode,
-                title: row.title,
-                subCategoryId,
-                materialType: MATERIAL_TYPES.RAW_MATERIALS,
-                unitOfMeasurement: normalizeUnit(row.unitRaw),
-                unitPrice: 0,
-                quantity: 0,
-                openingUnitPrice: 0,
-                openingQuantity: 0,
-                createdBy: user.id,
-              })
-              .returning({
-                code: schema.materials.code,
-                unitOfMeasurement: schema.materials.unitOfMeasurement,
-              });
+              const mainCategoryLegacyCode = row.materialLegacyCode.slice(1, 3);
+              const subCategoryLegacyCode = row.materialLegacyCode.slice(3, 5);
+              const subCategoryId = subcategoryByLegacyPair.get(`${mainCategoryLegacyCode}:${subCategoryLegacyCode}`);
 
-            material = {
-              code: createdMaterial.code,
-              unitOfMeasurement: createdMaterial.unitOfMeasurement,
-            };
-            materialByLegacy.set(row.materialLegacyCode, material);
-            summary.materialsCreated++;
+              if (!subCategoryId) {
+                skippedMaterials.push({
+                  sourceFile: row.sourceFile,
+                  sourceRowNumber: row.sourceRowNumber,
+                  legacyCode: row.materialLegacyCode,
+                  title: row.title,
+                  reason: `No material subcategory found for ${mainCategoryLegacyCode}/${subCategoryLegacyCode}`,
+                });
+                summary.skippedRowsMissingMaterials++;
+                continue;
+              }
+
+              const [createdMaterial] = await tx
+                .insert(schema.materials)
+                .values({
+                  code: generateUniqueMaterialCode(usedMaterialCodes),
+                  legacyCode: row.materialLegacyCode,
+                  title: row.title,
+                  subCategoryId,
+                  materialType: MATERIAL_TYPES.RAW_MATERIALS,
+                  unitOfMeasurement: normalizeUnit(row.unitRaw),
+                  unitPrice: 0,
+                  quantity: 0,
+                  openingUnitPrice: 0,
+                  openingQuantity: 0,
+                  createdBy: user.id,
+                })
+                .returning({
+                  code: schema.materials.code,
+                  unitOfMeasurement: schema.materials.unitOfMeasurement,
+                });
+
+              material = {
+                code: createdMaterial.code,
+                unitOfMeasurement: createdMaterial.unitOfMeasurement,
+              };
+              materialByLegacy.set(row.materialLegacyCode, material);
+              const titleKey = normalizeText(row.title);
+              if (titleKey && !materialByTitle.has(titleKey)) {
+                materialByTitle.set(titleKey, material);
+              }
+              summary.materialsCreated++;
+            }
           }
 
           const conversionResult = resolveConversionFactor({
@@ -744,7 +901,7 @@ async function main() {
           });
         }
 
-        if (usableRows.length === 0) return;
+        if (usableRows.length === 0) continue;
 
         const invoiceDate = usableRows[0].invoiceDate;
         const completedAt = usableRows.reduce(
@@ -904,6 +1061,8 @@ async function main() {
     console.log(`Inventory items created:        ${summary.inventoryTransactionItemsCreated}`);
     console.log(`Suppliers created:              ${summary.suppliersCreated}`);
     console.log(`Materials created:              ${summary.materialsCreated}`);
+    console.log(`No-code rows matched by name:   ${summary.noCodeRowsMatchedByName}`);
+    console.log(`No-code materials created:      ${summary.noCodeMaterialsCreated}`);
     console.log(`Existing permit groups skipped: ${summary.skippedExistingPermitGroups}`);
     console.log(`Partial groups skipped:         ${summary.skippedPartialPermitGroups}`);
     console.log(`Rows skipped for materials:     ${summary.skippedRowsMissingMaterials}`);
@@ -921,10 +1080,22 @@ async function main() {
       }
     }
 
+    if (noCodeMaterialEvents.length > 0) {
+      console.log('\n--- No-code rows resolved by title ---');
+      for (const event of noCodeMaterialEvents.slice(0, 30)) {
+        console.log(
+          `  ${event.sourceFile} row ${event.sourceRowNumber}: ${event.title} | material=${event.materialCode} | ${event.action}`,
+        );
+      }
+      if (noCodeMaterialEvents.length > 30) {
+        console.log(`  ... and ${noCodeMaterialEvents.length - 30} more`);
+      }
+    }
+
     if (skippedMaterials.length > 0) {
       console.log('\n--- Rows skipped because materials could not be resolved/created ---');
       for (const row of skippedMaterials.slice(0, 30)) {
-        console.log(`  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode} | ${row.title} | ${row.reason}`);
+        console.log(`  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode || '(no code)'} | ${row.title} | ${row.reason}`);
       }
       if (skippedMaterials.length > 30) {
         console.log(`  ... and ${skippedMaterials.length - 30} more`);
@@ -935,7 +1106,7 @@ async function main() {
       console.log('\n--- Rows skipped because file units could not be converted ---');
       for (const row of skippedUnitRows.slice(0, 30)) {
         console.log(
-          `  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode} | ${row.title} | unit="${row.unitRaw || '(فارغ)'}" | ${row.reason}`,
+          `  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode || '(no code)'} | ${row.title} | unit="${row.unitRaw || '(فارغ)'}" | ${row.reason}`,
         );
       }
       if (skippedUnitRows.length > 30) {
@@ -947,7 +1118,7 @@ async function main() {
       console.log('\n--- Duplicate material rows merged inside one order group ---');
       for (const warning of duplicateOrderItemWarnings.slice(0, 20)) {
         console.log(
-          `  ${warning.groupKey} | ${warning.materialLegacyCode} | titles=${warning.titles.join(' || ')} | qty=${warning.quantities.join(', ')} | prices=${warning.unitPrices.join(', ')}`,
+          `  ${warning.groupKey} | ${warning.materialLegacyCode || '(no code)'} | titles=${warning.titles.join(' || ')} | qty=${warning.quantities.join(', ')} | prices=${warning.unitPrices.join(', ')}`,
         );
       }
       if (duplicateOrderItemWarnings.length > 20) {
