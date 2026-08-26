@@ -88,7 +88,10 @@ All sources live on the header — one source event per transaction; items only 
 - Material purchase requisitions (`material_purchase_requisitions`):
   - Parallel header approvals (planning, purchasing manager, director) — each `approved_at`/`approved_by` pair; any party may reject
   - Lock line edits once **any** approval stamp exists
+  - Create/add/update item: material must exist and not be soft-deleted; unique material per requisition
+  - Keep at least one item on the requisition (delete blocked when only one remains)
   - Reject/cancel blocked after full approval if any MPO allocation exists; `rejected_at` wins over concurrent approvals
+  - Approve slot is not idempotent — second stamp on the same party returns 400
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Parent requisition must be fully approved (all three `approved_at` set; not rejected/cancelled)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested`
