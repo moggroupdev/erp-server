@@ -193,6 +193,66 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getTotalAmountMismatches(params: { from?: string; to?: string }) {
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const absoluteDifference = sql`abs(${materialPurchaseOrders.totalAmount} - ${materialPurchaseOrders.legacyInvoiceTotalPurchases})`;
+    const mismatchCondition = sql`${absoluteDifference} >= greatest(abs(${materialPurchaseOrders.totalAmount}), abs(${materialPurchaseOrders.legacyInvoiceTotalPurchases})) * 0.01`;
+    const where = and(
+      this.notCancelledWithDateRange(dateRange),
+      isNotNull(materialPurchaseOrders.legacyInvoiceTotalPurchases),
+      mismatchCondition,
+    )!;
+
+    const rows = await this.db
+      .select({
+        orderId: materialPurchaseOrders.id,
+        orderCode: materialPurchaseOrders.code,
+        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+        supplierId: suppliers.id,
+        supplierName: suppliers.name,
+        calculatedTotalAmount: materialPurchaseOrders.totalAmount,
+        legacyInvoiceTotalPurchases: materialPurchaseOrders.legacyInvoiceTotalPurchases,
+        createdAt: materialPurchaseOrders.createdAt,
+        completedAt: materialPurchaseOrders.completedAt,
+      })
+      .from(materialPurchaseOrders)
+      .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
+      .where(where)
+      .orderBy(desc(absoluteDifference), desc(materialPurchaseOrders.createdAt));
+
+    const orders = rows.map((r) => {
+      const calculatedTotalAmount = Number(r.calculatedTotalAmount);
+      const legacyInvoiceTotalPurchases = Number(r.legacyInvoiceTotalPurchases);
+      return {
+        orderId: r.orderId,
+        orderCode: r.orderCode,
+        legacyInvoiceNumber: r.legacyInvoiceNumber,
+        supplierId: r.supplierId,
+        supplierName: r.supplierName,
+        calculatedTotalAmount,
+        legacyInvoiceTotalPurchases,
+        difference: calculatedTotalAmount - legacyInvoiceTotalPurchases,
+        createdAt: r.createdAt,
+        completedAt: r.completedAt,
+      };
+    });
+
+    const mismatchCount = orders.length;
+    const totalCalculatedAmount = orders.reduce((sum, row) => sum + row.calculatedTotalAmount, 0);
+    const totalLegacyInvoicePurchases = orders.reduce((sum, row) => sum + row.legacyInvoiceTotalPurchases, 0);
+    const totalDifference = totalCalculatedAmount - totalLegacyInvoicePurchases;
+
+    return {
+      overview: {
+        mismatchCount,
+        totalCalculatedAmount,
+        totalLegacyInvoicePurchases,
+        totalDifference,
+      },
+      orders,
+    };
+  }
+
   public async getSupplierStats(params: { supplierId: string; from?: string; to?: string; groupBy?: string }) {
     const [supplier] = await this.db
       .select({ id: suppliers.id, code: suppliers.code, name: suppliers.name })

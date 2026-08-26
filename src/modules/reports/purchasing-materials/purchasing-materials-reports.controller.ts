@@ -61,4 +61,12 @@ export class PurchasingMaterialsReportsController {
   ) {
     return this.service.getSupplierStats({ supplierId, from, to, groupBy });
   }
+
+  @Get('total-amount-mismatches')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @ApiBearerAuth()
+  getTotalAmountMismatches(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.service.getTotalAmountMismatches({ from, to });
+  }
 }
