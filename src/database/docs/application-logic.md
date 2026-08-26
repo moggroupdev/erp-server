@@ -85,6 +85,15 @@ All sources live on the header — one source event per transaction; items only 
 - Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered`
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
+- Material purchase requisitions (`material_purchase_requisitions`):
+  - Parallel header approvals (planning, purchasing manager, director) — each `approved_at`/`approved_by` pair; any party may reject
+  - Lock line edits once **any** approval stamp exists
+  - Reject/cancel blocked after full approval if any MPO allocation exists; `rejected_at` wins over concurrent approvals
+- `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
+  - Parent requisition must be fully approved (all three `approved_at` set; not rejected/cancelled)
+  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested`
+  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered`
+  - MPO lines may have zero allocations (MPO created without a requisition)
 
 ### Outsourcing
 
@@ -168,9 +177,10 @@ All sources live on the header — one source event per transaction; items only 
 | `product_units`                                                                              | no `cancelled_at`                | `warranty_started_at`     | `cancelled_at` |
 | `previews`, `deliveries`, `installations`, `trips`, `maintenance_orders`                     | scheduled, not done/cancelled    | `completed_at` (trips: —) | `cancelled_at` |
 | `material_purchase_orders`, `product_purchase_orders`, `outsourcing_orders`                  | open                             | `completed_at`            | `cancelled_at` |
+| `material_purchase_requisitions`                                                             | pending (see below)              | approved (see below)      | `cancelled_at` / `rejected_at` |
 | Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
-Mutually exclusive `completed_at` and `cancelled_at` where both exist.
+Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, `cancelled_at` and `rejected_at` are mutually exclusive; derive status as: `cancelled` → `rejected` → `approved` (all three approval timestamps set) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` (not cached).
 
 ---
 

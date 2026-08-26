@@ -94,6 +94,26 @@ FOR EACH ROW EXECUTE PROCEDURE generate_contracts_code();
 
 -- ---------------------------------------------------------------------------
 
+-- MATERIAL PURCHASE REQUISITIONS: MPQ
+CREATE SEQUENCE IF NOT EXISTS material_purchase_requisitions_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_material_purchase_requisitions_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'MPQ-' || LPAD(nextval('material_purchase_requisitions_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS material_purchase_requisitions_generate_code ON material_purchase_requisitions;
+CREATE TRIGGER material_purchase_requisitions_generate_code
+BEFORE INSERT ON material_purchase_requisitions
+FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_requisitions_code();
+
+-- ---------------------------------------------------------------------------
+
 -- MATERIAL PURCHASE ORDERS: MPO
 CREATE SEQUENCE IF NOT EXISTS material_purchase_orders_code_seq START 1 INCREMENT 1;
 

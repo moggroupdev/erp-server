@@ -19,7 +19,7 @@ export const materialPurchaseRequisitions = pgTable(
   'material_purchase_requisitions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MPRQ-00000001
+    code: text('code').unique().notNull(), // Format: MPQ-00000001
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
     notes: text('notes'),
     planningApprovedAt: timestamp('planning_approved_at', { withTimezone: true }),
@@ -99,9 +99,7 @@ export const materialPurchaseRequisitionItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseRequisitionId: uuid('material_purchase_requisition_id').notNull(),
-    materialCode: text('material_code')
-      .notNull()
-      .references(() => materials.code),
+    materialCode: text('material_code').notNull(),
     quantityRequested: numeric('quantity_requested').notNull(),
     notes: text('notes'),
   },
@@ -110,6 +108,11 @@ export const materialPurchaseRequisitionItems = pgTable(
       name: 'mprqi_mprq_id_fk',
       columns: [table.materialPurchaseRequisitionId],
       foreignColumns: [materialPurchaseRequisitions.id],
+    }),
+    foreignKey({
+      name: 'mprqi_material_code_fk',
+      columns: [table.materialCode],
+      foreignColumns: [materials.code],
     }),
     index('mprqi_mprq_id_idx').on(table.materialPurchaseRequisitionId),
     index('mprqi_material_code_idx').on(table.materialCode),
@@ -214,19 +217,13 @@ export const materialPurchaseOrderItemContractItems = pgTable(
   ],
 );
 
-// Links MPO order lines to requisition lines. quantity_allocated is required and meaningful
-// (unlike contract allocations). @APP_CHECKED:
-// - Allocations only against a fully approved requisition
-// - SUM(allocated) per requisition line <= quantity_requested
-// - SUM(allocated) per MPO line <= quantity_ordered
-// - Lock requisition lines once any approval exists
-// - Reject/cancel disallowed after full approval if any allocation exists
+// Links MPO lines to requisition lines; qty required (unlike optional contract allocations).
 export const materialPurchaseOrderItemRequisitionItems = pgTable(
   'material_purchase_order_item_requisition_items',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
-    materialPurchaseRequisitionItemId: uuid('material_purchase_requisition_item_id').notNull(),
+    materialPurchaseRequisitionItemId: uuid('material_purchase_requisition_item_id').notNull(), // @APP_CHECKED - parent requisition must be fully approved; qty caps enforced in app
     quantityAllocated: numeric('quantity_allocated').notNull(),
   },
   (table) => [

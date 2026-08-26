@@ -7596,8 +7596,8 @@
         }
       },
       "foreignKeys": {
-        "material_purchase_requisition_items_material_code_materials_code_fk": {
-          "name": "material_purchase_requisition_items_material_code_materials_code_fk",
+        "mprqi_material_code_fk": {
+          "name": "mprqi_material_code_fk",
           "tableFrom": "material_purchase_requisition_items",
           "tableTo": "materials",
           "columnsFrom": [
