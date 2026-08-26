@@ -21,6 +21,10 @@ legacy_invoice_number is unique per supplier, not globally:
   - Duplicated invoice number → disambiguate by the supplier linked to the MPO,
     using the supplier name embedded in اسم الملف
 
+When تاريخ الإصدار is present, it also overrides:
+  material_purchase_orders.createdAt / completedAt / legacyInvoiceIssuedAt
+  material_purchase_receipts.receivedAt / createdAt (all receipts for that order)
+
 Unresolved or conflicting rows are logged and skipped.
 
 Options:
@@ -78,6 +82,8 @@ type Summary = {
   unmatchedInWorkbook: number;
   unmatchedInDb: number;
   unresolvedDuplicates: number;
+  datesOverridden: number;
+  datesSkippedMissingIssuedAt: number;
 };
 
 function parseCliArgs(): void {
@@ -446,6 +452,8 @@ async function main() {
     unmatchedInWorkbook: 0,
     unmatchedInDb: 0,
     unresolvedDuplicates: 0,
+    datesOverridden: 0,
+    datesSkippedMissingIssuedAt: 0,
   };
 
   try {
@@ -531,16 +539,49 @@ async function main() {
       for (const match of matches) {
         const { workbookRow, order, method } = match;
 
+        const orderUpdate: {
+          legacyInvoiceIssuedAt: Date | null;
+          legacyInvoiceTotalPurchases: number;
+          legacyInvoiceTotalDiscount: number;
+          legacyInvoiceVatAmount: number;
+          legacyInvoiceWithholdingTaxAmount: number;
+          legacyInvoiceTotalAmount: number;
+          createdAt?: Date;
+          completedAt?: Date;
+        } = {
+          legacyInvoiceIssuedAt: workbookRow.issuedAt,
+          legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
+          legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
+          legacyInvoiceVatAmount: workbookRow.vatAmount,
+          legacyInvoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
+          legacyInvoiceTotalAmount: workbookRow.totalAmount,
+        };
+
+        if (workbookRow.issuedAt) {
+          orderUpdate.createdAt = workbookRow.issuedAt;
+          orderUpdate.completedAt = workbookRow.issuedAt;
+          orderUpdate.legacyInvoiceIssuedAt = workbookRow.issuedAt;
+
+          await tx
+            .update(schema.materialPurchaseReceipts)
+            .set({
+              receivedAt: workbookRow.issuedAt,
+              createdAt: workbookRow.issuedAt,
+            })
+            .where(eq(schema.materialPurchaseReceipts.materialPurchaseOrderId, order.id));
+
+          summary.datesOverridden++;
+        } else {
+          summary.datesSkippedMissingIssuedAt++;
+          problems.push({
+            level: 'warning',
+            message: `Matched ${order.code} (invoice ${workbookRow.invoiceNumber}) but تاريخ الإصدار is empty; tax totals updated, dates left unchanged.`,
+          });
+        }
+
         await tx
           .update(schema.materialPurchaseOrders)
-          .set({
-            legacyInvoiceIssuedAt: workbookRow.issuedAt,
-            legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
-            legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
-            legacyInvoiceVatAmount: workbookRow.vatAmount,
-            legacyInvoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
-            legacyInvoiceTotalAmount: workbookRow.totalAmount,
-          })
+          .set(orderUpdate)
           .where(eq(schema.materialPurchaseOrders.id, order.id));
 
         if (method === 'invoice') summary.matchedByInvoice++;
@@ -554,6 +595,8 @@ async function main() {
     console.log(`Invalid rows skipped:                ${summary.invalidRowsSkipped}`);
     console.log(`Matched by invoice number:           ${summary.matchedByInvoice}`);
     console.log(`Matched by invoice + supplier:       ${summary.matchedByInvoiceAndSupplier}`);
+    console.log(`Dates overridden from تاريخ الإصدار: ${summary.datesOverridden}`);
+    console.log(`Dates skipped (missing issue date):  ${summary.datesSkippedMissingIssuedAt}`);
     console.log(`Unmatched in workbook (no DB):       ${summary.unmatchedInWorkbook}`);
     console.log(`Unmatched in DB (no workbook):       ${summary.unmatchedInDb}`);
     console.log(`Unresolved duplicate invoice rows:   ${summary.unresolvedDuplicates}`);
