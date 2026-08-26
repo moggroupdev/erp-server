@@ -270,7 +270,7 @@ export class PurchasingMaterialsReportsService {
     const mismatchCount = orders.length;
     const totalCalculatedAmount = orders.reduce((sum, row) => sum + row.calculatedTotalAmount, 0);
     const totalLegacyInvoicePurchases = orders.reduce((sum, row) => sum + row.legacyInvoiceTotalPurchases, 0);
-    const totalDifference = totalCalculatedAmount - totalLegacyInvoicePurchases;
+    const totalDifference = orders.reduce((sum, row) => sum + Math.abs(row.difference), 0);
     const missingInvoiceTotalCount = completedWithoutInvoiceTotal.length;
     const missingInvoiceTotalCalculatedAmount = completedWithoutInvoiceTotal.reduce(
       (sum, row) => sum + row.calculatedTotalAmount,
