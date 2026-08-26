@@ -27,6 +27,9 @@ existing material by exact normalized title, or created without a legacy code
 under a reserved Misc subcategory (main 99 / sub 01) if no title match exists.
 
 Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
+  تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt / legacyInvoiceIssuedAt,
+                   and material_purchase_receipts.receivedAt / createdAt
+  تاريخ الإضافة → inventory_transactions.createdAt
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -904,10 +907,6 @@ async function main() {
         if (usableRows.length === 0) continue;
 
         const invoiceDate = usableRows[0].invoiceDate;
-        const completedAt = usableRows.reduce(
-          (latest, row) => (row.receiptDate.getTime() > latest.getTime() ? row.receiptDate : latest),
-          usableRows[0].receiptDate,
-        );
 
         const orderItemGroups = new Map<
           string,
@@ -945,8 +944,9 @@ async function main() {
             code: sql`DEFAULT`,
             supplierId,
             legacyInvoiceNumber: usableRows[0].invoiceNumber,
+            legacyInvoiceIssuedAt: invoiceDate,
             totalAmount,
-            completedAt,
+            completedAt: invoiceDate,
             notes: SEED_IMPORT_NOTE,
             createdAt: invoiceDate,
             createdBy: user.id,
@@ -984,6 +984,7 @@ async function main() {
         }
 
         for (const [permitNumber, receiptRows] of receiptGroups) {
+          const invoiceDateForReceipt = receiptRows[0].invoiceDate;
           const receiptDate = receiptRows[0].receiptDate;
 
           const [createdReceipt] = await tx
@@ -991,10 +992,10 @@ async function main() {
             .values({
               code: sql`DEFAULT`,
               materialPurchaseOrderId: createdOrder.id,
-              receivedAt: receiptDate,
+              receivedAt: invoiceDateForReceipt,
               receivedBy: user.id,
               notes: SEED_IMPORT_NOTE,
-              createdAt: receiptDate,
+              createdAt: invoiceDateForReceipt,
               createdBy: user.id,
             })
             .returning({ id: schema.materialPurchaseReceipts.id });
