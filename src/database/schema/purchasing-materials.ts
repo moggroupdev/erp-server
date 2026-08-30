@@ -9,6 +9,8 @@ import {
   positiveNullableQuantityCheck,
   productionSubDepartmentEnum,
   materialUnitEnum,
+  approvalGateColumns,
+  approvalGateConstraints,
 } from './common';
 import { users } from './users';
 import { suppliers } from './suppliers';
@@ -24,16 +26,9 @@ export const materialPurchaseRequisitions = pgTable(
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
     productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
     notes: text('notes'),
-    planningApprovedAt: timestamp('planning_approved_at', { withTimezone: true }),
-    planningApprovedBy: uuid('planning_approved_by'),
-    purchasingManagerApprovedAt: timestamp('purchasing_manager_approved_at', { withTimezone: true }),
-    purchasingManagerApprovedBy: uuid('purchasing_manager_approved_by'),
-    directorApprovedAt: timestamp('director_approved_at', { withTimezone: true }),
-    directorApprovedBy: uuid('director_approved_by'),
-    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
-    rejectedBy: uuid('rejected_by'),
-    rejectionReason: text('rejection_reason'),
-    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    ...approvalGateColumns('planning'),
+    ...approvalGateColumns('purchasingManager'),
+    ...approvalGateColumns('manager'),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
@@ -45,48 +40,13 @@ export const materialPurchaseRequisitions = pgTable(
       columns: [table.productionSubDepartmentManagerId],
       foreignColumns: [users.id],
     }),
-    foreignKey({
-      name: 'mprq_planning_approved_by_fk',
-      columns: [table.planningApprovedBy],
-      foreignColumns: [users.id],
-    }),
-    foreignKey({
-      name: 'mprq_purchasing_manager_approved_by_fk',
-      columns: [table.purchasingManagerApprovedBy],
-      foreignColumns: [users.id],
-    }),
-    foreignKey({
-      name: 'mprq_director_approved_by_fk',
-      columns: [table.directorApprovedBy],
-      foreignColumns: [users.id],
-    }),
-    foreignKey({
-      name: 'mprq_rejected_by_fk',
-      columns: [table.rejectedBy],
-      foreignColumns: [users.id],
-    }),
+    ...approvalGateConstraints(table, 'planning', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'purchasingManager', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'manager', 'mprq', users.id),
     index('mprq_production_sub_department_idx').on(table.productionSubDepartment),
     index('mprq_psd_manager_id_idx').on(table.productionSubDepartmentManagerId),
-    index('mprq_planning_approved_at_idx').on(table.planningApprovedAt),
-    index('mprq_purchasing_manager_approved_at_idx').on(table.purchasingManagerApprovedAt),
-    index('mprq_director_approved_at_idx').on(table.directorApprovedAt),
-    index('mprq_rejected_at_idx').on(table.rejectedAt),
-    index('mprq_cancelled_at_idx').on(table.cancelledAt),
     index('mprq_created_at_idx').on(table.createdAt),
     index('mprq_created_by_idx').on(table.createdBy),
-    index('mprq_planning_approved_by_idx').on(table.planningApprovedBy),
-    index('mprq_purchasing_manager_approved_by_idx').on(table.purchasingManagerApprovedBy),
-    index('mprq_director_approved_by_idx').on(table.directorApprovedBy),
-    index('mprq_rejected_by_idx').on(table.rejectedBy),
-    check('mprq_planning_approval_pair', sql`(${table.planningApprovedAt} IS NULL) = (${table.planningApprovedBy} IS NULL)`),
-    check(
-      'mprq_purchasing_manager_approval_pair',
-      sql`(${table.purchasingManagerApprovedAt} IS NULL) = (${table.purchasingManagerApprovedBy} IS NULL)`,
-    ),
-    check('mprq_director_approval_pair', sql`(${table.directorApprovedAt} IS NULL) = (${table.directorApprovedBy} IS NULL)`),
-    check('mprq_rejection_pair', sql`(${table.rejectedAt} IS NULL) = (${table.rejectedBy} IS NULL)`),
-    check('mprq_rejection_reason_required', sql`(${table.rejectedAt} IS NULL) = (${table.rejectionReason} IS NULL)`),
-    check('mprq_cancelled_rejected_exclusive', sql`${table.cancelledAt} IS NULL OR ${table.rejectedAt} IS NULL`),
   ],
 );
 
@@ -307,25 +267,20 @@ export const materialPurchaseRequisitionsRelations = relations(materialPurchaseR
     references: [users.id],
     relationName: 'materialPurchaseRequisitionCreatedBy',
   }),
-  planningApprovedBy: one(users, {
-    fields: [materialPurchaseRequisitions.planningApprovedBy],
+  planningDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.planningDecidedBy],
     references: [users.id],
-    relationName: 'materialPurchaseRequisitionPlanningApprovedBy',
+    relationName: 'materialPurchaseRequisitionPlanningDecidedBy',
   }),
-  purchasingManagerApprovedBy: one(users, {
-    fields: [materialPurchaseRequisitions.purchasingManagerApprovedBy],
+  purchasingManagerDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.purchasingManagerDecidedBy],
     references: [users.id],
-    relationName: 'materialPurchaseRequisitionPurchasingManagerApprovedBy',
+    relationName: 'materialPurchaseRequisitionPurchasingManagerDecidedBy',
   }),
-  directorApprovedBy: one(users, {
-    fields: [materialPurchaseRequisitions.directorApprovedBy],
+  managerDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.managerDecidedBy],
     references: [users.id],
-    relationName: 'materialPurchaseRequisitionDirectorApprovedBy',
-  }),
-  rejectedBy: one(users, {
-    fields: [materialPurchaseRequisitions.rejectedBy],
-    references: [users.id],
-    relationName: 'materialPurchaseRequisitionRejectedBy',
+    relationName: 'materialPurchaseRequisitionManagerDecidedBy',
   }),
   items: many(materialPurchaseRequisitionItems),
 }));

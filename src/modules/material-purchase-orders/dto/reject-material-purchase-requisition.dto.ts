@@ -7,5 +7,5 @@ export class RejectMaterialPurchaseRequisitionDto {
   @IsString()
   @IsNotEmpty()
   @ApiProperty()
-  rejectionReason: string;
+  reason: string;
 }

@@ -8,14 +8,14 @@ import {
 } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
-  materialPurchaseOrderItemRequisitionItems,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
   materialUnitConversions,
   productionSubDepartmentManagers,
 } from 'src/database/schema';
-import { QueryParams, User, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
+import { APPROVAL_DECISIONS } from 'src/utils/constants';
+import { QueryParams, User, type ApprovalDecision, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -36,7 +36,7 @@ const MATERIAL_COLUMNS = {
 const USER_COLUMNS = { id: true, name: true } as const;
 
 type RequisitionRow = typeof materialPurchaseRequisitions.$inferSelect;
-type ApprovalSlot = 'planning' | 'purchasingManager' | 'director';
+type ApprovalSlot = 'planning' | 'purchasingManager' | 'manager';
 
 @Injectable()
 export class MaterialPurchaseRequisitionsService {
@@ -101,10 +101,9 @@ export class MaterialPurchaseRequisitionsService {
       with: {
         createdBy: { columns: USER_COLUMNS },
         productionSubDepartmentManager: { columns: USER_COLUMNS },
-        planningApprovedBy: { columns: USER_COLUMNS },
-        purchasingManagerApprovedBy: { columns: USER_COLUMNS },
-        directorApprovedBy: { columns: USER_COLUMNS },
-        rejectedBy: { columns: USER_COLUMNS },
+        planningDecidedBy: { columns: USER_COLUMNS },
+        purchasingManagerDecidedBy: { columns: USER_COLUMNS },
+        managerDecidedBy: { columns: USER_COLUMNS },
         items: {
           with: {
             material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra },
@@ -235,135 +234,88 @@ export class MaterialPurchaseRequisitionsService {
   }
 
   public async approvePlanning(id: string, user: User) {
-    return this.approveSlot(id, user, 'planning');
+    return this.decideGate(id, user, 'planning', APPROVAL_DECISIONS.APPROVED);
+  }
+
+  public async rejectPlanning(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
+    return this.decideGate(id, user, 'planning', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
   }
 
   public async approvePurchasingManager(id: string, user: User) {
-    return this.approveSlot(id, user, 'purchasingManager');
+    return this.decideGate(id, user, 'purchasingManager', APPROVAL_DECISIONS.APPROVED);
   }
 
-  public async approveDirector(id: string, user: User) {
-    return this.approveSlot(id, user, 'director');
+  public async rejectPurchasingManager(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
+    return this.decideGate(id, user, 'purchasingManager', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
   }
 
-  public async reject(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
-    const requisition = await this.requireRequisition(id);
-
-    if (requisition.cancelledAt) {
-      throw new BadRequestException(
-        translate(
-          'Cannot reject a cancelled purchase requisition.',
-          'لا يمكن رفض طلب شراء ملغى.',
-        ),
-      );
-    }
-
-    if (requisition.rejectedAt) {
-      throw new BadRequestException(
-        translate(
-          'Purchase requisition is already rejected.',
-          'طلب الشراء مرفوض بالفعل.',
-        ),
-      );
-    }
-
-    if (this.isFullyApproved(requisition)) {
-      await this.assertNoAllocations(id);
-    }
-
-    const [updated] = await this.db
-      .update(materialPurchaseRequisitions)
-      .set({
-        rejectedAt: new Date(),
-        rejectedBy: user.id,
-        rejectionReason: rejectDto.rejectionReason,
-      })
-      .where(eq(materialPurchaseRequisitions.id, id))
-      .returning();
-
-    return updated;
+  public async approveManager(id: string, user: User) {
+    return this.decideGate(id, user, 'manager', APPROVAL_DECISIONS.APPROVED);
   }
 
-  public async cancel(id: string) {
-    const requisition = await this.requireRequisition(id);
-
-    if (requisition.rejectedAt) {
-      throw new BadRequestException(
-        translate(
-          'Cannot cancel a rejected purchase requisition.',
-          'لا يمكن إلغاء طلب شراء مرفوض.',
-        ),
-      );
-    }
-
-    if (requisition.cancelledAt) {
-      throw new BadRequestException(
-        translate(
-          'Purchase requisition is already cancelled.',
-          'طلب الشراء ملغى بالفعل.',
-        ),
-      );
-    }
-
-    if (this.isFullyApproved(requisition)) {
-      await this.assertNoAllocations(id);
-    }
-
-    const [updated] = await this.db
-      .update(materialPurchaseRequisitions)
-      .set({ cancelledAt: new Date() })
-      .where(eq(materialPurchaseRequisitions.id, id))
-      .returning();
-
-    return updated;
+  public async rejectManager(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
+    return this.decideGate(id, user, 'manager', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
   }
 
   // ============================== PRIVATE METHODS ==============================
 
-  private async approveSlot(id: string, user: User, slot: ApprovalSlot) {
+  private async decideGate(
+    id: string,
+    user: User,
+    slot: ApprovalSlot,
+    decision: Exclude<ApprovalDecision, 'pending'>,
+    reason?: string,
+  ) {
     const requisition = await this.requireRequisition(id);
 
-    if (requisition.cancelledAt) {
+    if (this.isRejected(requisition)) {
       throw new BadRequestException(
         translate(
-          'Cannot approve a cancelled purchase requisition.',
-          'لا يمكن اعتماد طلب شراء ملغى.',
+          'Cannot record a decision on a rejected purchase requisition.',
+          'لا يمكن تسجيل قرار على طلب شراء مرفوض.',
         ),
       );
     }
 
-    if (requisition.rejectedAt) {
+    if (this.gateDecision(requisition, slot) !== APPROVAL_DECISIONS.PENDING) {
       throw new BadRequestException(
         translate(
-          'Cannot approve a rejected purchase requisition.',
-          'لا يمكن اعتماد طلب شراء مرفوض.',
+          'This decision has already been recorded.',
+          'تم تسجيل هذا القرار مسبقاً.',
         ),
       );
     }
 
-    const alreadyApproved =
-      slot === 'planning'
-        ? requisition.planningApprovedAt
-        : slot === 'purchasingManager'
-          ? requisition.purchasingManagerApprovedAt
-          : requisition.directorApprovedAt;
+    const trimmedReason = reason?.trim() || null;
 
-    if (alreadyApproved) {
+    if (decision === APPROVAL_DECISIONS.REJECTED && !trimmedReason) {
       throw new BadRequestException(
-        translate(
-          'This approval has already been recorded.',
-          'تم تسجيل هذا الاعتماد مسبقاً.',
-        ),
+        translate('Rejection reason is required.', 'سبب الرفض مطلوب.'),
       );
     }
 
     const now = new Date();
     const patch =
       slot === 'planning'
-        ? { planningApprovedAt: now, planningApprovedBy: user.id }
+        ? {
+            planningDecision: decision,
+            planningDecidedAt: now,
+            planningDecidedBy: user.id,
+            planningReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+          }
         : slot === 'purchasingManager'
-          ? { purchasingManagerApprovedAt: now, purchasingManagerApprovedBy: user.id }
-          : { directorApprovedAt: now, directorApprovedBy: user.id };
+          ? {
+              purchasingManagerDecision: decision,
+              purchasingManagerDecidedAt: now,
+              purchasingManagerDecidedBy: user.id,
+              purchasingManagerReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+            }
+          : {
+              managerDecision: decision,
+              managerDecidedAt: now,
+              managerDecidedBy: user.id,
+              managerReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+            };
 
     const [updated] = await this.db
       .update(materialPurchaseRequisitions)
@@ -404,74 +356,36 @@ export class MaterialPurchaseRequisitionsService {
   }
 
   private assertEditable(requisition: RequisitionRow) {
-    if (requisition.cancelledAt) {
+    if (this.hasAnyDecision(requisition)) {
       throw new BadRequestException(
         translate(
-          'Cannot edit a cancelled purchase requisition.',
-          'لا يمكن تعديل طلب شراء ملغى.',
-        ),
-      );
-    }
-
-    if (requisition.rejectedAt) {
-      throw new BadRequestException(
-        translate(
-          'Cannot edit a rejected purchase requisition.',
-          'لا يمكن تعديل طلب شراء مرفوض.',
-        ),
-      );
-    }
-
-    if (this.hasAnyApproval(requisition)) {
-      throw new BadRequestException(
-        translate(
-          'Cannot edit a purchase requisition after any approval has been recorded.',
-          'لا يمكن تعديل طلب شراء بعد تسجيل أي اعتماد.',
+          'Cannot edit a purchase requisition after any decision has been recorded.',
+          'لا يمكن تعديل طلب شراء بعد تسجيل أي قرار.',
         ),
       );
     }
   }
 
-  private hasAnyApproval(requisition: RequisitionRow) {
-    return Boolean(
-      requisition.planningApprovedAt ||
-        requisition.purchasingManagerApprovedAt ||
-        requisition.directorApprovedAt,
+  private gateDecision(requisition: RequisitionRow, slot: ApprovalSlot): ApprovalDecision {
+    if (slot === 'planning') return requisition.planningDecision as ApprovalDecision;
+    if (slot === 'purchasingManager') return requisition.purchasingManagerDecision as ApprovalDecision;
+    return requisition.managerDecision as ApprovalDecision;
+  }
+
+  private hasAnyDecision(requisition: RequisitionRow) {
+    return (
+      this.gateDecision(requisition, 'planning') !== APPROVAL_DECISIONS.PENDING ||
+      this.gateDecision(requisition, 'purchasingManager') !== APPROVAL_DECISIONS.PENDING ||
+      this.gateDecision(requisition, 'manager') !== APPROVAL_DECISIONS.PENDING
     );
   }
 
-  private isFullyApproved(requisition: RequisitionRow) {
-    return Boolean(
-      requisition.planningApprovedAt &&
-        requisition.purchasingManagerApprovedAt &&
-        requisition.directorApprovedAt,
+  private isRejected(requisition: RequisitionRow) {
+    return (
+      this.gateDecision(requisition, 'planning') === APPROVAL_DECISIONS.REJECTED ||
+      this.gateDecision(requisition, 'purchasingManager') === APPROVAL_DECISIONS.REJECTED ||
+      this.gateDecision(requisition, 'manager') === APPROVAL_DECISIONS.REJECTED
     );
-  }
-
-  private async assertNoAllocations(requisitionId: string) {
-    const items = await this.db.query.materialPurchaseRequisitionItems.findMany({
-      where: eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, requisitionId),
-      columns: { id: true },
-    });
-
-    if (items.length === 0) return;
-
-    const allocation = await this.db.query.materialPurchaseOrderItemRequisitionItems.findFirst({
-      where: inArray(
-        materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
-        items.map((item) => item.id),
-      ),
-      columns: { id: true },
-    });
-
-    if (allocation) {
-      throw new BadRequestException(
-        translate(
-          'Cannot reject or cancel a fully approved purchase requisition that already has purchase-order allocations.',
-          'لا يمكن رفض أو إلغاء طلب شراء معتمد بالكامل وله تخصيصات على أوامر شراء.',
-        ),
-      );
-    }
   }
 
   private assertNoDuplicateMaterials(materialCodes: string[]) {

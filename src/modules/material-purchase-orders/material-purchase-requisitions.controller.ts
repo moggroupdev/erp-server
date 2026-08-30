@@ -89,7 +89,7 @@ export class MaterialPurchaseRequisitionsController {
     return this.materialPurchaseRequisitionsService.deleteItem(id, itemId);
   }
 
-  @Post(':id/approve-planning')
+  @Post(':id/planning/approve')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PLANNING)
   @ApiBearerAuth()
@@ -97,7 +97,19 @@ export class MaterialPurchaseRequisitionsController {
     return this.materialPurchaseRequisitionsService.approvePlanning(id, user);
   }
 
-  @Post(':id/approve-purchasing-manager')
+  @Post(':id/planning/reject')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PLANNING)
+  @ApiBearerAuth()
+  rejectPlanning(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() rejectDto: RejectMaterialPurchaseRequisitionDto,
+    @RequestUser() user: User,
+  ) {
+    return this.materialPurchaseRequisitionsService.rejectPlanning(id, rejectDto, user);
+  }
+
+  @Post(':id/purchasing-manager/approve')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PURCHASING_MANAGER)
   @ApiBearerAuth()
@@ -105,31 +117,35 @@ export class MaterialPurchaseRequisitionsController {
     return this.materialPurchaseRequisitionsService.approvePurchasingManager(id, user);
   }
 
-  @Post(':id/approve-director')
+  @Post(':id/purchasing-manager/reject')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_DIRECTOR)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PURCHASING_MANAGER)
   @ApiBearerAuth()
-  approveDirector(@Param('id', ParseUUIDPipe) id: string, @RequestUser() user: User) {
-    return this.materialPurchaseRequisitionsService.approveDirector(id, user);
-  }
-
-  @Post(':id/reject')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.REJECT_MATERIAL_PURCHASE_REQUISITION)
-  @ApiBearerAuth()
-  reject(
+  rejectPurchasingManager(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() rejectDto: RejectMaterialPurchaseRequisitionDto,
     @RequestUser() user: User,
   ) {
-    return this.materialPurchaseRequisitionsService.reject(id, rejectDto, user);
+    return this.materialPurchaseRequisitionsService.rejectPurchasingManager(id, rejectDto, user);
   }
 
-  @Post(':id/cancel')
+  @Post(':id/manager/approve')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.CANCEL_MATERIAL_PURCHASE_REQUISITION)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_MANAGER)
   @ApiBearerAuth()
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.materialPurchaseRequisitionsService.cancel(id);
+  approveManager(@Param('id', ParseUUIDPipe) id: string, @RequestUser() user: User) {
+    return this.materialPurchaseRequisitionsService.approveManager(id, user);
+  }
+
+  @Post(':id/manager/reject')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_MANAGER)
+  @ApiBearerAuth()
+  rejectManager(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() rejectDto: RejectMaterialPurchaseRequisitionDto,
+    @RequestUser() user: User,
+  ) {
+    return this.materialPurchaseRequisitionsService.rejectManager(id, rejectDto, user);
   }
 }
