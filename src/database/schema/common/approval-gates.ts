@@ -12,7 +12,7 @@ function buildApprovalGate(snake: string) {
     decision: approvalDecisionEnum(`${snake}_decision`).notNull().default(APPROVAL_DECISIONS.PENDING),
     decidedAt: timestamp(`${snake}_decided_at`, { withTimezone: true }),
     decidedBy: uuid(`${snake}_decided_by`),
-    reason: text(`${snake}_reason`),
+    decisionReason: text(`${snake}_decision_reason`),
   };
 }
 
@@ -25,7 +25,7 @@ type NamedApprovalGate<P extends string> = {
 } & {
   [K in `${P}DecidedBy`]: ApprovalGateBuilders['decidedBy'];
 } & {
-  [K in `${P}Reason`]: ApprovalGateBuilders['reason'];
+  [K in `${P}DecisionReason`]: ApprovalGateBuilders['decisionReason'];
 };
 
 /** Shared 4-column set for a named approval party. Reuse per gate on any table. */
@@ -37,7 +37,7 @@ export function approvalGateColumns<P extends string>(prefix: P): NamedApprovalG
     [`${prefix}Decision`]: columns.decision,
     [`${prefix}DecidedAt`]: columns.decidedAt,
     [`${prefix}DecidedBy`]: columns.decidedBy,
-    [`${prefix}Reason`]: columns.reason,
+    [`${prefix}DecisionReason`]: columns.decisionReason,
   } as NamedApprovalGate<P>;
 }
 
@@ -54,7 +54,7 @@ export function approvalGateConstraints(
   const decision = columns[`${prefix}Decision`];
   const decidedAt = columns[`${prefix}DecidedAt`];
   const decidedBy = columns[`${prefix}DecidedBy`];
-  const reason = columns[`${prefix}Reason`];
+  const decisionReason = columns[`${prefix}DecisionReason`];
 
   return [
     foreignKey({
@@ -70,8 +70,8 @@ export function approvalGateConstraints(
       sql`(${decision} = 'pending') = (${decidedAt} IS NULL) AND (${decision} = 'pending') = (${decidedBy} IS NULL)`,
     ),
     check(
-      `${constraintPrefix}_reason_required`,
-      sql`(${decision} = 'rejected') = (${reason} IS NOT NULL)`,
+      `${constraintPrefix}_decision_reason_required`,
+      sql`(${decision} = 'rejected') = (${decisionReason} IS NOT NULL)`,
     ),
   ];
 }

@@ -24,7 +24,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - **Uniqueness:** use `.unique()` on a column **or** `uniqueIndex()` — never both with the same name (breaks migrations).
 - Use `uniqueIndex()` only for partial uniqueness (e.g. one default address).
 - Status often comes from timestamps (`cancelledAt`, `completedAt`) — avoid redundant **entity-level** status enums.
-- **Multi-party approval:** use `approvalGateColumns(prefix)` + `approvalGateConstraints(table, prefix, tableAbbrev, users.id)` from `schema/common/approval-gates.ts`. Each gate is `decision` (`approval_decision`: pending/approved/rejected) + `decidedAt` + `decidedBy` + `reason` (required iff rejected). Overall entity status is still derived (rejected if any gate rejected; approved if all approved; else pending). Do not add a header status column.
+- **Multi-party approval:** use `approvalGateColumns(prefix)` + `approvalGateConstraints(table, prefix, tableAbbrev, users.id)` from `schema/common/approval-gates.ts`. Each gate is `decision` (`approval_decision`: pending/approved/rejected) + `decidedAt` + `decidedBy` + `decisionReason` (required iff rejected). Overall entity status is still derived (rejected if any gate rejected; approved if all approved; else pending). Do not add a header status column.
 
 ### DRY vs. performance
 

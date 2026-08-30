@@ -301,20 +301,20 @@ export class MaterialPurchaseRequisitionsService {
             planningDecision: decision,
             planningDecidedAt: now,
             planningDecidedBy: user.id,
-            planningReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+            planningDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
           }
         : slot === 'purchasingManager'
           ? {
               purchasingManagerDecision: decision,
               purchasingManagerDecidedAt: now,
               purchasingManagerDecidedBy: user.id,
-              purchasingManagerReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+              purchasingManagerDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
             }
           : {
               managerDecision: decision,
               managerDecidedAt: now,
               managerDecidedBy: user.id,
-              managerReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+              managerDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
             };
 
     const [updated] = await this.db

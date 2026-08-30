@@ -86,7 +86,7 @@ All sources live on the header — one source event per transaction; items only 
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase requisitions (`material_purchase_requisitions`):
-  - Three parallel header gates (planning, purchasing manager, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `reason`
+  - Three parallel header gates (planning, purchasing manager, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
   - Overall status is derived: `rejected` if any gate is `rejected`; `approved` if all three are `approved`; else `pending`
   - First rejection is terminal — remaining pending gates stay pending forever; no further decisions or edits
   - Lock header/item edits once **any** gate leaves `pending`
@@ -95,7 +95,7 @@ All sources live on the header — one source event per transaction; items only 
   - `production_sub_department_manager_id` (`@HISTORICAL_SNAPSHOT`): copy from `production_sub_department_managers.manager_id` on create; re-copy only when `production_sub_department` changes while editable; omit from update DTOs
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Gate decide is not idempotent — second decision on the same party returns 400
-  - Rejecting a gate requires a non-empty `reason`; approve stores `reason` as null
+  - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (same unit as the requisition line's `unit_of_measurement_selected`)
