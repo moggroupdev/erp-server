@@ -8,6 +8,7 @@ import {
   positiveQuantityCheck,
   positiveNullableQuantityCheck,
   productionSubDepartmentEnum,
+  materialUnitEnum,
 } from './common';
 import { users } from './users';
 import { suppliers } from './suppliers';
@@ -95,6 +96,7 @@ export const materialPurchaseRequisitionItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseRequisitionId: uuid('material_purchase_requisition_id').notNull(),
     materialCode: text('material_code').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityRequested: numeric('quantity_requested').notNull(),
     notes: text('notes'),
   },
@@ -151,10 +153,7 @@ export const materialPurchaseOrders = pgTable(
     nonNegativeNullableQuantityCheck('mpo_invoice_total_purchases_non_negative', table.invoiceTotalPurchases),
     nonNegativeNullableQuantityCheck('mpo_invoice_total_discount_non_negative', table.invoiceTotalDiscount),
     nonNegativeNullableQuantityCheck('mpo_invoice_vat_amount_non_negative', table.invoiceVatAmount),
-    nonNegativeNullableQuantityCheck(
-      'mpo_invoice_withholding_tax_amount_non_negative',
-      table.invoiceWithholdingTaxAmount,
-    ),
+    nonNegativeNullableQuantityCheck('mpo_invoice_withholding_tax_amount_non_negative', table.invoiceWithholdingTaxAmount),
     nonNegativeNullableQuantityCheck('mpo_invoice_total_amount_non_negative', table.invoiceTotalAmount),
   ],
 );

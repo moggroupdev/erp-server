@@ -12,9 +12,10 @@ import {
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
+  materialUnitConversions,
   productionSubDepartmentManagers,
 } from 'src/database/schema';
-import { QueryParams, User, type ProductionSubDepartment } from 'src/utils/types';
+import { QueryParams, User, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -47,7 +48,7 @@ export class MaterialPurchaseRequisitionsService {
   public async create(createDto: CreateMaterialPurchaseRequisitionDto, user: User) {
     const { items, ...header } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
-    await this.assertMaterialsExist(items.map((item) => item.materialCode));
+    await this.assertMaterialsAndSelectedUnits(items);
     const productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(
       header.productionSubDepartment,
     );
@@ -69,6 +70,7 @@ export class MaterialPurchaseRequisitionsService {
           items.map((item) => ({
             materialPurchaseRequisitionId: requisition.id,
             materialCode: item.materialCode,
+            unitOfMeasurementSelected: item.unitOfMeasurementSelected,
             quantityRequested: item.quantityRequested,
             notes: item.notes,
           })),
@@ -160,7 +162,7 @@ export class MaterialPurchaseRequisitionsService {
   public async addItem(id: string, createDto: CreateMaterialPurchaseRequisitionItemDto) {
     const requisition = await this.requireRequisition(id);
     this.assertEditable(requisition);
-    await this.assertMaterialsExist([createDto.materialCode]);
+    await this.assertMaterialsAndSelectedUnits([createDto]);
     await this.assertMaterialNotOnRequisition(id, createDto.materialCode);
 
     const [inserted] = await this.db
@@ -168,6 +170,7 @@ export class MaterialPurchaseRequisitionsService {
       .values({
         materialPurchaseRequisitionId: id,
         materialCode: createDto.materialCode,
+        unitOfMeasurementSelected: createDto.unitOfMeasurementSelected,
         quantityRequested: createDto.quantityRequested,
         notes: createDto.notes,
       })
@@ -182,8 +185,16 @@ export class MaterialPurchaseRequisitionsService {
 
     const existing = await this.requireItem(id, itemId);
 
+    const nextMaterialCode = updateDto.materialCode ?? existing.materialCode;
+    const nextUnit = updateDto.unitOfMeasurementSelected ?? existing.unitOfMeasurementSelected;
+
+    if (updateDto.materialCode !== undefined || updateDto.unitOfMeasurementSelected !== undefined) {
+      await this.assertMaterialsAndSelectedUnits([
+        { materialCode: nextMaterialCode, unitOfMeasurementSelected: nextUnit },
+      ]);
+    }
+
     if (updateDto.materialCode !== undefined && updateDto.materialCode !== existing.materialCode) {
-      await this.assertMaterialsExist([updateDto.materialCode]);
       await this.assertMaterialNotOnRequisition(id, updateDto.materialCode, itemId);
     }
 
@@ -483,15 +494,17 @@ export class MaterialPurchaseRequisitionsService {
     return assignment?.managerId ?? null;
   }
 
-  private async assertMaterialsExist(materialCodes: string[]) {
-    const uniqueCodes = [...new Set(materialCodes)];
+  private async assertMaterialsAndSelectedUnits(
+    items: { materialCode: string; unitOfMeasurementSelected: MaterialUnit }[],
+  ) {
+    const uniqueCodes = [...new Set(items.map((item) => item.materialCode))];
     const found = await this.db.query.materials.findMany({
       where: and(inArray(materials.code, uniqueCodes), isNull(materials.deletedAt)),
-      columns: { code: true },
+      columns: { code: true, unitOfMeasurement: true },
     });
 
-    const foundCodes = new Set(found.map((row) => row.code));
-    const missing = uniqueCodes.filter((code) => !foundCodes.has(code));
+    const byCode = new Map(found.map((row) => [row.code, row]));
+    const missing = uniqueCodes.filter((code) => !byCode.has(code));
 
     if (missing.length > 0) {
       throw new NotFoundException(
@@ -500,6 +513,31 @@ export class MaterialPurchaseRequisitionsService {
           `المواد غير موجودة: ${missing.join(', ')}.`,
         ),
       );
+    }
+
+    const conversions = await this.db.query.materialUnitConversions.findMany({
+      where: inArray(materialUnitConversions.materialCode, uniqueCodes),
+      columns: { materialCode: true, unit: true },
+    });
+
+    const allowedByCode = new Map<string, Set<string>>();
+    for (const material of found) {
+      allowedByCode.set(material.code, new Set([material.unitOfMeasurement]));
+    }
+    for (const conversion of conversions) {
+      allowedByCode.get(conversion.materialCode)?.add(conversion.unit);
+    }
+
+    for (const item of items) {
+      const allowed = allowedByCode.get(item.materialCode);
+      if (!allowed?.has(item.unitOfMeasurementSelected)) {
+        throw new BadRequestException(
+          translate(
+            `Unit "${item.unitOfMeasurementSelected}" is not valid for material ${item.materialCode}.`,
+            `الوحدة "${item.unitOfMeasurementSelected}" غير صالحة للمادة ${item.materialCode}.`,
+          ),
+        );
+      }
     }
   }
 

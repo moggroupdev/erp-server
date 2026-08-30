@@ -1,6 +1,8 @@
 import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MATERIAL_UNIT_VALUES } from 'src/utils/constants';
+import { type MaterialUnit } from 'src/utils/types';
 
 export class CreateMaterialPurchaseRequisitionItemDto {
   @Trim()
@@ -8,6 +10,11 @@ export class CreateMaterialPurchaseRequisitionItemDto {
   @IsNotEmpty()
   @ApiProperty()
   materialCode: string;
+
+  @IsIn(MATERIAL_UNIT_VALUES)
+  @IsNotEmpty()
+  @ApiProperty({ enum: MATERIAL_UNIT_VALUES })
+  unitOfMeasurementSelected: MaterialUnit;
 
   @IsNumber()
   @IsPositive()

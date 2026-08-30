@@ -89,13 +89,14 @@ All sources live on the header — one source event per transaction; items only 
   - Parallel header approvals (planning, purchasing manager, director) — each `approved_at`/`approved_by` pair; any party may reject
   - Lock line edits once **any** approval stamp exists
   - Create/add/update item: material must exist and not be soft-deleted; unique material per requisition
+  - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_requested` is in this unit
   - `production_sub_department_manager_id` (`@HISTORICAL_SNAPSHOT`): copy from `production_sub_department_managers.manager_id` on create; re-copy only when `production_sub_department` changes while editable; omit from update DTOs
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Reject/cancel blocked after full approval if any MPO allocation exists; `rejected_at` wins over concurrent approvals
   - Approve slot is not idempotent — second stamp on the same party returns 400
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Parent requisition must be fully approved (all three `approved_at` set; not rejected/cancelled)
-  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested`
+  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (same unit as the requisition line's `unit_of_measurement_selected`)
   - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered`
   - MPO lines may have zero allocations (MPO created without a requisition)
 
@@ -184,7 +185,7 @@ All sources live on the header — one source event per transaction; items only 
 | `material_purchase_requisitions`                                                             | pending (see below)              | approved (see below)      | `cancelled_at` / `rejected_at` |
 | Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
-Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, `cancelled_at` and `rejected_at` are mutually exclusive; derive status as: `cancelled` → `rejected` → `approved` (all three approval timestamps set) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` (not cached).
+Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, `cancelled_at` and `rejected_at` are mutually exclusive; derive status as: `cancelled` → `rejected` → `approved` (all three approval timestamps set) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` in the line's `unit_of_measurement_selected` (not cached).
 
 ---
 
