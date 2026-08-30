@@ -21,6 +21,7 @@ export const materialPurchaseRequisitions = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPQ-00000001
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
+    productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
     notes: text('notes'),
     planningApprovedAt: timestamp('planning_approved_at', { withTimezone: true }),
     planningApprovedBy: uuid('planning_approved_by'),
@@ -38,6 +39,11 @@ export const materialPurchaseRequisitions = pgTable(
       .references(() => users.id),
   },
   (table) => [
+    foreignKey({
+      name: 'mprq_psd_manager_id_fk',
+      columns: [table.productionSubDepartmentManagerId],
+      foreignColumns: [users.id],
+    }),
     foreignKey({
       name: 'mprq_planning_approved_by_fk',
       columns: [table.planningApprovedBy],
@@ -59,6 +65,7 @@ export const materialPurchaseRequisitions = pgTable(
       foreignColumns: [users.id],
     }),
     index('mprq_production_sub_department_idx').on(table.productionSubDepartment),
+    index('mprq_psd_manager_id_idx').on(table.productionSubDepartmentManagerId),
     index('mprq_planning_approved_at_idx').on(table.planningApprovedAt),
     index('mprq_purchasing_manager_approved_at_idx').on(table.purchasingManagerApprovedAt),
     index('mprq_director_approved_at_idx').on(table.directorApprovedAt),
@@ -291,6 +298,11 @@ export const materialPurchaseReceiptItems = pgTable(
 // ============================== RELATIONS ==============================
 
 export const materialPurchaseRequisitionsRelations = relations(materialPurchaseRequisitions, ({ one, many }) => ({
+  productionSubDepartmentManager: one(users, {
+    fields: [materialPurchaseRequisitions.productionSubDepartmentManagerId],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionProductionSubDepartmentManager',
+  }),
   createdBy: one(users, {
     fields: [materialPurchaseRequisitions.createdBy],
     references: [users.id],

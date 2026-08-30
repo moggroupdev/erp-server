@@ -12,8 +12,9 @@ import {
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
+  productionSubDepartmentManagers,
 } from 'src/database/schema';
-import { QueryParams, User } from 'src/utils/types';
+import { QueryParams, User, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -47,12 +48,16 @@ export class MaterialPurchaseRequisitionsService {
     const { items, ...header } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertMaterialsExist(items.map((item) => item.materialCode));
+    const productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(
+      header.productionSubDepartment,
+    );
 
     return await this.db.transaction(async (tx) => {
       const [requisition] = await tx
         .insert(materialPurchaseRequisitions)
         .values({
           ...header,
+          productionSubDepartmentManagerId,
           code: sql`DEFAULT`,
           createdBy: user.id,
         })
@@ -81,7 +86,10 @@ export class MaterialPurchaseRequisitionsService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: { createdBy: { columns: USER_COLUMNS } },
+      withRelations: {
+        createdBy: { columns: USER_COLUMNS },
+        productionSubDepartmentManager: { columns: USER_COLUMNS },
+      },
     });
   }
 
@@ -90,6 +98,7 @@ export class MaterialPurchaseRequisitionsService {
       where: eq(materialPurchaseRequisitions.id, id),
       with: {
         createdBy: { columns: USER_COLUMNS },
+        productionSubDepartmentManager: { columns: USER_COLUMNS },
         planningApprovedBy: { columns: USER_COLUMNS },
         purchasingManagerApprovedBy: { columns: USER_COLUMNS },
         directorApprovedBy: { columns: USER_COLUMNS },
@@ -126,9 +135,22 @@ export class MaterialPurchaseRequisitionsService {
     const requisition = await this.requireRequisition(id);
     this.assertEditable(requisition);
 
+    const values: UpdateMaterialPurchaseRequisitionDto & {
+      productionSubDepartmentManagerId?: string | null;
+    } = { ...updateDto };
+
+    if (
+      updateDto.productionSubDepartment !== undefined &&
+      updateDto.productionSubDepartment !== requisition.productionSubDepartment
+    ) {
+      values.productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(
+        updateDto.productionSubDepartment,
+      );
+    }
+
     const [updated] = await this.db
       .update(materialPurchaseRequisitions)
-      .set(updateDto)
+      .set(values)
       .where(eq(materialPurchaseRequisitions.id, id))
       .returning();
 
@@ -450,6 +472,15 @@ export class MaterialPurchaseRequisitionsService {
         ),
       );
     }
+  }
+
+  private async resolveSubDepartmentManagerId(productionSubDepartment: ProductionSubDepartment) {
+    const assignment = await this.db.query.productionSubDepartmentManagers.findFirst({
+      where: eq(productionSubDepartmentManagers.subDepartment, productionSubDepartment),
+      columns: { managerId: true },
+    });
+
+    return assignment?.managerId ?? null;
   }
 
   private async assertMaterialsExist(materialCodes: string[]) {

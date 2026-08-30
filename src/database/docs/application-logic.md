@@ -89,6 +89,7 @@ All sources live on the header — one source event per transaction; items only 
   - Parallel header approvals (planning, purchasing manager, director) — each `approved_at`/`approved_by` pair; any party may reject
   - Lock line edits once **any** approval stamp exists
   - Create/add/update item: material must exist and not be soft-deleted; unique material per requisition
+  - `production_sub_department_manager_id` (`@HISTORICAL_SNAPSHOT`): copy from `production_sub_department_managers.manager_id` on create; re-copy only when `production_sub_department` changes while editable; omit from update DTOs
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Reject/cancel blocked after full approval if any MPO allocation exists; `rejected_at` wins over concurrent approvals
   - Approve slot is not idempotent — second stamp on the same party returns 400
