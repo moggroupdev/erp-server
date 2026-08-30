@@ -47,7 +47,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Procurement
 
 - Approved suppliers with contact details, tax number, material classification (aluminum, stainless steel, sheet steel, and similar), addresses, and a blacklist timestamp when a supplier is blocked
-- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production sub-department; parallel approvals from planning, purchasing manager, and director; after approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
+- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production sub-department; parallel approvals from planning, purchasing manager, and manager (each gate records yes/no with reason and timestamp); after full approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
 - Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand and/or to approved purchase requisition lines
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with supplier serial numbers where applicable
 - Quotation request emails sent to suppliers when sourcing materials
@@ -105,7 +105,7 @@ Production then builds a plan that schedules each unit across the product's conf
 
 ### Materials and Warehouse
 
-Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, warehouse staff raise a material purchase requisition for the relevant production sub-department. Planning, the purchasing manager, and the director approve in parallel. Once fully approved, Purchasing may raise one or more material purchase orders with approved suppliers, allocating ordered quantities from the requisition line(s) — leftover quantity stays open until covered. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
+Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, warehouse staff raise a material purchase requisition for the relevant production sub-department. Planning, the purchasing manager, and the manager approve in parallel. Once fully approved, Purchasing may raise one or more material purchase orders with approved suppliers, allocating ordered quantities from the requisition line(s) — leftover quantity stays open until covered. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
 
 When a manufactured material is manufactured externally, Purchasing (or Operations) raises an outsourcing order with a supplier. Component materials are issued from stock to the supplier based on the manufactured material's BOM (quantities suggested from the BOM, adjustable before confirm). When the supplier returns the finished manufactured material, it is inspected and accepted quantities are received into inventory; the manufacturing fee is tracked on the outsourcing order.
 

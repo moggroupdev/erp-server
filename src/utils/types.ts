@@ -11,6 +11,7 @@ import {
   SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
+  APPROVAL_DECISION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
 } from './constants';
@@ -39,6 +40,8 @@ export type JwtPayload = { id: string; type: TokenType };
 // ==================== ENUMS ====================
 
 export type Permission = (typeof PERMISSION_VALUES)[number];
+
+export type ApprovalDecision = (typeof APPROVAL_DECISION_VALUES)[number];
 
 export type LoginStatus = (typeof LOGIN_STATUS_VALUES)[number];
 

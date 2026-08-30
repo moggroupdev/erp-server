@@ -53,11 +53,9 @@ export const PERMISSION_VALUES = [
   'add_material_purchase_requisition',
   'read_material_purchase_requisitions',
   'update_material_purchase_requisition',
-  'cancel_material_purchase_requisition',
   'approve_material_purchase_requisition_planning',
   'approve_material_purchase_requisition_purchasing_manager',
-  'approve_material_purchase_requisition_director',
-  'reject_material_purchase_requisition',
+  'approve_material_purchase_requisition_manager',
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',
   'update_legacy_issue_permit',
@@ -67,6 +65,16 @@ export const PERMISSIONS = Object.fromEntries(
   PERMISSION_VALUES.map((permission) => [permission.toUpperCase(), permission]),
 ) as {
   [K in Uppercase<(typeof PERMISSION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== APPROVAL_DECISIONS ====================
+
+export const APPROVAL_DECISION_VALUES = ['pending', 'approved', 'rejected'] as const;
+
+export const APPROVAL_DECISIONS = Object.fromEntries(
+  APPROVAL_DECISION_VALUES.map((decision) => [decision.toUpperCase(), decision]),
+) as {
+  [K in Uppercase<(typeof APPROVAL_DECISION_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== LOGIN_STATUSES ====================

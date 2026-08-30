@@ -17,9 +17,12 @@ import {
   INVENTORY_TRANSACTION_TYPE_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
+  APPROVAL_DECISION_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
+
+export const approvalDecisionEnum = pgEnum('approval_decision', APPROVAL_DECISION_VALUES);
 
 export const loginStatusEnum = pgEnum('login_status', LOGIN_STATUS_VALUES);
 
