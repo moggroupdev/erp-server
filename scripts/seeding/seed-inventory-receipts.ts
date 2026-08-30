@@ -27,7 +27,7 @@ existing material by exact normalized title, or created without a legacy code
 under a reserved Misc subcategory (main 99 / sub 01) if no title match exists.
 
 Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
-  تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt / legacyInvoiceIssuedAt,
+  تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt / invoiceIssuedAt,
                    and material_purchase_receipts.receivedAt / createdAt
   تاريخ الإضافة → inventory_transactions.createdAt
 
@@ -948,8 +948,8 @@ async function main() {
           .values({
             code: sql`DEFAULT`,
             supplierId,
-            legacyInvoiceNumber: usableRows[0].invoiceNumber,
-            legacyInvoiceIssuedAt: invoiceDate,
+            invoiceNumber: usableRows[0].invoiceNumber,
+            invoiceIssuedAt: invoiceDate,
             totalAmount,
             completedAt: invoiceDate,
             notes: SEED_IMPORT_NOTE,

@@ -25,7 +25,7 @@ export class MaterialPurchaseOrdersService {
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(materialPurchaseOrders, queryParams, {
       filtering: true,
-      searchableFields: ['code', 'legacyInvoiceNumber', 'notes'],
+      searchableFields: ['code', 'invoiceNumber', 'notes'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,

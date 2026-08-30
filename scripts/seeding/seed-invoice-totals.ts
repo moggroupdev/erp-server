@@ -15,14 +15,14 @@ const USAGE = `Usage: npm run seed:invoice-totals
 Seeds legacy e-invoice tax totals from:
   data/invoices/totals.xlsx
 
-Matches workbook rows to material_purchase_orders by legacy_invoice_number.
-legacy_invoice_number is unique per supplier, not globally:
+Matches workbook rows to material_purchase_orders by invoice_number.
+invoice_number is unique per supplier, not globally:
   - Unique invoice number in both the workbook and the DB → match by invoice number
   - Duplicated invoice number → disambiguate by the supplier linked to the MPO,
     using the supplier name embedded in اسم الملف
 
 When تاريخ الإصدار is present, it also overrides:
-  material_purchase_orders.createdAt / completedAt / legacyInvoiceIssuedAt
+  material_purchase_orders.createdAt / completedAt / invoiceIssuedAt
   material_purchase_receipts.receivedAt / createdAt (all receipts for that order)
 
 Unresolved or conflicting rows are logged and skipped.
@@ -484,21 +484,21 @@ async function main() {
       .select({
         id: schema.materialPurchaseOrders.id,
         code: schema.materialPurchaseOrders.code,
-        legacyInvoiceNumber: schema.materialPurchaseOrders.legacyInvoiceNumber,
+        invoiceNumber: schema.materialPurchaseOrders.invoiceNumber,
         supplierId: schema.materialPurchaseOrders.supplierId,
         supplierName: schema.suppliers.name,
       })
       .from(schema.materialPurchaseOrders)
       .innerJoin(schema.suppliers, eq(schema.materialPurchaseOrders.supplierId, schema.suppliers.id))
-      .where(isNotNull(schema.materialPurchaseOrders.legacyInvoiceNumber));
+      .where(isNotNull(schema.materialPurchaseOrders.invoiceNumber));
 
     const orders: DbOrder[] = [];
     for (const order of orderRows) {
-      const invoiceNumber = normalizeIdentifier(order.legacyInvoiceNumber);
+      const invoiceNumber = normalizeIdentifier(order.invoiceNumber);
       if (!invoiceNumber) {
         problems.push({
           level: 'warning',
-          message: `MPO ${order.code} has a blank legacy invoice number after normalization; skipped.`,
+          message: `MPO ${order.code} has a blank invoice number after normalization; skipped.`,
         });
         continue;
       }
@@ -540,27 +540,27 @@ async function main() {
         const { workbookRow, order, method } = match;
 
         const orderUpdate: {
-          legacyInvoiceIssuedAt: Date | null;
-          legacyInvoiceTotalPurchases: number;
-          legacyInvoiceTotalDiscount: number;
-          legacyInvoiceVatAmount: number;
-          legacyInvoiceWithholdingTaxAmount: number;
-          legacyInvoiceTotalAmount: number;
+          invoiceIssuedAt: Date | null;
+          invoiceTotalPurchases: number;
+          invoiceTotalDiscount: number;
+          invoiceVatAmount: number;
+          invoiceWithholdingTaxAmount: number;
+          invoiceTotalAmount: number;
           createdAt?: Date;
           completedAt?: Date;
         } = {
-          legacyInvoiceIssuedAt: workbookRow.issuedAt,
-          legacyInvoiceTotalPurchases: workbookRow.totalPurchases,
-          legacyInvoiceTotalDiscount: workbookRow.totalDiscount,
-          legacyInvoiceVatAmount: workbookRow.vatAmount,
-          legacyInvoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
-          legacyInvoiceTotalAmount: workbookRow.totalAmount,
+          invoiceIssuedAt: workbookRow.issuedAt,
+          invoiceTotalPurchases: workbookRow.totalPurchases,
+          invoiceTotalDiscount: workbookRow.totalDiscount,
+          invoiceVatAmount: workbookRow.vatAmount,
+          invoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
+          invoiceTotalAmount: workbookRow.totalAmount,
         };
 
         if (workbookRow.issuedAt) {
           orderUpdate.createdAt = workbookRow.issuedAt;
           orderUpdate.completedAt = workbookRow.issuedAt;
-          orderUpdate.legacyInvoiceIssuedAt = workbookRow.issuedAt;
+          orderUpdate.invoiceIssuedAt = workbookRow.issuedAt;
 
           await tx
             .update(schema.materialPurchaseReceipts)

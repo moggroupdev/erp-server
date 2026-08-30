@@ -22,7 +22,7 @@ const TOP_SUPPLIERS_LIMIT = 10;
 const TOP_MATERIALS_LIMIT = 10;
 const TOP_ORDERS_LIMIT = 10;
 
-const invoiceTotalPurchases = sql`coalesce(${materialPurchaseOrders.legacyInvoiceTotalPurchases}, 0)`;
+const invoiceTotalPurchases = sql`coalesce(${materialPurchaseOrders.invoiceTotalPurchases}, 0)`;
 const orderLinesTotal = sql`(
   select coalesce(sum(i.quantity_ordered * i.unit_price), 0)
   from material_purchase_order_items i
@@ -196,31 +196,31 @@ export class PurchasingMaterialsReportsService {
   public async getTotalAmountMismatches(params: { from?: string; to?: string }) {
     const dateRange = this.buildDateRange(params.from, params.to);
     const dateWhere = this.notCancelledWithDateRange(dateRange);
-    const absoluteDifference = sql`abs(${materialPurchaseOrders.totalAmount} - ${materialPurchaseOrders.legacyInvoiceTotalPurchases})`;
-    const mismatchCondition = sql`${absoluteDifference} >= greatest(abs(${materialPurchaseOrders.totalAmount}), abs(${materialPurchaseOrders.legacyInvoiceTotalPurchases})) * 0.01`;
+    const absoluteDifference = sql`abs(${materialPurchaseOrders.totalAmount} - ${materialPurchaseOrders.invoiceTotalPurchases})`;
+    const mismatchCondition = sql`${absoluteDifference} >= greatest(abs(${materialPurchaseOrders.totalAmount}), abs(${materialPurchaseOrders.invoiceTotalPurchases})) * 0.01`;
 
     const [mismatchRows, missingInvoiceTotalRows] = await Promise.all([
       this.db
         .select({
           orderId: materialPurchaseOrders.id,
           orderCode: materialPurchaseOrders.code,
-          legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+          invoiceNumber: materialPurchaseOrders.invoiceNumber,
           supplierId: suppliers.id,
           supplierName: suppliers.name,
           calculatedTotalAmount: materialPurchaseOrders.totalAmount,
-          legacyInvoiceTotalPurchases: materialPurchaseOrders.legacyInvoiceTotalPurchases,
+          invoiceTotalPurchases: materialPurchaseOrders.invoiceTotalPurchases,
           createdAt: materialPurchaseOrders.createdAt,
           completedAt: materialPurchaseOrders.completedAt,
         })
         .from(materialPurchaseOrders)
         .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
-        .where(and(dateWhere, isNotNull(materialPurchaseOrders.legacyInvoiceTotalPurchases), mismatchCondition))
+        .where(and(dateWhere, isNotNull(materialPurchaseOrders.invoiceTotalPurchases), mismatchCondition))
         .orderBy(desc(absoluteDifference), desc(materialPurchaseOrders.createdAt)),
       this.db
         .select({
           orderId: materialPurchaseOrders.id,
           orderCode: materialPurchaseOrders.code,
-          legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+          invoiceNumber: materialPurchaseOrders.invoiceNumber,
           supplierId: suppliers.id,
           supplierName: suppliers.name,
           calculatedTotalAmount: materialPurchaseOrders.totalAmount,
@@ -233,7 +233,7 @@ export class PurchasingMaterialsReportsService {
           and(
             dateWhere,
             isNotNull(materialPurchaseOrders.completedAt),
-            isNull(materialPurchaseOrders.legacyInvoiceTotalPurchases),
+            isNull(materialPurchaseOrders.invoiceTotalPurchases),
           ),
         )
         .orderBy(desc(materialPurchaseOrders.completedAt), desc(materialPurchaseOrders.createdAt)),
@@ -241,16 +241,16 @@ export class PurchasingMaterialsReportsService {
 
     const orders = mismatchRows.map((r) => {
       const calculatedTotalAmount = Number(r.calculatedTotalAmount);
-      const legacyInvoiceTotalPurchases = Number(r.legacyInvoiceTotalPurchases);
+      const invoiceTotalPurchases = Number(r.invoiceTotalPurchases);
       return {
         orderId: r.orderId,
         orderCode: r.orderCode,
-        legacyInvoiceNumber: r.legacyInvoiceNumber,
+        invoiceNumber: r.invoiceNumber,
         supplierId: r.supplierId,
         supplierName: r.supplierName,
         calculatedTotalAmount,
-        legacyInvoiceTotalPurchases,
-        difference: calculatedTotalAmount - legacyInvoiceTotalPurchases,
+        invoiceTotalPurchases,
+        difference: calculatedTotalAmount - invoiceTotalPurchases,
         createdAt: r.createdAt,
         completedAt: r.completedAt,
       };
@@ -259,7 +259,7 @@ export class PurchasingMaterialsReportsService {
     const completedWithoutInvoiceTotal = missingInvoiceTotalRows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
-      legacyInvoiceNumber: r.legacyInvoiceNumber,
+      invoiceNumber: r.invoiceNumber,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
       calculatedTotalAmount: Number(r.calculatedTotalAmount),
@@ -269,7 +269,7 @@ export class PurchasingMaterialsReportsService {
 
     const mismatchCount = orders.length;
     const totalCalculatedAmount = orders.reduce((sum, row) => sum + row.calculatedTotalAmount, 0);
-    const totalLegacyInvoicePurchases = orders.reduce((sum, row) => sum + row.legacyInvoiceTotalPurchases, 0);
+    const totalInvoicePurchases = orders.reduce((sum, row) => sum + row.invoiceTotalPurchases, 0);
     const totalDifference = orders.reduce((sum, row) => sum + Math.abs(row.difference), 0);
     const missingInvoiceTotalCount = completedWithoutInvoiceTotal.length;
     const missingInvoiceTotalCalculatedAmount = completedWithoutInvoiceTotal.reduce(
@@ -281,7 +281,7 @@ export class PurchasingMaterialsReportsService {
       overview: {
         mismatchCount,
         totalCalculatedAmount,
-        totalLegacyInvoicePurchases,
+        totalInvoicePurchases,
         totalDifference,
         missingInvoiceTotalCount,
         missingInvoiceTotalCalculatedAmount,
@@ -511,10 +511,10 @@ export class PurchasingMaterialsReportsService {
       .select({
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
-        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
+        invoiceNumber: materialPurchaseOrders.invoiceNumber,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
-        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
+        invoiceTotalPurchases: invoiceTotalPurchases,
         createdAt: materialPurchaseOrders.createdAt,
         completedAt: materialPurchaseOrders.completedAt,
       })
@@ -527,10 +527,10 @@ export class PurchasingMaterialsReportsService {
     return rows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
-      legacyInvoiceNumber: r.legacyInvoiceNumber,
+      invoiceNumber: r.invoiceNumber,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
-      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
+      invoiceTotalPurchases: Number(r.invoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
     }));
@@ -617,11 +617,11 @@ export class PurchasingMaterialsReportsService {
       .select({
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
-        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
-        legacyInvoiceIssuedAt: materialPurchaseOrders.legacyInvoiceIssuedAt,
+        invoiceNumber: materialPurchaseOrders.invoiceNumber,
+        invoiceIssuedAt: materialPurchaseOrders.invoiceIssuedAt,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
-        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
+        invoiceTotalPurchases: invoiceTotalPurchases,
         createdAt: materialPurchaseOrders.createdAt,
         completedAt: materialPurchaseOrders.completedAt,
       })
@@ -634,15 +634,15 @@ export class PurchasingMaterialsReportsService {
       .groupBy(
         materialPurchaseOrders.id,
         materialPurchaseOrders.code,
-        materialPurchaseOrders.legacyInvoiceNumber,
-        materialPurchaseOrders.legacyInvoiceIssuedAt,
+        materialPurchaseOrders.invoiceNumber,
+        materialPurchaseOrders.invoiceIssuedAt,
         suppliers.id,
         suppliers.name,
-        materialPurchaseOrders.legacyInvoiceTotalPurchases,
+        materialPurchaseOrders.invoiceTotalPurchases,
         materialPurchaseOrders.createdAt,
         materialPurchaseOrders.completedAt,
       )
-      .orderBy(desc(materialPurchaseOrders.legacyInvoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
+      .orderBy(desc(materialPurchaseOrders.invoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
 
     const orderIds = rows.map((r) => r.orderId);
     const legacyByOrderId = await this.getInventoryTransactionLegacyNumbersByOrderIds(orderIds);
@@ -650,11 +650,11 @@ export class PurchasingMaterialsReportsService {
     return rows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
-      legacyInvoiceNumber: r.legacyInvoiceNumber,
-      legacyInvoiceIssuedAt: r.legacyInvoiceIssuedAt,
+      invoiceNumber: r.invoiceNumber,
+      invoiceIssuedAt: r.invoiceIssuedAt,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
-      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
+      invoiceTotalPurchases: Number(r.invoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
       inventoryTransactionLegacyNumbers: legacyByOrderId.get(r.orderId) ?? [],
@@ -822,15 +822,15 @@ export class PurchasingMaterialsReportsService {
       .select({
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
-        legacyInvoiceNumber: materialPurchaseOrders.legacyInvoiceNumber,
-        legacyInvoiceIssuedAt: materialPurchaseOrders.legacyInvoiceIssuedAt,
-        legacyInvoiceTotalPurchases: invoiceTotalPurchases,
+        invoiceNumber: materialPurchaseOrders.invoiceNumber,
+        invoiceIssuedAt: materialPurchaseOrders.invoiceIssuedAt,
+        invoiceTotalPurchases: invoiceTotalPurchases,
         createdAt: materialPurchaseOrders.createdAt,
         completedAt: materialPurchaseOrders.completedAt,
       })
       .from(materialPurchaseOrders)
       .where(where)
-      .orderBy(desc(materialPurchaseOrders.legacyInvoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
+      .orderBy(desc(materialPurchaseOrders.invoiceIssuedAt), desc(materialPurchaseOrders.createdAt));
 
     const orderIds = rows.map((r) => r.orderId);
     const legacyByOrderId = await this.getInventoryTransactionLegacyNumbersByOrderIds(orderIds);
@@ -838,9 +838,9 @@ export class PurchasingMaterialsReportsService {
     return rows.map((r) => ({
       orderId: r.orderId,
       orderCode: r.orderCode,
-      legacyInvoiceNumber: r.legacyInvoiceNumber,
-      legacyInvoiceIssuedAt: r.legacyInvoiceIssuedAt,
-      legacyInvoiceTotalPurchases: Number(r.legacyInvoiceTotalPurchases),
+      invoiceNumber: r.invoiceNumber,
+      invoiceIssuedAt: r.invoiceIssuedAt,
+      invoiceTotalPurchases: Number(r.invoiceTotalPurchases),
       createdAt: r.createdAt,
       completedAt: r.completedAt,
       inventoryTransactionLegacyNumbers: legacyByOrderId.get(r.orderId) ?? [],

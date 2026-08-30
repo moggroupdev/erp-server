@@ -22,7 +22,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 const TRANSACTION_SOURCE_RELATIONS = {
   materialPurchaseReceipt: {
     columns: { id: true, code: true },
-    with: { materialPurchaseOrder: { columns: { id: true, legacyInvoiceNumber: true } } },
+    with: { materialPurchaseOrder: { columns: { id: true, invoiceNumber: true } } },
   },
   outsourcingReceipt: {
     columns: { id: true, code: true },
