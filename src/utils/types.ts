@@ -5,6 +5,8 @@ import {
   MATERIAL_UNIT_VALUES,
   OFFER_STATUS_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
+  SUPPLIER_CLASSIFICATION_VALUES,
+  CUSTOMER_CLASSIFICATION_VALUES,
   TOKEN_TYPE_VALUES,
   SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INQUIRY_STATUS_VALUES,
@@ -44,6 +46,8 @@ export type MaterialUnit = (typeof MATERIAL_UNIT_VALUES)[number];
 
 export type MaterialType = (typeof MATERIAL_TYPE_VALUES)[number];
 export type ProductSourceType = (typeof PRODUCT_SOURCE_TYPE_VALUES)[number];
+export type SupplierClassification = (typeof SUPPLIER_CLASSIFICATION_VALUES)[number];
+export type CustomerClassification = (typeof CUSTOMER_CLASSIFICATION_VALUES)[number];
 
 export type InquiryStatus = (typeof INQUIRY_STATUS_VALUES)[number];
 

@@ -153,6 +153,57 @@ export const NEGOTIATION_PARTIES = Object.fromEntries(
   [K in Uppercase<(typeof NEGOTIATION_PARTY_VALUES)[number]>]: Lowercase<K>;
 };
 
+// ==================== SUPPLIER_CLASSIFICATIONS ====================
+
+export const SUPPLIER_CLASSIFICATION_VALUES = [
+  'aluminum',
+  'stainless_steel',
+  'sheet_steel',
+  'copper',
+  'plastic',
+  'glass',
+  'insulation',
+  'electrical',
+  'refrigeration',
+  'gas',
+  'hardware',
+  'coatings',
+  'spare_parts',
+  'imported_equipment',
+  'services',
+  'general',
+] as const;
+
+export const SUPPLIER_CLASSIFICATIONS = Object.fromEntries(
+  SUPPLIER_CLASSIFICATION_VALUES.map((classification) => [classification.toUpperCase(), classification]),
+) as {
+  [K in Uppercase<(typeof SUPPLIER_CLASSIFICATION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== CUSTOMER_CLASSIFICATIONS ====================
+
+export const CUSTOMER_CLASSIFICATION_VALUES = [
+  'restaurant',
+  'hotel',
+  'tourist_village',
+  'hospital',
+  'residential',
+  'cafe',
+  'bakery',
+  'factory',
+  'shopping_mall',
+  'sports_club',
+  'banquet_hall',
+  'supermarket',
+  'corporate',
+] as const;
+
+export const CUSTOMER_CLASSIFICATIONS = Object.fromEntries(
+  CUSTOMER_CLASSIFICATION_VALUES.map((classification) => [classification.toUpperCase(), classification]),
+) as {
+  [K in Uppercase<(typeof CUSTOMER_CLASSIFICATION_VALUES)[number]>]: Lowercase<K>;
+};
+
 // ==================== SUPPLIER_QUOTATION_EMAIL_STATUSES ====================
 
 export const SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES = ['draft', 'sent', 'failed'] as const;

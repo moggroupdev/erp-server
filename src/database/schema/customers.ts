@@ -1,6 +1,6 @@
-import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, deletedAt } from './common';
+import { createdAt, blacklistedAt, customerClassificationEnum } from './common';
 import { users } from './users';
 import { cities, countries } from './locations';
 import { inquiries } from './inquiries';
@@ -17,14 +17,22 @@ export const customers = pgTable(
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
+    classification: customerClassificationEnum('classification'),
     notes: text('notes'),
-    deletedAt,
+    blacklistedAt,
+    addedToBlacklistBy: uuid('added_to_blacklist_by').references(() => users.id),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
   },
-  (table) => [index('customers_name_idx').on(table.name)],
+  (table) => [
+    index('customers_name_idx').on(table.name),
+    index('customers_classification_idx').on(table.classification),
+    index('customers_blacklisted_at_idx').on(table.blacklistedAt),
+    index('customers_added_to_blacklist_by_idx').on(table.addedToBlacklistBy),
+    check('customers_blacklist_pair', sql`(${table.blacklistedAt} IS NULL) = (${table.addedToBlacklistBy} IS NULL)`),
+  ],
 );
 
 export const customerAddresses = pgTable(
@@ -57,6 +65,12 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [customers.createdBy],
     references: [users.id],
+    relationName: 'customerCreatedBy',
+  }),
+  addedToBlacklistBy: one(users, {
+    fields: [customers.addedToBlacklistBy],
+    references: [users.id],
+    relationName: 'customerAddedToBlacklistBy',
   }),
   addresses: many(customerAddresses),
   inquiries: many(inquiries),

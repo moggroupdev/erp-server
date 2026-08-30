@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt } from './common';
+import { pgTable, uuid, text, boolean, index, uniqueIndex, check } from 'drizzle-orm/pg-core';
+import { createdAt, blacklistedAt, supplierClassificationEnum } from './common';
 import { users } from './users';
 import { cities, countries } from './locations';
 import { materialPurchaseOrders } from './purchasing-materials';
@@ -15,14 +15,23 @@ export const suppliers = pgTable(
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
+    taxNumber: text('tax_number').unique(),
+    classification: supplierClassificationEnum('classification'),
     notes: text('notes'),
-    deletedAt,
+    blacklistedAt,
+    addedToBlacklistBy: uuid('added_to_blacklist_by').references(() => users.id),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
   },
-  (table) => [index('suppliers_name_idx').on(table.name)],
+  (table) => [
+    index('suppliers_name_idx').on(table.name),
+    index('suppliers_classification_idx').on(table.classification),
+    index('suppliers_blacklisted_at_idx').on(table.blacklistedAt),
+    index('suppliers_added_to_blacklist_by_idx').on(table.addedToBlacklistBy),
+    check('suppliers_blacklist_pair', sql`(${table.blacklistedAt} IS NULL) = (${table.addedToBlacklistBy} IS NULL)`),
+  ],
 );
 
 export const supplierAddresses = pgTable(
@@ -55,6 +64,12 @@ export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [suppliers.createdBy],
     references: [users.id],
+    relationName: 'supplierCreatedBy',
+  }),
+  addedToBlacklistBy: one(users, {
+    fields: [suppliers.addedToBlacklistBy],
+    references: [users.id],
+    relationName: 'supplierAddedToBlacklistBy',
   }),
   addresses: many(supplierAddresses),
   materialPurchaseOrders: many(materialPurchaseOrders),

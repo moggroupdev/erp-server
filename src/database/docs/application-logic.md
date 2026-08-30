@@ -14,7 +14,7 @@ Duplication Inventory → `[db-duplications.md](./db-duplications.md)`.
 
 ## Global policies
 
-- **No hard deletion** — use `deleted_at`, `cancelled_at`, or status; history stays queryable.
+- **No hard deletion** — use `deleted_at`, `blacklisted_at`, `cancelled_at`, or status; history stays queryable.
 - **Codes immutable** — auto-generated `code` columns (triggers) omitted from create/update DTOs.
 - **Snapshots immutable** — `@HISTORICAL_SNAPSHOT` columns set on insert only; omit from update DTOs.
 

@@ -16,7 +16,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Customers & Sales Pipeline
 
-- Customer records with structured delivery addresses (country, governorate, and city)
+- Customer records with classification (restaurant, hotel, tourist village, hospital, residential, and similar), structured delivery addresses (country, governorate, and city), and a blacklist timestamp when a customer is blocked
 - Product inquiries listing requested equipment and quantities, progressing through preview scheduling, site visit, quotation, and acceptance or rejection
 - Site previews: scheduled visits with assigned staff, per-item measurements, and technical notes
 - Sales offers (quotations) with line pricing, validity period, status, and optional blanket discount negotiation (round log before acceptance)
@@ -46,7 +46,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Procurement
 
-- Approved suppliers with contact details and addresses
+- Approved suppliers with contact details, tax number, material classification (aluminum, stainless steel, sheet steel, and similar), addresses, and a blacklist timestamp when a supplier is blocked
 - Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production sub-department; parallel approvals from planning, purchasing manager, and director; after approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
 - Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand and/or to approved purchase requisition lines
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with supplier serial numbers where applicable

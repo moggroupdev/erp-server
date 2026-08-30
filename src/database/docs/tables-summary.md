@@ -29,9 +29,9 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | countries                                      | uuid        | —    | NO                       | NO        | NO             |
 | governorates                                   | uuid        | —    | NO                       | NO        | NO             |
 | cities                                         | uuid        | —    | NO                       | NO        | NO             |
-| customers                                      | uuid        | CUS  | deletedAt field          | YES       | YES (NOT NULL) |
+| customers                                      | uuid        | CUS  | blacklistedAt field      | YES       | YES (NOT NULL) |
 | customer_addresses                             | uuid        | —    | NO                       | NO        | NO             |
-| suppliers                                      | uuid        | SUP  | deletedAt field          | YES       | YES (NOT NULL) |
+| suppliers                                      | uuid        | SUP  | blacklistedAt field      | YES       | YES (NOT NULL) |
 | supplier_addresses                             | uuid        | —    | NO                       | NO        | NO             |
 | material_category_mains                        | uuid        | —    | NO                       | NO        | NO             |
 | material_category_subs                         | uuid        | —    | NO                       | NO        | NO             |
