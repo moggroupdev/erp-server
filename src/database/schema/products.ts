@@ -93,6 +93,7 @@ export const productStandardBoms = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityRequired: numeric('quantity_required').notNull(),
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -105,9 +106,12 @@ export const productStandardBoms = pgTable(
       columns: [table.productDimensionId],
       foreignColumns: [productDimensions.id],
     }),
-    unique('product_standard_boms_dimension_material_unique').on(table.productDimensionId, table.materialCode),
+    unique('product_standard_boms_dimension_material_department_unique')
+      .on(table.productDimensionId, table.materialCode, table.productionSubDepartment)
+      .nullsNotDistinct(),
     index('product_standard_boms_product_dimension_id_idx').on(table.productDimensionId),
     index('product_standard_boms_material_code_idx').on(table.materialCode),
+    index('product_standard_boms_production_sub_department_idx').on(table.productionSubDepartment),
     positiveQuantityCheck('product_standard_boms_quantity_required_positive', table.quantityRequired),
   ],
 );
