@@ -67,15 +67,16 @@ export class BomsService {
 
     const values = await Promise.all(
       items.map(async (item) => {
-        const { unit, quantityRequired, ...rest } = item;
+        const { quantityRequired, unitOfMeasurementSelected, ...rest } = item;
         return {
           ...rest,
           createdBy: user.id,
           productDimensionId: dimensionId,
+          unitOfMeasurementSelected,
           quantityRequired: await this.materialUnitConversionService.convertToBaseUnit(
             item.materialCode,
             quantityRequired,
-            unit,
+            unitOfMeasurementSelected,
           ),
         };
       }),
@@ -115,6 +116,7 @@ export class BomsService {
             productDimensionId: true,
             materialCode: true,
             quantityRequired: true,
+            unitOfMeasurementSelected: true,
             productionSubDepartment: true,
             notes: true,
           },
@@ -217,25 +219,31 @@ export class BomsService {
         ),
       );
 
-    const { unit, quantityRequired, ...rest } = createBomItemDto;
+    const { quantityRequired, unitOfMeasurementSelected, ...rest } = createBomItemDto;
     const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
       createBomItemDto.materialCode,
       quantityRequired,
-      unit,
+      unitOfMeasurementSelected,
     );
 
     const [item] = await this.db
       .insert(productStandardBoms)
-      .values({ ...rest, quantityRequired: quantityInBaseUnit, productDimensionId: dimensionId, createdBy: user.id })
+      .values({
+        ...rest,
+        quantityRequired: quantityInBaseUnit,
+        unitOfMeasurementSelected,
+        productDimensionId: dimensionId,
+        createdBy: user.id,
+      })
       .returning();
 
     return item;
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
-    const { unit, quantityRequired, ...rest } = updateBomItemDto;
+    const { quantityRequired, unitOfMeasurementSelected, ...rest } = updateBomItemDto;
 
-    let quantityInBaseUnit = quantityRequired; // Initially
+    let quantityInBaseUnit = quantityRequired;
 
     if (quantityRequired !== undefined) {
       const existing = await this.db.query.productStandardBoms.findFirst({
@@ -251,13 +259,17 @@ export class BomsService {
       quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
         existing.materialCode,
         quantityRequired,
-        unit,
+        unitOfMeasurementSelected,
       );
     }
 
     const [updatedItem] = await this.db
       .update(productStandardBoms)
-      .set({ ...rest, ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}) })
+      .set({
+        ...rest,
+        unitOfMeasurementSelected,
+        ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}),
+      })
       .where(eq(productStandardBoms.id, itemId))
       .returning();
 

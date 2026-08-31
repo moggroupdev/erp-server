@@ -10,6 +10,7 @@ import {
   positiveQuantityCheck,
   productSourceTypeEnum,
   productionSubDepartmentEnum,
+  materialUnitEnum,
 } from './common';
 import { users } from './users';
 import { productCategorySubs } from './categories';
@@ -93,6 +94,7 @@ export const productStandardBoms = pgTable(
       .notNull()
       .references(() => materials.code),
     quantityRequired: numeric('quantity_required').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
     notes: text('notes'),
     createdAt,

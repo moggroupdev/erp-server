@@ -267,6 +267,13 @@
       "when": 1788164728884,
       "tag": "0037_reflective_skullbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1788167153558,
+      "tag": "0038_rare_abomination",
+      "breakpoints": true
     }
   ]
 }
