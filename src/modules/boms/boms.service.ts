@@ -281,6 +281,20 @@ export class BomsService {
     return updatedItem;
   }
 
+  public async deleteItem(itemId: string) {
+    const [deletedItem] = await this.db
+      .delete(productStandardBoms)
+      .where(eq(productStandardBoms.id, itemId))
+      .returning();
+
+    if (!deletedItem)
+      throw new NotFoundException(
+        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+      );
+
+    return deletedItem;
+  }
+
   // ============================== PRIVATE METHODS ==============================
 
   private dimensionDepartmentWhere(dimensionId: string, productionSubDepartment: ProductionSubDepartment): SQL {
