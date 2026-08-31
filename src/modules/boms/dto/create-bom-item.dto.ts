@@ -22,9 +22,9 @@ export class CreateBomItemDto {
   unit?: MaterialUnit;
 
   @IsIn(PRODUCTION_SUB_DEPARTMENT_VALUES)
-  @IsOptional()
-  @ApiPropertyOptional({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
-  productionSubDepartment?: ProductionSubDepartment;
+  @IsNotEmpty()
+  @ApiProperty({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
+  productionSubDepartment: ProductionSubDepartment;
 
   @TrimToNull()
   @IsString()

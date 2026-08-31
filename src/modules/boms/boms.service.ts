@@ -29,7 +29,7 @@ export class BomsService {
 
     await this.assertIsManufacturedProduct(dimensionId);
 
-    const productionSubDepartments = new Set(items.map((item) => item.productionSubDepartment ?? null));
+    const productionSubDepartments = new Set(items.map((item) => item.productionSubDepartment));
     if (productionSubDepartments.size > 1) {
       throw new ConflictException(
         translate(
@@ -39,7 +39,7 @@ export class BomsService {
       );
     }
 
-    const productionSubDepartment = items[0]?.productionSubDepartment ?? null;
+    const productionSubDepartment = items[0].productionSubDepartment;
 
     if (
       await this.db.query.productStandardBoms.findFirst({
@@ -184,7 +184,7 @@ export class BomsService {
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {
     await this.assertIsManufacturedProduct(dimensionId);
 
-    const productionSubDepartment = createBomItemDto.productionSubDepartment ?? null;
+    const productionSubDepartment = createBomItemDto.productionSubDepartment;
 
     if (
       !(await this.db.query.productStandardBoms.findFirst({
@@ -271,15 +271,10 @@ export class BomsService {
 
   // ============================== PRIVATE METHODS ==============================
 
-  private dimensionDepartmentWhere(
-    dimensionId: string,
-    productionSubDepartment: ProductionSubDepartment | null,
-  ): SQL {
+  private dimensionDepartmentWhere(dimensionId: string, productionSubDepartment: ProductionSubDepartment): SQL {
     return and(
       eq(productStandardBoms.productDimensionId, dimensionId),
-      productionSubDepartment === null
-        ? isNull(productStandardBoms.productionSubDepartment)
-        : eq(productStandardBoms.productionSubDepartment, productionSubDepartment),
+      eq(productStandardBoms.productionSubDepartment, productionSubDepartment),
     )!;
   }
 
