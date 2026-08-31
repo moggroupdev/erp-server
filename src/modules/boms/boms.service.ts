@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, SQL } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -9,7 +9,7 @@ import {
   productStandardBoms,
 } from 'src/database/schema';
 import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
-import { type User } from 'src/utils/types';
+import { type ProductionSubDepartment, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
@@ -29,14 +29,29 @@ export class BomsService {
 
     await this.assertIsManufacturedProduct(dimensionId);
 
+    const productionSubDepartments = new Set(items.map((item) => item.productionSubDepartment ?? null));
+    if (productionSubDepartments.size > 1) {
+      throw new ConflictException(
+        translate(
+          'All BOM items in a single create request must belong to the same production sub-department.',
+          'يجب أن تنتمي جميع بنود قائمة المواد في طلب الإنشاء الواحد إلى نفس القسم الفرعي للإنتاج.',
+        ),
+      );
+    }
+
+    const productionSubDepartment = items[0]?.productionSubDepartment ?? null;
+
     if (
       await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.productDimensionId, dimensionId),
+        where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
         columns: { id: true },
       })
     ) {
       throw new ConflictException(
-        translate(`A BOM already exists for dimension ${dimensionId}.`, `توجد بالفعل قائمة مواد للمقاس ${dimensionId}.`),
+        translate(
+          `A BOM already exists for dimension ${dimensionId} in this production sub-department.`,
+          `توجد بالفعل قائمة مواد للمقاس ${dimensionId} في هذا القسم الفرعي للإنتاج.`,
+        ),
       );
     }
 
@@ -100,6 +115,7 @@ export class BomsService {
             productDimensionId: true,
             materialCode: true,
             quantityRequired: true,
+            productionSubDepartment: true,
             notes: true,
           },
           with: {
@@ -168,16 +184,18 @@ export class BomsService {
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {
     await this.assertIsManufacturedProduct(dimensionId);
 
+    const productionSubDepartment = createBomItemDto.productionSubDepartment ?? null;
+
     if (
       !(await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.productDimensionId, dimensionId),
+        where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
         columns: { id: true },
       }))
     ) {
       throw new NotFoundException(
         translate(
-          `No BOM exists for dimension ${dimensionId}. Create the BOM first.`,
-          `لا توجد قائمة مواد للمقاس ${dimensionId}. أنشئ قائمة المواد أولاً.`,
+          `No BOM exists for dimension ${dimensionId} in this production sub-department. Create the BOM first.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId} في هذا القسم الفرعي للإنتاج. أنشئ قائمة المواد أولاً.`,
         ),
       );
     }
@@ -186,7 +204,7 @@ export class BomsService {
     if (
       await this.db.query.productStandardBoms.findFirst({
         where: and(
-          eq(productStandardBoms.productDimensionId, dimensionId),
+          this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
           eq(productStandardBoms.materialCode, createBomItemDto.materialCode),
         ),
         columns: { id: true },
@@ -194,8 +212,8 @@ export class BomsService {
     )
       throw new ConflictException(
         translate(
-          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension.`,
-          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس.`,
+          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension and production sub-department.`,
+          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس والقسم الفرعي للإنتاج.`,
         ),
       );
 
@@ -252,6 +270,18 @@ export class BomsService {
   }
 
   // ============================== PRIVATE METHODS ==============================
+
+  private dimensionDepartmentWhere(
+    dimensionId: string,
+    productionSubDepartment: ProductionSubDepartment | null,
+  ): SQL {
+    return and(
+      eq(productStandardBoms.productDimensionId, dimensionId),
+      productionSubDepartment === null
+        ? isNull(productStandardBoms.productionSubDepartment)
+        : eq(productStandardBoms.productionSubDepartment, productionSubDepartment),
+    )!;
+  }
 
   private async assertIsManufacturedProduct(productDimensionId: string) {
     const dimension = await this.db.query.productDimensions.findFirst({
