@@ -33,8 +33,8 @@ export class BomsService {
     if (productionSubDepartments.size > 1) {
       throw new ConflictException(
         translate(
-          'All BOM items in a single create request must belong to the same production sub-department.',
-          'يجب أن تنتمي جميع بنود قائمة المواد في طلب الإنشاء الواحد إلى نفس القسم الفرعي للإنتاج.',
+          'All BOM items in a single create request must belong to the same production department.',
+          'يجب أن تنتمي جميع بنود قائمة المواد في طلب الإنشاء الواحد إلى نفس قسم الانتاج.',
         ),
       );
     }
@@ -49,8 +49,8 @@ export class BomsService {
     ) {
       throw new ConflictException(
         translate(
-          `A BOM already exists for dimension ${dimensionId} in this production sub-department.`,
-          `توجد بالفعل قائمة مواد للمقاس ${dimensionId} في هذا القسم الفرعي للإنتاج.`,
+          `A BOM already exists for dimension ${dimensionId} in this production department.`,
+          `توجد بالفعل قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
         ),
       );
     }
@@ -194,8 +194,8 @@ export class BomsService {
     ) {
       throw new NotFoundException(
         translate(
-          `No BOM exists for dimension ${dimensionId} in this production sub-department. Create the BOM first.`,
-          `لا توجد قائمة مواد للمقاس ${dimensionId} في هذا القسم الفرعي للإنتاج. أنشئ قائمة المواد أولاً.`,
+          `No BOM exists for dimension ${dimensionId} in this production department. Create the BOM first.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا. أنشئ قائمة المواد أولاً.`,
         ),
       );
     }
@@ -212,8 +212,8 @@ export class BomsService {
     )
       throw new ConflictException(
         translate(
-          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension and production sub-department.`,
-          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس والقسم الفرعي للإنتاج.`,
+          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension and production department.`,
+          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس وقسم الانتاج.`,
         ),
       );
 
