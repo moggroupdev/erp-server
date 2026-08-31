@@ -64,7 +64,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `maintenance_order_materials.unit_price`                       | Selling price at time of use                                                                                |
 | `material_purchase_requisitions.production_sub_department_manager_id` | `production_sub_department_managers.manager_id` for the requisition's `production_sub_department` |
 
-**Rules:** set once on INSERT; omit from update DTOs. Re-copy only when the driving FK changes (e.g. sub-department on an editable requisition). Not the same as live master data (`materials.unit_price`, current `production_sub_department_managers`).
+**Rules:** set once on INSERT; omit from update DTOs. Re-copy only when the driving FK changes (e.g. production department on an editable requisition). Not the same as live master data (`materials.unit_price`, current `production_sub_department_managers`).
 
 ---
 

@@ -32,10 +32,10 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Manufacturing
 
 - Production plans scheduling work over a date range
-- Per-product production routing: each manufactured product defines an ordered sequence of production sub-departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, and others) with completion-percentage weights that sum to 100%
-- Production sub-department managers and deputy managers assigned per work-center (enum-identified; labels are a frontend concern)
-- Work broken down per product unit and production sub-department step, with sequential completion gating
-- Progress notes and completion tracking per sub-department step
+- Per-product production routing: each manufactured product defines an ordered sequence of production departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, and others) with completion-percentage weights that sum to 100%
+- Production department managers and deputy managers assigned per work-center (enum-identified; labels are a frontend concern)
+- Work broken down per product unit and production department step, with sequential completion gating
+- Progress notes and completion tracking per production department step
 
 ### Inventory & Warehouse
 
@@ -47,7 +47,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Procurement
 
 - Approved suppliers with contact details, tax number, material classification (aluminum, stainless steel, sheet steel, and similar), addresses, and a blacklist timestamp when a supplier is blocked
-- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production sub-department; parallel approvals from planning, purchasing manager, and manager (each gate records yes/no with reason and timestamp); after full approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
+- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production department; parallel approvals from planning, purchasing manager, and manager (each gate records yes/no with reason and timestamp); after full approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
 - Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand and/or to approved purchase requisition lines
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with supplier serial numbers where applicable
 - Quotation request emails sent to suppliers when sourcing materials
@@ -77,7 +77,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 - User accounts with role-based permissions
 - Department hierarchy for org-chart departments (Administration, HR, Finance, Production, and others) with optional parent-child structure and department managers
-- Production staff belong to the Production org-chart department and are additionally assigned to one of fixed production sub-departments (work-centers)
+- Production staff belong to the Production org-chart department and are additionally assigned to one of fixed production departments (work-centers)
 
 ---
 
@@ -101,11 +101,11 @@ Once a contract is in place, the company breaks each active line item into indiv
 
 For items built in-house, the Technical Office prepares the standard BOMs for each dimension variant. Actual material costs are tracked through inventory transactions when materials are issued from the warehouse to the production floor.
 
-Production then builds a plan that schedules each unit across the product's configured production sub-departments — cutting, bending, sheet metal, refrigeration, electrical, and so on — in the order and completion weights defined on the product. Progress is tracked per unit and per sub-department step, with sequential gating so a step cannot be completed before the prior one. Manager and deputy manager are assigned per sub-department work-center.
+Production then builds a plan that schedules each unit across the product's configured production departments — cutting, bending, sheet metal, refrigeration, electrical, and so on — in the order and completion weights defined on the product. Progress is tracked per unit and per production department step, with sequential gating so a step cannot be completed before the prior one. Manager and deputy manager are assigned per production department work-center.
 
 ### Materials and Warehouse
 
-Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, warehouse staff raise a material purchase requisition for the relevant production sub-department. Planning, the purchasing manager, and the manager approve in parallel. Once fully approved, Purchasing may raise one or more material purchase orders with approved suppliers, allocating ordered quantities from the requisition line(s) — leftover quantity stays open until covered. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
+Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, warehouse staff raise a material purchase requisition for the relevant production department. Planning, the purchasing manager, and the manager approve in parallel. Once fully approved, Purchasing may raise one or more material purchase orders with approved suppliers, allocating ordered quantities from the requisition line(s) — leftover quantity stays open until covered. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
 
 When a manufactured material is manufactured externally, Purchasing (or Operations) raises an outsourcing order with a supplier. Component materials are issued from stock to the supplier based on the manufactured material's BOM (quantities suggested from the BOM, adjustable before confirm). When the supplier returns the finished manufactured material, it is inspected and accepted quantities are received into inventory; the manufacturing fee is tracked on the outsourcing order.
 
