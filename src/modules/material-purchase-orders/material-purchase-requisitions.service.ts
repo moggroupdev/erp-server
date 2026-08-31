@@ -1,18 +1,15 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
+  materialPurchaseOrderItems,
+  materialPurchaseOrders,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
   materialUnitConversions,
   productionSubDepartmentManagers,
+  suppliers,
 } from 'src/database/schema';
 import { APPROVAL_DECISIONS } from 'src/utils/constants';
 import { QueryParams, User, type ApprovalDecision, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
@@ -31,12 +28,20 @@ const MATERIAL_COLUMNS = {
   materialType: true,
   unitOfMeasurement: true,
   subCategoryId: true,
+  unitPrice: true,
+  quantity: true,
+  minimumStock: true,
 } as const;
 
 const USER_COLUMNS = { id: true, name: true } as const;
 
 type RequisitionRow = typeof materialPurchaseRequisitions.$inferSelect;
 type ApprovalSlot = 'planning' | 'purchasingManager' | 'manager';
+type LastPurchaseSnapshot = {
+  lastPurchasePrice: number;
+  lastPurchaseDate: Date;
+  lastPurchaseVendor: string;
+};
 
 @Injectable()
 export class MaterialPurchaseRequisitionsService {
@@ -49,9 +54,7 @@ export class MaterialPurchaseRequisitionsService {
     const { items, ...header } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertMaterialsAndSelectedUnits(items);
-    const productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(
-      header.productionSubDepartment,
-    );
+    const productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(header.productionSubDepartment);
 
     return await this.db.transaction(async (tx) => {
       const [requisition] = await tx
@@ -88,9 +91,7 @@ export class MaterialPurchaseRequisitionsService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: {
-        createdBy: { columns: USER_COLUMNS },
-      },
+      withRelations: { createdBy: { columns: USER_COLUMNS } },
     });
   }
 
@@ -103,17 +104,34 @@ export class MaterialPurchaseRequisitionsService {
         planningDecidedBy: { columns: USER_COLUMNS },
         purchasingManagerDecidedBy: { columns: USER_COLUMNS },
         managerDecidedBy: { columns: USER_COLUMNS },
-        items: {
-          with: {
-            material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra },
-          },
-        },
+        items: { with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } } },
       },
     });
 
     if (!requisition) this.throwNotFound(id);
 
-    return requisition;
+    const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(
+      requisition.items.map((item) => item.materialCode),
+    );
+
+    return {
+      ...requisition,
+      items: requisition.items.map((item) => {
+        const lastPurchase = lastPurchaseByMaterialCode.get(item.materialCode);
+        const { unitPrice, quantity, minimumStock, ...material } = item.material;
+
+        return {
+          ...item,
+          material,
+          unitPrice: Number(unitPrice),
+          quantity: Number(quantity),
+          minimumStock: minimumStock != null ? Number(minimumStock) : null,
+          lastPurchasePrice: lastPurchase?.lastPurchasePrice ?? null,
+          lastPurchaseDate: lastPurchase?.lastPurchaseDate ?? null,
+          lastPurchaseVendor: lastPurchase?.lastPurchaseVendor ?? null,
+        };
+      }),
+    };
   }
 
   public async updateHeader(id: string, updateDto: UpdateMaterialPurchaseRequisitionDto) {
@@ -128,9 +146,7 @@ export class MaterialPurchaseRequisitionsService {
       updateDto.productionSubDepartment !== undefined &&
       updateDto.productionSubDepartment !== requisition.productionSubDepartment
     ) {
-      values.productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(
-        updateDto.productionSubDepartment,
-      );
+      values.productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(updateDto.productionSubDepartment);
     }
 
     const [updated] = await this.db
@@ -172,9 +188,7 @@ export class MaterialPurchaseRequisitionsService {
     const nextUnit = updateDto.unitOfMeasurementSelected ?? existing.unitOfMeasurementSelected;
 
     if (updateDto.materialCode !== undefined || updateDto.unitOfMeasurementSelected !== undefined) {
-      await this.assertMaterialsAndSelectedUnits([
-        { materialCode: nextMaterialCode, unitOfMeasurementSelected: nextUnit },
-      ]);
+      await this.assertMaterialsAndSelectedUnits([{ materialCode: nextMaterialCode, unitOfMeasurementSelected: nextUnit }]);
     }
 
     if (updateDto.materialCode !== undefined && updateDto.materialCode !== existing.materialCode) {
@@ -202,10 +216,7 @@ export class MaterialPurchaseRequisitionsService {
 
     if (items.length <= 1) {
       throw new BadRequestException(
-        translate(
-          'A purchase requisition must keep at least one item.',
-          'يجب أن يحتفظ طلب الشراء ببند واحد على الأقل.',
-        ),
+        translate('A purchase requisition must keep at least one item.', 'يجب أن يحتفظ طلب الشراء ببند واحد على الأقل.'),
       );
     }
 
@@ -254,28 +265,18 @@ export class MaterialPurchaseRequisitionsService {
 
     if (this.isRejected(requisition)) {
       throw new BadRequestException(
-        translate(
-          'Cannot record a decision on a rejected purchase requisition.',
-          'لا يمكن تسجيل قرار على طلب شراء مرفوض.',
-        ),
+        translate('Cannot record a decision on a rejected purchase requisition.', 'لا يمكن تسجيل قرار على طلب شراء مرفوض.'),
       );
     }
 
     if (this.gateDecision(requisition, slot) !== APPROVAL_DECISIONS.PENDING) {
-      throw new BadRequestException(
-        translate(
-          'This decision has already been recorded.',
-          'تم تسجيل هذا القرار مسبقاً.',
-        ),
-      );
+      throw new BadRequestException(translate('This decision has already been recorded.', 'تم تسجيل هذا القرار مسبقاً.'));
     }
 
     const trimmedReason = reason?.trim() || null;
 
     if (decision === APPROVAL_DECISIONS.REJECTED && !trimmedReason) {
-      throw new BadRequestException(
-        translate('Rejection reason is required.', 'سبب الرفض مطلوب.'),
-      );
+      throw new BadRequestException(translate('Rejection reason is required.', 'سبب الرفض مطلوب.'));
     }
 
     const now = new Date();
@@ -392,9 +393,7 @@ export class MaterialPurchaseRequisitionsService {
     return assignment?.managerId ?? null;
   }
 
-  private async assertMaterialsAndSelectedUnits(
-    items: { materialCode: string; unitOfMeasurementSelected: MaterialUnit }[],
-  ) {
+  private async assertMaterialsAndSelectedUnits(items: { materialCode: string; unitOfMeasurementSelected: MaterialUnit }[]) {
     const uniqueCodes = [...new Set(items.map((item) => item.materialCode))];
     const found = await this.db.query.materials.findMany({
       where: and(inArray(materials.code, uniqueCodes), isNull(materials.deletedAt)),
@@ -406,10 +405,7 @@ export class MaterialPurchaseRequisitionsService {
 
     if (missing.length > 0) {
       throw new NotFoundException(
-        translate(
-          `Material(s) not found: ${missing.join(', ')}.`,
-          `المواد غير موجودة: ${missing.join(', ')}.`,
-        ),
+        translate(`Material(s) not found: ${missing.join(', ')}.`, `المواد غير موجودة: ${missing.join(', ')}.`),
       );
     }
 
@@ -458,12 +454,40 @@ export class MaterialPurchaseRequisitionsService {
     }
   }
 
+  private async getLastPurchaseByMaterialCode(materialCodes: string[]) {
+    const uniqueCodes = [...new Set(materialCodes)];
+    if (uniqueCodes.length === 0) return new Map<string, LastPurchaseSnapshot>();
+
+    const rows = await this.db
+      .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
+        materialCode: materialPurchaseOrderItems.materialCode,
+        unitPrice: materialPurchaseOrderItems.unitPrice,
+        purchaseDate: materialPurchaseOrders.createdAt,
+        vendorName: suppliers.name,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
+      .where(
+        and(inArray(materialPurchaseOrderItems.materialCode, uniqueCodes), isNull(materialPurchaseOrders.cancelledAt)),
+      )
+      .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt));
+
+    return new Map(
+      rows.map((row) => [
+        row.materialCode,
+        {
+          lastPurchasePrice: Number(row.unitPrice),
+          lastPurchaseDate: row.purchaseDate,
+          lastPurchaseVendor: row.vendorName,
+        },
+      ]),
+    );
+  }
+
   private throwNotFound(id: string): never {
     throw new NotFoundException(
-      translate(
-        `Material purchase requisition with ID ${id} does not exist.`,
-        `لا يوجد طلب شراء مواد بالمعرف ${id}.`,
-      ),
+      translate(`Material purchase requisition with ID ${id} does not exist.`, `لا يوجد طلب شراء مواد بالمعرف ${id}.`),
     );
   }
 }
