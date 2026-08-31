@@ -90,7 +90,6 @@ export class MaterialPurchaseRequisitionsService {
       pagination: true,
       withRelations: {
         createdBy: { columns: USER_COLUMNS },
-        productionSubDepartmentManager: { columns: USER_COLUMNS },
       },
     });
   }
@@ -107,7 +106,6 @@ export class MaterialPurchaseRequisitionsService {
         items: {
           with: {
             material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra },
-            orderItemAllocations: { columns: { quantityAllocated: true } },
           },
         },
       },
@@ -115,21 +113,7 @@ export class MaterialPurchaseRequisitionsService {
 
     if (!requisition) this.throwNotFound(id);
 
-    return {
-      ...requisition,
-      items: requisition.items.map((item) => {
-        const quantityAllocated = item.orderItemAllocations.reduce(
-          (sum, allocation) => sum + Number(allocation.quantityAllocated),
-          0,
-        );
-        const { orderItemAllocations: _, ...rest } = item;
-        return {
-          ...rest,
-          quantityAllocated,
-          quantityRemaining: Number(item.quantityRequested) - quantityAllocated,
-        };
-      }),
-    };
+    return requisition;
   }
 
   public async updateHeader(id: string, updateDto: UpdateMaterialPurchaseRequisitionDto) {
