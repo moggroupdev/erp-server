@@ -12,17 +12,13 @@ import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { type ProductionSubDepartment, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
-import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
 
 @Injectable()
 export class BomsService {
-  constructor(
-    @Inject(DRIZZLE) private db: DrizzleDB,
-    private materialUnitConversionService: MaterialUnitConversionService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
   public async create(dimensionId: string, createBomDto: CreateBomDto, user: User) {
     const { items } = createBomDto;
@@ -65,22 +61,11 @@ export class BomsService {
       seen.add(code);
     }
 
-    const values = await Promise.all(
-      items.map(async (item) => {
-        const { quantityRequired, unitOfMeasurementSelected, ...rest } = item;
-        return {
-          ...rest,
-          createdBy: user.id,
-          productDimensionId: dimensionId,
-          unitOfMeasurementSelected,
-          quantityRequired: await this.materialUnitConversionService.convertToBaseUnit(
-            item.materialCode,
-            quantityRequired,
-            unitOfMeasurementSelected,
-          ),
-        };
-      }),
-    );
+    const values = items.map((item) => ({
+      ...item,
+      createdBy: user.id,
+      productDimensionId: dimensionId,
+    }));
 
     return await this.db.transaction(async (tx) => {
       return await tx.insert(productStandardBoms).values(values).returning();
@@ -219,19 +204,10 @@ export class BomsService {
         ),
       );
 
-    const { quantityRequired, unitOfMeasurementSelected, ...rest } = createBomItemDto;
-    const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-      createBomItemDto.materialCode,
-      quantityRequired,
-      unitOfMeasurementSelected,
-    );
-
     const [item] = await this.db
       .insert(productStandardBoms)
       .values({
-        ...rest,
-        quantityRequired: quantityInBaseUnit,
-        unitOfMeasurementSelected,
+        ...createBomItemDto,
         productDimensionId: dimensionId,
         createdBy: user.id,
       })
@@ -241,35 +217,9 @@ export class BomsService {
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
-    const { quantityRequired, unitOfMeasurementSelected, ...rest } = updateBomItemDto;
-
-    let quantityInBaseUnit = quantityRequired;
-
-    if (quantityRequired !== undefined) {
-      const existing = await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.id, itemId),
-        columns: { materialCode: true },
-      });
-
-      if (!existing)
-        throw new NotFoundException(
-          translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-        );
-
-      quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-        existing.materialCode,
-        quantityRequired,
-        unitOfMeasurementSelected,
-      );
-    }
-
     const [updatedItem] = await this.db
       .update(productStandardBoms)
-      .set({
-        ...rest,
-        unitOfMeasurementSelected,
-        ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}),
-      })
+      .set(updateBomItemDto)
       .where(eq(productStandardBoms.id, itemId))
       .returning();
 

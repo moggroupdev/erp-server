@@ -149,7 +149,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Catalog pricing
 
-- Suggested price = `SUM(bom.quantity_required × materials.unit_price) × products.pricing_factor` for selected dimension
+- Suggested price = `SUM(convert_to_base(bom.quantity_required, bom.unit_of_measurement_selected) × materials.unit_price) × products.pricing_factor` for selected dimension
 
 ### Materials
 

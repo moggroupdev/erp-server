@@ -93,7 +93,7 @@ export const productStandardBoms = pgTable(
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
-    quantityRequired: numeric('quantity_required').notNull(),
+    quantityRequired: numeric('quantity_required').notNull(), // @APP_CHECKED - Stored in unit_of_measurement_selected (or base unit when null)
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
     notes: text('notes'),

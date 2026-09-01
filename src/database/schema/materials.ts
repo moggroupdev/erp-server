@@ -80,7 +80,7 @@ export const manufacturedMaterialBoms = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     manufacturedMaterialCode: text('manufactured_material_code').notNull(), // @APP_CHECKED - materials.code with material_type = 'manufactured_material'
     materialCode: text('material_code').notNull(), // Component material
-    quantityRequired: numeric('quantity_required').notNull(),
+    quantityRequired: numeric('quantity_required').notNull(), // @APP_CHECKED - Stored in unit_of_measurement_selected (or base unit when null)
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     notes: text('notes'),
     createdAt,
