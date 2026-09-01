@@ -10,6 +10,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
+import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
 
 @Injectable()
 export class MaterialsService {
@@ -63,6 +64,21 @@ export class MaterialsService {
     const [updatedMaterial] = await this.db
       .update(materials)
       .set(updateMaterialDto)
+      .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
+      .returning();
+    if (!updatedMaterial)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+    return updatedMaterial;
+  }
+
+  public async setMarketPrice(code: string, dto: SetMaterialMarketPriceDto, user: User) {
+    const [updatedMaterial] = await this.db
+      .update(materials)
+      .set({
+        marketUnitPrice: dto.marketUnitPrice,
+        marketUnitPriceSetAt: new Date(),
+        marketUnitPriceSetBy: user.id,
+      })
       .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
       .returning();
     if (!updatedMaterial)

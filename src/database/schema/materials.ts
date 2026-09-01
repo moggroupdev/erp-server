@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, foreignKey, unique, check } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, foreignKey, unique, check, timestamp } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   deletedAt,
@@ -34,6 +34,9 @@ export const materials = pgTable(
     openingUnitPrice: numeric('opening_unit_price').default(0), // Unit price at the start of the project
     openingQuantity: numeric('opening_quantity').default(0), // Quantity on hand at the start of the project
     minimumStock: numeric('minimum_stock'),
+    marketUnitPrice: numeric('market_unit_price'), // Manually entered market price (سعر السوق)
+    marketUnitPriceSetAt: timestamp('market_unit_price_set_at', { withTimezone: true }),
+    marketUnitPriceSetBy: uuid('market_unit_price_set_by').references(() => users.id),
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
@@ -48,6 +51,11 @@ export const materials = pgTable(
     nonNegativeNullableQuantityCheck('materials_opening_unit_price_non_negative', table.openingUnitPrice),
     nonNegativeNullableQuantityCheck('materials_opening_quantity_non_negative', table.openingQuantity),
     nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
+    nonNegativeNullableQuantityCheck('materials_market_unit_price_non_negative', table.marketUnitPrice),
+    check(
+      'materials_market_unit_price_pair',
+      sql`(${table.marketUnitPrice} IS NULL) = (${table.marketUnitPriceSetAt} IS NULL) AND (${table.marketUnitPriceSetAt} IS NULL) = (${table.marketUnitPriceSetBy} IS NULL)`,
+    ),
   ],
 );
 
@@ -116,6 +124,11 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [materials.createdBy],
     references: [users.id],
+  }),
+  marketUnitPriceSetBy: one(users, {
+    fields: [materials.marketUnitPriceSetBy],
+    references: [users.id],
+    relationName: 'materialMarketUnitPriceSetBy',
   }),
   subCategory: one(materialCategorySubs, {
     fields: [materials.subCategoryId],

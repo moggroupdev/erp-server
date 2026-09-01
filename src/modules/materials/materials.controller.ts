@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Param, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -10,6 +10,7 @@ import { MaterialsService } from './materials.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
+import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
 
 @Controller('materials')
 export class MaterialsController {
@@ -46,6 +47,14 @@ export class MaterialsController {
   @ApiBearerAuth()
   update(@Param('code') code: string, @Body() updateMaterialDto: UpdateMaterialDto) {
     return this.materialsService.update(code, updateMaterialDto);
+  }
+
+  @Patch(':code/market-price')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.SET_MATERIAL_MARKET_PRICE)
+  @ApiBearerAuth()
+  setMarketPrice(@Param('code') code: string, @Body() dto: SetMaterialMarketPriceDto, @RequestUser() user: User) {
+    return this.materialsService.setMarketPrice(code, dto, user);
   }
 
   @Post(':code/units')
