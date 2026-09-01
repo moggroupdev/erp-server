@@ -37,6 +37,7 @@ export class MmBomsService {
             manufacturedMaterialCode: true,
             materialCode: true,
             quantityRequired: true,
+            unitOfMeasurementSelected: true,
             notes: true,
           },
           with: {
@@ -133,24 +134,30 @@ export class MmBomsService {
       );
     }
 
-    const { unit, quantityRequired, ...rest } = createBomItemDto;
+    const { unitOfMeasurementSelected, quantityRequired, ...rest } = createBomItemDto;
 
     const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
       createBomItemDto.materialCode,
       quantityRequired,
-      unit,
+      unitOfMeasurementSelected,
     );
 
     const [item] = await this.db
       .insert(manufacturedMaterialBoms)
-      .values({ ...rest, quantityRequired: quantityInBaseUnit, manufacturedMaterialCode, createdBy: user.id })
+      .values({
+        ...rest,
+        quantityRequired: quantityInBaseUnit,
+        unitOfMeasurementSelected,
+        manufacturedMaterialCode,
+        createdBy: user.id,
+      })
       .returning();
 
     return item;
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateMmBomItemDto) {
-    const { unit, quantityRequired, ...rest } = updateBomItemDto;
+    const { unitOfMeasurementSelected, quantityRequired, ...rest } = updateBomItemDto;
 
     let quantityInBaseUnit = quantityRequired;
 
@@ -169,13 +176,17 @@ export class MmBomsService {
       quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
         existing.materialCode,
         quantityRequired,
-        unit,
+        unitOfMeasurementSelected,
       );
     }
 
     const [updatedItem] = await this.db
       .update(manufacturedMaterialBoms)
-      .set({ ...rest, ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}) })
+      .set({
+        ...rest,
+        unitOfMeasurementSelected,
+        ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}),
+      })
       .where(eq(manufacturedMaterialBoms.id, itemId))
       .returning();
 

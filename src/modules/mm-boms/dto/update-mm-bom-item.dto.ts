@@ -1,6 +1,6 @@
 import { TrimToNull } from 'src/utils/decorators';
-import { IsIn, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit } from 'src/utils/types';
 
@@ -12,9 +12,9 @@ export class UpdateMmBomItemDto {
   quantityRequired?: number;
 
   @IsIn(MATERIAL_UNIT_VALUES)
-  @IsOptional()
-  @ApiPropertyOptional({ enum: MATERIAL_UNIT_VALUES, description: 'Defaults to the material base unit when omitted' })
-  unit?: MaterialUnit;
+  @IsNotEmpty()
+  @ApiProperty({ enum: MATERIAL_UNIT_VALUES })
+  unitOfMeasurementSelected: MaterialUnit;
 
   @TrimToNull()
   @IsString()

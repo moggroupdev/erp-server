@@ -347,6 +347,7 @@ export class BomsService {
                   id: true,
                   materialCode: true,
                   quantityRequired: true,
+                  unitOfMeasurementSelected: true,
                   notes: true,
                 },
                 with: {
