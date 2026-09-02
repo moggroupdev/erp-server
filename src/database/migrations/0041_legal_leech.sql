@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'use_unit_conversion_tool' BEFORE 'add_manufactured_material_bom';
