@@ -288,6 +288,13 @@
       "when": 1788247223261,
       "tag": "0040_wide_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788342485397,
+      "tag": "0041_legal_leech",
+      "breakpoints": true
     }
   ]
 }
