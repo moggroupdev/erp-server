@@ -52,7 +52,10 @@ export class MaterialsService {
   public async get(code: string) {
     const material = await this.db.query.materials.findFirst({
       where: eq(materials.code, code),
-      with: { createdBy: { columns: { id: true, name: true } } },
+      with: {
+        createdBy: { columns: { id: true, name: true } },
+        marketUnitPriceSetBy: { columns: { id: true, name: true } },
+      },
       extras: materialUnitConversionsExtra,
     });
     if (!material)
