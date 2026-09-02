@@ -1,0 +1,1 @@
+ALTER TABLE "manufactured_material_boms" ADD COLUMN "unit_of_measurement_selected" "material_unit";

@@ -12,13 +12,13 @@ type MismatchReport = {
 const REPORTS: MismatchReport[] = [
   {
     label: 'transaction unit mismatches',
-    csvPath: path.join(__dirname, '../data/transactions/_unit-mismatches/unit-mismatches.csv'),
-    dirPath: path.join(__dirname, '../data/transactions/_unit-mismatches'),
+    csvPath: path.join(__dirname, '../../data/transactions/_unit-mismatches/unit-mismatches.csv'),
+    dirPath: path.join(__dirname, '../../data/transactions/_unit-mismatches'),
   },
   {
     label: 'material unit mismatches',
-    csvPath: path.join(__dirname, '../data/materials/_unit-mismatches/unit-mismatches.csv'),
-    dirPath: path.join(__dirname, '../data/materials/_unit-mismatches'),
+    csvPath: path.join(__dirname, '../../data/materials/_unit-mismatches/unit-mismatches.csv'),
+    dirPath: path.join(__dirname, '../../data/materials/_unit-mismatches'),
   },
 ];
 

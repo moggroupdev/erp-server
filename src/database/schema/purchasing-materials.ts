@@ -4,8 +4,13 @@ import {
   createdAt,
   numeric,
   nonNegativeQuantityCheck,
+  nonNegativeNullableQuantityCheck,
   positiveQuantityCheck,
   positiveNullableQuantityCheck,
+  productionSubDepartmentEnum,
+  materialUnitEnum,
+  approvalGateColumns,
+  approvalGateConstraints,
 } from './common';
 import { users } from './users';
 import { suppliers } from './suppliers';
@@ -13,12 +18,78 @@ import { materials } from './materials';
 import { contractItems } from './contracts';
 import { inventoryTransactions } from './inventory-transactions';
 
+export const materialPurchaseRequisitions = pgTable(
+  'material_purchase_requisitions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    code: text('code').unique().notNull(), // Format: MPQ-00000001
+    productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
+    productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
+    notes: text('notes'),
+    ...approvalGateColumns('planning'),
+    ...approvalGateColumns('purchasingManager'),
+    ...approvalGateColumns('manager'),
+    createdAt,
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+  },
+  (table) => [
+    foreignKey({
+      name: 'mprq_psd_manager_id_fk',
+      columns: [table.productionSubDepartmentManagerId],
+      foreignColumns: [users.id],
+    }),
+    ...approvalGateConstraints(table, 'planning', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'purchasingManager', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'manager', 'mprq', users.id),
+    index('mprq_production_sub_department_idx').on(table.productionSubDepartment),
+    index('mprq_psd_manager_id_idx').on(table.productionSubDepartmentManagerId),
+    index('mprq_created_at_idx').on(table.createdAt),
+    index('mprq_created_by_idx').on(table.createdBy),
+  ],
+);
+
+export const materialPurchaseRequisitionItems = pgTable(
+  'material_purchase_requisition_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseRequisitionId: uuid('material_purchase_requisition_id').notNull(),
+    materialCode: text('material_code').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
+    quantityRequested: numeric('quantity_requested').notNull(),
+    notes: text('notes'),
+  },
+  (table) => [
+    foreignKey({
+      name: 'mprqi_mprq_id_fk',
+      columns: [table.materialPurchaseRequisitionId],
+      foreignColumns: [materialPurchaseRequisitions.id],
+    }),
+    foreignKey({
+      name: 'mprqi_material_code_fk',
+      columns: [table.materialCode],
+      foreignColumns: [materials.code],
+    }),
+    index('mprqi_mprq_id_idx').on(table.materialPurchaseRequisitionId),
+    index('mprqi_material_code_idx').on(table.materialCode),
+    unique('mprqi_mprq_material_unique').on(table.materialPurchaseRequisitionId, table.materialCode),
+    positiveQuantityCheck('mprqi_quantity_requested_positive', table.quantityRequested),
+  ],
+);
+
 export const materialPurchaseOrders = pgTable(
   'material_purchase_orders',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPO-00000001
-    legacyInvoiceNumber: text('legacy_invoice_number'), // Legacy invoice number from historical seeded receipts
+    invoiceNumber: text('invoice_number'),
+    invoiceIssuedAt: timestamp('invoice_issued_at', { withTimezone: true }),
+    invoiceTotalPurchases: numeric('invoice_total_purchases'),
+    invoiceTotalDiscount: numeric('invoice_total_discount'),
+    invoiceVatAmount: numeric('invoice_vat_amount'),
+    invoiceWithholdingTaxAmount: numeric('invoice_withholding_tax_amount'),
+    invoiceTotalAmount: numeric('invoice_total_amount'),
     supplierId: uuid('supplier_id')
       .notNull()
       .references(() => suppliers.id),
@@ -39,6 +110,11 @@ export const materialPurchaseOrders = pgTable(
     index('mpo_created_by_idx').on(table.createdBy),
     check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
+    nonNegativeNullableQuantityCheck('mpo_invoice_total_purchases_non_negative', table.invoiceTotalPurchases),
+    nonNegativeNullableQuantityCheck('mpo_invoice_total_discount_non_negative', table.invoiceTotalDiscount),
+    nonNegativeNullableQuantityCheck('mpo_invoice_vat_amount_non_negative', table.invoiceVatAmount),
+    nonNegativeNullableQuantityCheck('mpo_invoice_withholding_tax_amount_non_negative', table.invoiceWithholdingTaxAmount),
+    nonNegativeNullableQuantityCheck('mpo_invoice_total_amount_non_negative', table.invoiceTotalAmount),
   ],
 );
 
@@ -91,6 +167,33 @@ export const materialPurchaseOrderItemContractItems = pgTable(
     index('mpoici_contract_item_id_idx').on(table.contractItemId),
     unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
     positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
+  ],
+);
+
+// Links MPO lines to requisition lines; qty required (unlike optional contract allocations).
+export const materialPurchaseOrderItemRequisitionItems = pgTable(
+  'material_purchase_order_item_requisition_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    materialPurchaseRequisitionItemId: uuid('material_purchase_requisition_item_id').notNull(), // @APP_CHECKED - parent requisition must be fully approved; qty caps enforced in app
+    quantityAllocated: numeric('quantity_allocated').notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'mpoirqi_mpoi_id_fk',
+      columns: [table.materialPurchaseOrderItemId],
+      foreignColumns: [materialPurchaseOrderItems.id],
+    }),
+    foreignKey({
+      name: 'mpoirqi_mprqi_id_fk',
+      columns: [table.materialPurchaseRequisitionItemId],
+      foreignColumns: [materialPurchaseRequisitionItems.id],
+    }),
+    index('mpoirqi_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    index('mpoirqi_mprqi_id_idx').on(table.materialPurchaseRequisitionItemId),
+    unique('mpoirqi_mpoi_mprqi_unique').on(table.materialPurchaseOrderItemId, table.materialPurchaseRequisitionItemId),
+    positiveQuantityCheck('mpoirqi_quantity_allocated_positive', table.quantityAllocated),
   ],
 );
 
@@ -153,6 +256,47 @@ export const materialPurchaseReceiptItems = pgTable(
 
 // ============================== RELATIONS ==============================
 
+export const materialPurchaseRequisitionsRelations = relations(materialPurchaseRequisitions, ({ one, many }) => ({
+  productionSubDepartmentManager: one(users, {
+    fields: [materialPurchaseRequisitions.productionSubDepartmentManagerId],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionProductionSubDepartmentManager',
+  }),
+  createdBy: one(users, {
+    fields: [materialPurchaseRequisitions.createdBy],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionCreatedBy',
+  }),
+  planningDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.planningDecidedBy],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionPlanningDecidedBy',
+  }),
+  purchasingManagerDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.purchasingManagerDecidedBy],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionPurchasingManagerDecidedBy',
+  }),
+  managerDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.managerDecidedBy],
+    references: [users.id],
+    relationName: 'materialPurchaseRequisitionManagerDecidedBy',
+  }),
+  items: many(materialPurchaseRequisitionItems),
+}));
+
+export const materialPurchaseRequisitionItemsRelations = relations(materialPurchaseRequisitionItems, ({ one, many }) => ({
+  materialPurchaseRequisition: one(materialPurchaseRequisitions, {
+    fields: [materialPurchaseRequisitionItems.materialPurchaseRequisitionId],
+    references: [materialPurchaseRequisitions.id],
+  }),
+  material: one(materials, {
+    fields: [materialPurchaseRequisitionItems.materialCode],
+    references: [materials.code],
+  }),
+  orderItemAllocations: many(materialPurchaseOrderItemRequisitionItems),
+}));
+
 export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders, ({ one, many }) => ({
   supplier: one(suppliers, {
     fields: [materialPurchaseOrders.supplierId],
@@ -177,6 +321,7 @@ export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrd
     references: [materials.code],
   }),
   contractItemAllocations: many(materialPurchaseOrderItemContractItems),
+  requisitionItemAllocations: many(materialPurchaseOrderItemRequisitionItems),
   receiptItems: many(materialPurchaseReceiptItems),
 }));
 
@@ -190,6 +335,20 @@ export const materialPurchaseOrderItemContractItemsRelations = relations(
     contractItem: one(contractItems, {
       fields: [materialPurchaseOrderItemContractItems.contractItemId],
       references: [contractItems.id],
+    }),
+  }),
+);
+
+export const materialPurchaseOrderItemRequisitionItemsRelations = relations(
+  materialPurchaseOrderItemRequisitionItems,
+  ({ one }) => ({
+    materialPurchaseOrderItem: one(materialPurchaseOrderItems, {
+      fields: [materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId],
+      references: [materialPurchaseOrderItems.id],
+    }),
+    materialPurchaseRequisitionItem: one(materialPurchaseRequisitionItems, {
+      fields: [materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId],
+      references: [materialPurchaseRequisitionItems.id],
     }),
   }),
 );

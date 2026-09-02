@@ -1,0 +1,9 @@
+ALTER TABLE "material_purchase_requisitions" RENAME COLUMN "planning_reason" TO "planning_decision_reason";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" RENAME COLUMN "purchasing_manager_reason" TO "purchasing_manager_decision_reason";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" RENAME COLUMN "manager_reason" TO "manager_decision_reason";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" DROP CONSTRAINT "mprq_planning_reason_required";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" DROP CONSTRAINT "mprq_purchasing_manager_reason_required";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" DROP CONSTRAINT "mprq_manager_reason_required";--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" ADD CONSTRAINT "mprq_planning_decision_reason_required" CHECK (("material_purchase_requisitions"."planning_decision" = 'rejected') = ("material_purchase_requisitions"."planning_decision_reason" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" ADD CONSTRAINT "mprq_purchasing_manager_decision_reason_required" CHECK (("material_purchase_requisitions"."purchasing_manager_decision" = 'rejected') = ("material_purchase_requisitions"."purchasing_manager_decision_reason" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" ADD CONSTRAINT "mprq_manager_decision_reason_required" CHECK (("material_purchase_requisitions"."manager_decision" = 'rejected') = ("material_purchase_requisitions"."manager_decision_reason" IS NOT NULL));

@@ -14,7 +14,7 @@ Duplication Inventory → `[db-duplications.md](./db-duplications.md)`.
 
 ## Global policies
 
-- **No hard deletion** — use `deleted_at`, `cancelled_at`, or status; history stays queryable.
+- **No hard deletion** — use `deleted_at`, `blacklisted_at`, `cancelled_at`, or status; history stays queryable.
 - **Codes immutable** — auto-generated `code` columns (triggers) omitted from create/update DTOs.
 - **Snapshots immutable** — `@HISTORICAL_SNAPSHOT` columns set on insert only; omit from update DTOs.
 
@@ -85,6 +85,22 @@ All sources live on the header — one source event per transaction; items only 
 - Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered`
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
+- Material purchase requisitions (`material_purchase_requisitions`):
+  - Three parallel header gates (planning, purchasing manager, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
+  - Overall status is derived: `rejected` if any gate is `rejected`; `approved` if all three are `approved`; else `pending`
+  - First rejection is terminal — remaining pending gates stay pending forever; no further decisions or edits
+  - Lock header/item edits once **any** gate leaves `pending`
+  - Create/add/update item: material must exist and not be soft-deleted; unique material per requisition
+  - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_requested` is in this unit
+  - `production_sub_department_manager_id` (`@HISTORICAL_SNAPSHOT`): copy from `production_sub_department_managers.manager_id` on create; re-copy only when `production_sub_department` changes while editable; omit from update DTOs
+  - Keep at least one item on the requisition (delete blocked when only one remains)
+  - Gate decide is not idempotent — second decision on the same party returns 400
+  - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
+- `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
+  - Parent requisition must be fully approved (all three `decision = 'approved'`)
+  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (same unit as the requisition line's `unit_of_measurement_selected`)
+  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered`
+  - MPO lines may have zero allocations (MPO created without a requisition)
 
 ### Outsourcing
 
@@ -133,7 +149,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Catalog pricing
 
-- Suggested price = `SUM(bom.quantity_required × materials.unit_price) × products.pricing_factor` for selected dimension
+- Suggested price = `SUM(convert_to_base(bom.quantity_required, bom.unit_of_measurement_selected) × materials.unit_price) × products.pricing_factor` for selected dimension
 
 ### Materials
 
@@ -141,7 +157,7 @@ All sources live on the header — one source event per transaction; items only 
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
 - `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`
-- Quantity-entry endpoints (BOM items today; purchasing/inventory/maintenance/outsourcing when built) may accept an optional `unit`; the service converts via `conversion_factor_to_base` (or leaves the quantity unchanged when `unit` is omitted / equals the base unit) and persists only the base-unit quantity — the entered unit is not stored
+- Quantity-entry line items (BOMs, requisitions, legacy issue permits) store `quantity` in `unit_of_measurement_selected` as entered by the user; conversion to base unit happens only at calculation/display time (costing, aggregation, inventory sync)
 
 ### Supplier addresses
 
@@ -168,9 +184,10 @@ All sources live on the header — one source event per transaction; items only 
 | `product_units`                                                                              | no `cancelled_at`                | `warranty_started_at`     | `cancelled_at` |
 | `previews`, `deliveries`, `installations`, `trips`, `maintenance_orders`                     | scheduled, not done/cancelled    | `completed_at` (trips: —) | `cancelled_at` |
 | `material_purchase_orders`, `product_purchase_orders`, `outsourcing_orders`                  | open                             | `completed_at`            | `cancelled_at` |
+| `material_purchase_requisitions`                                                             | pending (see below)              | approved (see below)      | any gate `rejected` |
 | Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
-Mutually exclusive `completed_at` and `cancelled_at` where both exist.
+Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, derive status as: `rejected` (any gate `decision = 'rejected'`) → `approved` (all three gates `approved`) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` in the line's `unit_of_measurement_selected` (not cached).
 
 ---
 

@@ -9,7 +9,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 | Layer | File                          | Role                                                                                                                                      |
 | ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                         |
-| DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts`, `properties.ts` (shared columns), `types.ts`, `constraints.ts`. Imports enum values from constants. |
+| DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts`, `properties.ts` (shared columns), `types.ts`, `constraints.ts`, `approval-gates.ts`. Imports enum values from constants. |
 
 **New enum:** constants → `common/enums.ts` → schema. Migration is done manually by a developer (see Migrations).
 
@@ -23,7 +23,8 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - **Foreign keys:** default to inline `.references()`. When Drizzle's auto-generated constraint name would exceed PostgreSQL's 63-character identifier limit (`{table}_{column}_{refTable}_{refColumn}_fk`), declare the column as a bare type and add `foreignKey({ name: '<short_abbrev>_fk', ... })` in the table callback — use the same abbrev prefix as indexes on that table (e.g. `mpoi_mpo_id_fk`, `inv_tx_items_tx_id_fk`).
 - **Uniqueness:** use `.unique()` on a column **or** `uniqueIndex()` — never both with the same name (breaks migrations).
 - Use `uniqueIndex()` only for partial uniqueness (e.g. one default address).
-- Status often comes from timestamps (`cancelledAt`, `completedAt`) — avoid redundant status enums.
+- Status often comes from timestamps (`cancelledAt`, `completedAt`) — avoid redundant **entity-level** status enums.
+- **Multi-party approval:** use `approvalGateColumns(prefix)` + `approvalGateConstraints(table, prefix, tableAbbrev, users.id)` from `schema/common/approval-gates.ts`. Each gate is `decision` (`approval_decision`: pending/approved/rejected) + `decidedAt` + `decidedBy` + `decisionReason` (required iff rejected). Overall entity status is still derived (rejected if any gate rejected; approved if all approved; else pending). Do not add a header status column.
 
 ### DRY vs. performance
 

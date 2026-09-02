@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, SQL } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -9,34 +9,45 @@ import {
   productStandardBoms,
 } from 'src/database/schema';
 import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
-import { type User } from 'src/utils/types';
+import { type ProductionSubDepartment, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
-import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
 
 @Injectable()
 export class BomsService {
-  constructor(
-    @Inject(DRIZZLE) private db: DrizzleDB,
-    private materialUnitConversionService: MaterialUnitConversionService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
   public async create(dimensionId: string, createBomDto: CreateBomDto, user: User) {
     const { items } = createBomDto;
 
     await this.assertIsManufacturedProduct(dimensionId);
 
+    const productionSubDepartments = new Set(items.map((item) => item.productionSubDepartment));
+    if (productionSubDepartments.size > 1) {
+      throw new ConflictException(
+        translate(
+          'All BOM items in a single create request must belong to the same production department.',
+          'يجب أن تنتمي جميع بنود قائمة المواد في طلب الإنشاء الواحد إلى نفس قسم الانتاج.',
+        ),
+      );
+    }
+
+    const productionSubDepartment = items[0].productionSubDepartment;
+
     if (
       await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.productDimensionId, dimensionId),
+        where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
         columns: { id: true },
       })
     ) {
       throw new ConflictException(
-        translate(`A BOM already exists for dimension ${dimensionId}.`, `توجد بالفعل قائمة مواد للمقاس ${dimensionId}.`),
+        translate(
+          `A BOM already exists for dimension ${dimensionId} in this production department.`,
+          `توجد بالفعل قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
+        ),
       );
     }
 
@@ -50,21 +61,11 @@ export class BomsService {
       seen.add(code);
     }
 
-    const values = await Promise.all(
-      items.map(async (item) => {
-        const { unit, quantityRequired, ...rest } = item;
-        return {
-          ...rest,
-          createdBy: user.id,
-          productDimensionId: dimensionId,
-          quantityRequired: await this.materialUnitConversionService.convertToBaseUnit(
-            item.materialCode,
-            quantityRequired,
-            unit,
-          ),
-        };
-      }),
-    );
+    const values = items.map((item) => ({
+      ...item,
+      createdBy: user.id,
+      productDimensionId: dimensionId,
+    }));
 
     return await this.db.transaction(async (tx) => {
       return await tx.insert(productStandardBoms).values(values).returning();
@@ -100,6 +101,8 @@ export class BomsService {
             productDimensionId: true,
             materialCode: true,
             quantityRequired: true,
+            unitOfMeasurementSelected: true,
+            productionSubDepartment: true,
             notes: true,
           },
           with: {
@@ -168,16 +171,18 @@ export class BomsService {
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {
     await this.assertIsManufacturedProduct(dimensionId);
 
+    const productionSubDepartment = createBomItemDto.productionSubDepartment;
+
     if (
       !(await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.productDimensionId, dimensionId),
+        where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
         columns: { id: true },
       }))
     ) {
       throw new NotFoundException(
         translate(
-          `No BOM exists for dimension ${dimensionId}. Create the BOM first.`,
-          `لا توجد قائمة مواد للمقاس ${dimensionId}. أنشئ قائمة المواد أولاً.`,
+          `No BOM exists for dimension ${dimensionId} in this production department. Create the BOM first.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا. أنشئ قائمة المواد أولاً.`,
         ),
       );
     }
@@ -186,7 +191,7 @@ export class BomsService {
     if (
       await this.db.query.productStandardBoms.findFirst({
         where: and(
-          eq(productStandardBoms.productDimensionId, dimensionId),
+          this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
           eq(productStandardBoms.materialCode, createBomItemDto.materialCode),
         ),
         columns: { id: true },
@@ -194,52 +199,27 @@ export class BomsService {
     )
       throw new ConflictException(
         translate(
-          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension.`,
-          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس.`,
+          `Material ${createBomItemDto.materialCode} is already in the BOM for this dimension and production department.`,
+          `المادة ${createBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس وقسم الانتاج.`,
         ),
       );
 
-    const { unit, quantityRequired, ...rest } = createBomItemDto;
-    const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-      createBomItemDto.materialCode,
-      quantityRequired,
-      unit,
-    );
-
     const [item] = await this.db
       .insert(productStandardBoms)
-      .values({ ...rest, quantityRequired: quantityInBaseUnit, productDimensionId: dimensionId, createdBy: user.id })
+      .values({
+        ...createBomItemDto,
+        productDimensionId: dimensionId,
+        createdBy: user.id,
+      })
       .returning();
 
     return item;
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
-    const { unit, quantityRequired, ...rest } = updateBomItemDto;
-
-    let quantityInBaseUnit = quantityRequired; // Initially
-
-    if (quantityRequired !== undefined) {
-      const existing = await this.db.query.productStandardBoms.findFirst({
-        where: eq(productStandardBoms.id, itemId),
-        columns: { materialCode: true },
-      });
-
-      if (!existing)
-        throw new NotFoundException(
-          translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-        );
-
-      quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-        existing.materialCode,
-        quantityRequired,
-        unit,
-      );
-    }
-
     const [updatedItem] = await this.db
       .update(productStandardBoms)
-      .set({ ...rest, ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}) })
+      .set(updateBomItemDto)
       .where(eq(productStandardBoms.id, itemId))
       .returning();
 
@@ -251,7 +231,28 @@ export class BomsService {
     return updatedItem;
   }
 
+  public async deleteItem(itemId: string) {
+    const [deletedItem] = await this.db
+      .delete(productStandardBoms)
+      .where(eq(productStandardBoms.id, itemId))
+      .returning();
+
+    if (!deletedItem)
+      throw new NotFoundException(
+        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+      );
+
+    return deletedItem;
+  }
+
   // ============================== PRIVATE METHODS ==============================
+
+  private dimensionDepartmentWhere(dimensionId: string, productionSubDepartment: ProductionSubDepartment): SQL {
+    return and(
+      eq(productStandardBoms.productDimensionId, dimensionId),
+      eq(productStandardBoms.productionSubDepartment, productionSubDepartment),
+    )!;
+  }
 
   private async assertIsManufacturedProduct(productDimensionId: string) {
     const dimension = await this.db.query.productDimensions.findFirst({
@@ -296,6 +297,7 @@ export class BomsService {
                   id: true,
                   materialCode: true,
                   quantityRequired: true,
+                  unitOfMeasurementSelected: true,
                   notes: true,
                 },
                 with: {

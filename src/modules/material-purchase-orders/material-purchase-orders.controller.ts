@@ -17,7 +17,7 @@ export class MaterialPurchaseOrdersController {
   @ApiBearerAuth()
   @ApiListQueries()
   list(@Query() query: QueryParams) {
-    return this.materialPurchaseOrdersService.listOrders(query);
+    return this.materialPurchaseOrdersService.list(query);
   }
 
   @Get(':id')
@@ -25,6 +25,6 @@ export class MaterialPurchaseOrdersController {
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.materialPurchaseOrdersService.getOrder(id);
+    return this.materialPurchaseOrdersService.get(id);
   }
 }

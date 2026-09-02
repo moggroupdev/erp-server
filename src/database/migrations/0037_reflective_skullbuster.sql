@@ -1,0 +1,4 @@
+ALTER TABLE "product_standard_boms" DROP CONSTRAINT "product_standard_boms_dimension_material_unique";--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD COLUMN "production_sub_department" "production_sub_department";--> statement-breakpoint
+CREATE INDEX "product_standard_boms_production_sub_department_idx" ON "product_standard_boms" USING btree ("production_sub_department");--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD CONSTRAINT "product_standard_boms_dimension_material_department_unique" UNIQUE NULLS NOT DISTINCT("product_dimension_id","material_code","production_sub_department");

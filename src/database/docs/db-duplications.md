@@ -6,7 +6,7 @@ Columns that duplicate data reachable elsewhere. Default is DRY — add only whe
 | ---------------------- | -------------------------------------------------------------------------------------------------- |
 | `@RFP_APP_CHECKED`     | Redundant for performance — copy on insert for list/filter without hot joins; validated in service |
 | `@CACHING_APP_SYNCED`  | Live cache — app recomputes from child rows or events                                              |
-| `@HISTORICAL_SNAPSHOT` | Point-in-time price/cost — frozen on insert; catalog may change later                              |
+| `@HISTORICAL_SNAPSHOT` | Point-in-time value — frozen on insert (price/cost/assignment); master data may change later       |
 
 Schema format: `// @MARKER - brief rule`.
 
@@ -56,14 +56,15 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 ## @HISTORICAL_SNAPSHOT
 
-| Column                                    | Set on insert from                                             |
-| ----------------------------------------- | -------------------------------------------------------------- |
-| `offer_items.unit_price`                  | Quoted price (e.g. catalog BOM × `pricing_factor`)             |
-| `contract_items.unit_price`               | Pre-discount quoted price; changes via cancel-and-replace only |
-| `inventory_transaction_items.unit_price`  | User-provided actual price at transaction time                 |
-| `maintenance_order_materials.unit_price`  | Selling price at time of use                                   |
+| Column                                                         | Set on insert from                                                                                          |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `offer_items.unit_price`                                       | Quoted price (e.g. catalog BOM × `pricing_factor`)                                                          |
+| `contract_items.unit_price`                                    | Pre-discount quoted price; changes via cancel-and-replace only                                              |
+| `inventory_transaction_items.unit_price`                       | User-provided actual price at transaction time                                                              |
+| `maintenance_order_materials.unit_price`                       | Selling price at time of use                                                                                |
+| `material_purchase_requisitions.production_sub_department_manager_id` | `production_sub_department_managers.manager_id` for the requisition's `production_sub_department` |
 
-**Rules:** set once on INSERT; omit from update DTOs. Not the same as live catalog (`materials.unit_price`).
+**Rules:** set once on INSERT; omit from update DTOs. Re-copy only when the driving FK changes (e.g. production department on an editable requisition). Not the same as live master data (`materials.unit_price`, current `production_sub_department_managers`).
 
 ---
 

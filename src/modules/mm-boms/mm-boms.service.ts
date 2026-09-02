@@ -6,16 +6,12 @@ import { MATERIAL_TYPES } from 'src/utils/constants';
 import { type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
-import { MaterialUnitConversionService } from 'src/utils/services/material-unit-conversion.service';
 import { CreateMmBomItemDto } from './dto/create-mm-bom-item.dto';
 import { UpdateMmBomItemDto } from './dto/update-mm-bom-item.dto';
 
 @Injectable()
 export class MmBomsService {
-  constructor(
-    @Inject(DRIZZLE) private db: DrizzleDB,
-    private materialUnitConversionService: MaterialUnitConversionService,
-  ) {}
+  constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
 
   public async get(manufacturedMaterialCode: string) {
     const material = await this.db.query.materials.findFirst({
@@ -37,6 +33,7 @@ export class MmBomsService {
             manufacturedMaterialCode: true,
             materialCode: true,
             quantityRequired: true,
+            unitOfMeasurementSelected: true,
             notes: true,
           },
           with: {
@@ -133,49 +130,22 @@ export class MmBomsService {
       );
     }
 
-    const { unit, quantityRequired, ...rest } = createBomItemDto;
-
-    const quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-      createBomItemDto.materialCode,
-      quantityRequired,
-      unit,
-    );
-
     const [item] = await this.db
       .insert(manufacturedMaterialBoms)
-      .values({ ...rest, quantityRequired: quantityInBaseUnit, manufacturedMaterialCode, createdBy: user.id })
+      .values({
+        ...createBomItemDto,
+        manufacturedMaterialCode,
+        createdBy: user.id,
+      })
       .returning();
 
     return item;
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateMmBomItemDto) {
-    const { unit, quantityRequired, ...rest } = updateBomItemDto;
-
-    let quantityInBaseUnit = quantityRequired;
-
-    if (quantityRequired !== undefined) {
-      const existing = await this.db.query.manufacturedMaterialBoms.findFirst({
-        where: eq(manufacturedMaterialBoms.id, itemId),
-        columns: { materialCode: true },
-      });
-
-      if (!existing) {
-        throw new NotFoundException(
-          translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-        );
-      }
-
-      quantityInBaseUnit = await this.materialUnitConversionService.convertToBaseUnit(
-        existing.materialCode,
-        quantityRequired,
-        unit,
-      );
-    }
-
     const [updatedItem] = await this.db
       .update(manufacturedMaterialBoms)
-      .set({ ...rest, ...(quantityInBaseUnit !== undefined ? { quantityRequired: quantityInBaseUnit } : {}) })
+      .set(updateBomItemDto)
       .where(eq(manufacturedMaterialBoms.id, itemId))
       .returning();
 

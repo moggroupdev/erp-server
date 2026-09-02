@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as xlsx from 'xlsx';
-import { PRODUCT_SOURCE_TYPES } from '../src/utils/constants';
+import { PRODUCT_SOURCE_TYPES } from '../../src/utils/constants';
 
 type CategoryJson = {
   legacy_code: string;
@@ -39,7 +39,7 @@ type ParsedItem = {
   height: number | null;
 };
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '../..');
 const CODES_PATH = path.join(ROOT, 'data/products/codes.xlsx');
 const CATEGORIES_PATH = path.join(ROOT, 'data/categories/products.json');
 const OUT_DIR = path.join(ROOT, 'data/products/results');

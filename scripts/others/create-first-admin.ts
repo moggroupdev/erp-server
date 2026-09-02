@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 
 dotenv.config();

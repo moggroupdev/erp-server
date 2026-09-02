@@ -178,15 +178,15 @@ export class UsersService {
       if (!productionSubDepartment)
         throw new BadRequestException(
           translate(
-            'Production sub-department is required when the department is Production.',
-            'القسم الفرعي للإنتاج مطلوب عندما يكون القسم هو الإنتاج.',
+            'Production department is required when the department is Production.',
+            'قسم الانتاج مطلوب عندما يكون القسم هو الإنتاج.',
           ),
         );
     } else if (productionSubDepartment !== null) {
       throw new BadRequestException(
         translate(
-          'Production sub-department is only allowed when the department is Production.',
-          'القسم الفرعي للإنتاج مسموح به فقط عندما يكون القسم هو الإنتاج.',
+          'Production department is only allowed when the department is Production.',
+          'قسم الانتاج مسموح به فقط عندما يكون القسم هو الإنتاج.',
         ),
       );
     }

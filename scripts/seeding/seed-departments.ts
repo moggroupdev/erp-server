@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -16,7 +16,9 @@ type DepartmentCsvRow = {
   parent_id: string;
 };
 
-async function seedDepartments(db: ReturnType<typeof drizzle<typeof schema>>, rows: DepartmentCsvRow[]) {
+type SeedClient = Pick<ReturnType<typeof drizzle<typeof schema>>, 'insert'>;
+
+async function seedDepartments(db: SeedClient, rows: DepartmentCsvRow[]) {
   const roots = rows.filter((row) => !row.parent_id?.trim());
   const children = rows.filter((row) => row.parent_id?.trim());
 
@@ -55,14 +57,20 @@ async function main() {
   try {
     console.log('Seeding Departments...');
 
-    const departmentsCsvPath = path.join(__dirname, '../data/departments.csv');
+    const departmentsCsvPath = path.join(__dirname, '../../data/departments.csv');
     const departmentsData = fs.readFileSync(departmentsCsvPath, 'utf-8');
     const rows = parse<DepartmentCsvRow>(departmentsData, { columns: true, skip_empty_lines: true });
 
-    const count = await seedDepartments(db, rows);
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+    const count = await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
+      return seedDepartments(tx, rows);
+    });
     console.log(`Seeded ${count} departments.`);
   } catch (e) {
     console.error(e);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();

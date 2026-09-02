@@ -150,8 +150,8 @@ export class ProductsService {
       if (seenSubDepartments.has(route.productionSubDepartment)) {
         throw new ConflictException(
           translate(
-            `Duplicate production sub-department \`${route.productionSubDepartment}\` in routes.`,
-            `القسم الفرعي للإنتاج \`${route.productionSubDepartment}\` مكرر في المسارات.`,
+            `Duplicate production department \`${route.productionSubDepartment}\` in routes.`,
+            `قسم الانتاج \`${route.productionSubDepartment}\` مكرر في المسارات.`,
           ),
         );
       }

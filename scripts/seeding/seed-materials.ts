@@ -1,13 +1,13 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
 import { parseArgs } from 'node:util';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import * as schema from '../src/database/schema';
-import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../src/utils/constants';
-import { ensureNoUnitMismatchesBeforeSeeding } from './unit-mismatch-guard';
+import * as schema from '../../src/database/schema';
+import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../../src/utils/constants';
+import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -88,7 +88,7 @@ type UnresolvableUnitRow = {
   materialType: MaterialType;
 };
 
-const DATA_ROOT = path.join(__dirname, '../data/materials');
+const DATA_ROOT = path.join(__dirname, '../../data/materials');
 const MATERIAL_SOURCES: MaterialSource[] = [
   {
     label: 'raw-materials',
@@ -527,26 +527,32 @@ async function main() {
     console.log(`Skipped duplicate legacy codes: ${duplicateLegacyCodes.length}`);
     console.log(`Skipped rows with unresolvable units: ${unresolvableUnitRows.length}`);
 
-    if (toInsert.length > 0) {
-      for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
-        const batch = toInsert.slice(i, i + BATCH_SIZE);
-        await db.insert(schema.materials).values(batch).onConflictDoNothing({ target: schema.materials.legacyCode });
-        process.stdout.write(`\rInserted ${Math.min(i + BATCH_SIZE, toInsert.length)} / ${toInsert.length}`);
-      }
-      console.log();
-    }
+    console.log('Writing all inserts and updates in one database transaction. A failure rolls back the entire run.');
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-    for (const update of existingUpdates) {
-      await db
-        .update(schema.materials)
-        .set({
-          quantity: update.quantity,
-          unitPrice: update.unitPrice,
-          openingQuantity: update.quantity,
-          openingUnitPrice: update.unitPrice,
-        })
-        .where(eq(schema.materials.code, update.code));
-    }
+      if (toInsert.length > 0) {
+        for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+          const batch = toInsert.slice(i, i + BATCH_SIZE);
+          await tx.insert(schema.materials).values(batch).onConflictDoNothing({ target: schema.materials.legacyCode });
+          process.stdout.write(`\rInserted ${Math.min(i + BATCH_SIZE, toInsert.length)} / ${toInsert.length}`);
+        }
+        console.log();
+      }
+
+      for (const update of existingUpdates) {
+        await tx
+          .update(schema.materials)
+          .set({
+            quantity: update.quantity,
+            unitPrice: update.unitPrice,
+            openingQuantity: update.quantity,
+            openingUnitPrice: update.unitPrice,
+          })
+          .where(eq(schema.materials.code, update.code));
+      }
+    });
 
     console.log('\n========== MATERIALS SEED STATS ==========');
     console.log(`CSV rows loaded:              ${totalCsvRows}`);
@@ -618,6 +624,7 @@ async function main() {
     console.error(err.message);
     if (err.cause?.message) console.error(`Cause: ${err.cause.message}`);
     if (err.cause?.detail) console.error(`Detail: ${err.cause.detail}`);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();

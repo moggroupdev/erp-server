@@ -11,13 +11,18 @@ import {
   PERMISSION_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
   SERVICE_CONTRACT_INTERVAL_VALUES,
+  SUPPLIER_CLASSIFICATION_VALUES,
+  CUSTOMER_CLASSIFICATION_VALUES,
   SUPPLIER_QUOTATION_EMAIL_STATUS_VALUES,
   INVENTORY_TRANSACTION_TYPE_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
+  APPROVAL_DECISION_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
+
+export const approvalDecisionEnum = pgEnum('approval_decision', APPROVAL_DECISION_VALUES);
 
 export const loginStatusEnum = pgEnum('login_status', LOGIN_STATUS_VALUES);
 
@@ -32,6 +37,10 @@ export const inquiryStatusEnum = pgEnum('inquiry_status', INQUIRY_STATUS_VALUES)
 export const offerStatusEnum = pgEnum('offer_status', OFFER_STATUS_VALUES);
 
 export const negotiationPartyEnum = pgEnum('negotiation_party', NEGOTIATION_PARTY_VALUES);
+
+export const supplierClassificationEnum = pgEnum('supplier_classification', SUPPLIER_CLASSIFICATION_VALUES);
+
+export const customerClassificationEnum = pgEnum('customer_classification', CUSTOMER_CLASSIFICATION_VALUES);
 
 export const supplierQuotationEmailStatusEnum = pgEnum(
   'supplier_quotation_email_status',

@@ -1,0 +1,3 @@
+ALTER TABLE "material_purchase_requisitions" ADD COLUMN "production_sub_department_manager_id" uuid;--> statement-breakpoint
+ALTER TABLE "material_purchase_requisitions" ADD CONSTRAINT "mprq_psd_manager_id_fk" FOREIGN KEY ("production_sub_department_manager_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "mprq_psd_manager_id_idx" ON "material_purchase_requisitions" USING btree ("production_sub_department_manager_id");

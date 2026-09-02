@@ -31,15 +31,18 @@ export class CustomersService {
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      additionalConditions: [isNull(customers.deletedAt)],
+      additionalConditions: [isNull(customers.blacklistedAt)],
     });
   }
 
-  // We allow the `get` method to return a deleted customer too
+  // We allow the `get` method to return a blacklisted customer too
   public async get(id: string) {
     const customer = await this.db.query.customers.findFirst({
       where: eq(customers.id, id),
-      with: { createdBy: { columns: { id: true, name: true } } },
+      with: {
+        createdBy: { columns: { id: true, name: true } },
+        addedToBlacklistBy: { columns: { id: true, name: true } },
+      },
     });
     if (!customer)
       throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
@@ -50,7 +53,7 @@ export class CustomersService {
     const [updatedCustomer] = await this.db
       .update(customers)
       .set(updateCustomerDto)
-      .where(and(eq(customers.id, id), isNull(customers.deletedAt)))
+      .where(and(eq(customers.id, id), isNull(customers.blacklistedAt)))
       .returning();
     if (!updatedCustomer)
       throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));

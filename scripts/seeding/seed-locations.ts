@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import { parse } from 'csv-parse/sync';
-import * as schema from '../src/database/schema';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,7 +26,7 @@ async function main() {
   try {
     console.log('Seeding Countries...');
 
-    const countriesCsvPath = path.join(__dirname, '../data/locations/countries.csv');
+    const countriesCsvPath = path.join(__dirname, '../../data/locations/countries.csv');
     const countriesData = fs.readFileSync(countriesCsvPath, 'utf-8');
     const countriesRows = parse<CountryCsvRow>(countriesData, { columns: true, skip_empty_lines: true });
 
@@ -37,25 +37,7 @@ async function main() {
       nameAr: country.name_ar,
     }));
 
-    if (countriesToInsert.length > 0) {
-      await db
-        .insert(schema.countries)
-        .values(countriesToInsert)
-        .onConflictDoUpdate({
-          target: schema.countries.id,
-          set: {
-            code: sql`excluded.code`,
-            nameEn: sql`excluded.name_en`,
-            nameAr: sql`excluded.name_ar`,
-          },
-        });
-    }
-
-    console.log(`Seeded ${countriesToInsert.length} countries.`);
-
-    console.log('Seeding Governorates...');
-
-    const governoratesCsvPath = path.join(__dirname, '../data/locations/governorates.csv');
+    const governoratesCsvPath = path.join(__dirname, '../../data/locations/governorates.csv');
     const governoratesData = fs.readFileSync(governoratesCsvPath, 'utf-8');
     const governoratesLines = governoratesData.trim().split('\n');
 
@@ -69,20 +51,7 @@ async function main() {
       if (id && nameEn && nameAr) governoratesToInsert.push({ id, nameEn, nameAr });
     }
 
-    if (governoratesToInsert.length > 0) {
-      await db
-        .insert(schema.governorates)
-        .values(governoratesToInsert)
-        .onConflictDoUpdate({
-          target: schema.governorates.id,
-          set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar` },
-        });
-    }
-
-    console.log(`Seeded ${governoratesToInsert.length} governorates.`);
-
-    console.log('Seeding Cities...');
-    const citiesCsvPath = path.join(__dirname, '../data/locations/cities.csv');
+    const citiesCsvPath = path.join(__dirname, '../../data/locations/cities.csv');
     const citiesData = fs.readFileSync(citiesCsvPath, 'utf-8');
     const citiesLines = citiesData.trim().split('\n');
 
@@ -98,26 +67,63 @@ async function main() {
       if (id && governorateId && nameEn && nameAr) citiesToInsert.push({ id, governorateId, nameEn, nameAr });
     }
 
-    // Batch insert cities
-    const batchSize = 100;
-    for (let i = 0; i < citiesToInsert.length; i += batchSize) {
-      const batch = citiesToInsert.slice(i, i + batchSize);
-      await db
-        .insert(schema.cities)
-        .values(batch)
-        .onConflictDoUpdate({
-          target: schema.cities.id,
-          set: {
-            nameEn: sql`excluded.name_en`,
-            nameAr: sql`excluded.name_ar`,
-            governorateId: sql`excluded.governorate_id`,
-          },
-        });
-    }
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
-    console.log(`Seeded ${citiesToInsert.length} cities.`);
+      if (countriesToInsert.length > 0) {
+        await tx
+          .insert(schema.countries)
+          .values(countriesToInsert)
+          .onConflictDoUpdate({
+            target: schema.countries.id,
+            set: {
+              code: sql`excluded.code`,
+              nameEn: sql`excluded.name_en`,
+              nameAr: sql`excluded.name_ar`,
+            },
+          });
+      }
+
+      console.log(`Seeded ${countriesToInsert.length} countries.`);
+
+      console.log('Seeding Governorates...');
+      if (governoratesToInsert.length > 0) {
+        await tx
+          .insert(schema.governorates)
+          .values(governoratesToInsert)
+          .onConflictDoUpdate({
+            target: schema.governorates.id,
+            set: { nameEn: sql`excluded.name_en`, nameAr: sql`excluded.name_ar` },
+          });
+      }
+
+      console.log(`Seeded ${governoratesToInsert.length} governorates.`);
+
+      console.log('Seeding Cities...');
+      const batchSize = 100;
+      for (let i = 0; i < citiesToInsert.length; i += batchSize) {
+        const batch = citiesToInsert.slice(i, i + batchSize);
+        await tx
+          .insert(schema.cities)
+          .values(batch)
+          .onConflictDoUpdate({
+            target: schema.cities.id,
+            set: {
+              nameEn: sql`excluded.name_en`,
+              nameAr: sql`excluded.name_ar`,
+              governorateId: sql`excluded.governorate_id`,
+            },
+          });
+      }
+
+      console.log(`Seeded ${citiesToInsert.length} cities.`);
+    });
   } catch (e) {
     console.error(e);
+    console.error('Seed failed; all database changes from this run were rolled back.');
+    process.exitCode = 1;
   } finally {
     await pool.end();
   }

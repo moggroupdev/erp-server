@@ -17,9 +17,9 @@ export class CreateMmBomItemDto {
   quantityRequired: number;
 
   @IsIn(MATERIAL_UNIT_VALUES)
-  @IsOptional()
-  @ApiPropertyOptional({ enum: MATERIAL_UNIT_VALUES, description: 'Defaults to the material base unit when omitted' })
-  unit?: MaterialUnit;
+  @IsNotEmpty()
+  @ApiProperty({ enum: MATERIAL_UNIT_VALUES })
+  unitOfMeasurementSelected: MaterialUnit;
 
   @TrimToNull()
   @IsString()

@@ -27,19 +27,22 @@ export class SuppliersService {
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(suppliers, queryParams, {
       filtering: true,
-      searchableFields: ['name', 'code', 'email', 'phone'],
+      searchableFields: ['name', 'code', 'email', 'phone', 'taxNumber'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      additionalConditions: [isNull(suppliers.deletedAt)],
+      additionalConditions: [isNull(suppliers.blacklistedAt)],
     });
   }
 
-  // We allow the `get` method to return a deleted supplier too
+  // We allow the `get` method to return a blacklisted supplier too
   public async get(id: string) {
     const supplier = await this.db.query.suppliers.findFirst({
       where: eq(suppliers.id, id),
-      with: { createdBy: { columns: { id: true, name: true } } },
+      with: {
+        createdBy: { columns: { id: true, name: true } },
+        addedToBlacklistBy: { columns: { id: true, name: true } },
+      },
     });
     if (!supplier)
       throw new NotFoundException(translate(`Supplier with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
@@ -50,7 +53,7 @@ export class SuppliersService {
     const [updatedSupplier] = await this.db
       .update(suppliers)
       .set(updateSupplierDto)
-      .where(and(eq(suppliers.id, id), isNull(suppliers.deletedAt)))
+      .where(and(eq(suppliers.id, id), isNull(suppliers.blacklistedAt)))
       .returning();
     if (!updatedSupplier)
       throw new NotFoundException(translate(`Supplier with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));

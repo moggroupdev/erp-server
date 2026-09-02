@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
-import * as schema from '../src/database/schema';
+import { eq, sql } from 'drizzle-orm';
+import * as schema from '../../src/database/schema';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,8 +14,10 @@ type CategoryJson = {
   subcategories: { legacy_code: string; title: string }[];
 };
 
+type SeedClient = Pick<ReturnType<typeof drizzle<typeof schema>>, 'insert' | 'select'>;
+
 async function seedCategoryTree(
-  db: ReturnType<typeof drizzle<typeof schema>>,
+  db: SeedClient,
   mainsTable: typeof schema.materialCategoryMains | typeof schema.productCategoryMains,
   subsTable: typeof schema.materialCategorySubs | typeof schema.productCategorySubs,
   data: CategoryJson[],
@@ -91,16 +93,22 @@ async function main() {
   const db = drizzle(pool, { schema });
 
   try {
-    const materialsPath = path.join(__dirname, '../data/categories/materials.json');
-    const productsPath = path.join(__dirname, '../data/categories/products.json');
+    const materialsPath = path.join(__dirname, '../../data/categories/materials.json');
+    const productsPath = path.join(__dirname, '../../data/categories/products.json');
 
     const materialsData = JSON.parse(fs.readFileSync(materialsPath, 'utf-8')) as CategoryJson[];
     const productsData = JSON.parse(fs.readFileSync(productsPath, 'utf-8')) as CategoryJson[];
 
-    await seedCategoryTree(db, schema.materialCategoryMains, schema.materialCategorySubs, materialsData, 'material');
-    await seedCategoryTree(db, schema.productCategoryMains, schema.productCategorySubs, productsData, 'product');
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
+      await seedCategoryTree(tx, schema.materialCategoryMains, schema.materialCategorySubs, materialsData, 'material');
+      await seedCategoryTree(tx, schema.productCategoryMains, schema.productCategorySubs, productsData, 'product');
+    });
   } catch (e) {
     console.error(e);
+    console.error('Seed failed; all database changes from this run were rolled back.');
     process.exitCode = 1;
   } finally {
     await pool.end();

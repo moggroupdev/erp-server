@@ -28,17 +28,20 @@ export const PERMISSION_VALUES = [
   'add_supplier',
   'read_suppliers',
   'update_supplier',
+  'print_suppliers_list',
   'add_customer',
   'read_customers',
   'update_customer',
   'add_material',
   'read_materials',
   'update_material',
+  'set_material_market_price',
   'print_materials_list',
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
   'read_material_reports',
+  'read_material_purchasing_reports',
   'add_product',
   'read_products',
   'update_product',
@@ -48,6 +51,12 @@ export const PERMISSION_VALUES = [
   'update_product_bom',
   'read_inventory_transactions',
   'read_material_purchase_orders',
+  'add_material_purchase_requisition',
+  'read_material_purchase_requisitions',
+  'update_material_purchase_requisition',
+  'approve_material_purchase_requisition_planning',
+  'approve_material_purchase_requisition_purchasing_manager',
+  'approve_material_purchase_requisition_manager',
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',
   'update_legacy_issue_permit',
@@ -57,6 +66,16 @@ export const PERMISSIONS = Object.fromEntries(
   PERMISSION_VALUES.map((permission) => [permission.toUpperCase(), permission]),
 ) as {
   [K in Uppercase<(typeof PERMISSION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== APPROVAL_DECISIONS ====================
+
+export const APPROVAL_DECISION_VALUES = ['pending', 'approved', 'rejected'] as const;
+
+export const APPROVAL_DECISIONS = Object.fromEntries(
+  APPROVAL_DECISION_VALUES.map((decision) => [decision.toUpperCase(), decision]),
+) as {
+  [K in Uppercase<(typeof APPROVAL_DECISION_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== LOGIN_STATUSES ====================
@@ -141,6 +160,57 @@ export const NEGOTIATION_PARTIES = Object.fromEntries(
   NEGOTIATION_PARTY_VALUES.map((party) => [party.toUpperCase(), party]),
 ) as {
   [K in Uppercase<(typeof NEGOTIATION_PARTY_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== SUPPLIER_CLASSIFICATIONS ====================
+
+export const SUPPLIER_CLASSIFICATION_VALUES = [
+  'aluminum',
+  'stainless_steel',
+  'sheet_steel',
+  'copper',
+  'plastic',
+  'glass',
+  'insulation',
+  'electrical',
+  'refrigeration',
+  'gas',
+  'hardware',
+  'coatings',
+  'spare_parts',
+  'imported_equipment',
+  'services',
+  'general',
+] as const;
+
+export const SUPPLIER_CLASSIFICATIONS = Object.fromEntries(
+  SUPPLIER_CLASSIFICATION_VALUES.map((classification) => [classification.toUpperCase(), classification]),
+) as {
+  [K in Uppercase<(typeof SUPPLIER_CLASSIFICATION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== CUSTOMER_CLASSIFICATIONS ====================
+
+export const CUSTOMER_CLASSIFICATION_VALUES = [
+  'restaurant',
+  'hotel',
+  'tourist_village',
+  'hospital',
+  'residential',
+  'cafe',
+  'bakery',
+  'factory',
+  'shopping_mall',
+  'sports_club',
+  'banquet_hall',
+  'supermarket',
+  'corporate',
+] as const;
+
+export const CUSTOMER_CLASSIFICATIONS = Object.fromEntries(
+  CUSTOMER_CLASSIFICATION_VALUES.map((classification) => [classification.toUpperCase(), classification]),
+) as {
+  [K in Uppercase<(typeof CUSTOMER_CLASSIFICATION_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== SUPPLIER_QUOTATION_EMAIL_STATUSES ====================
