@@ -29,6 +29,7 @@ export const PERMISSION_VALUES = [
   'read_suppliers',
   'update_supplier',
   'print_suppliers_list',
+  'print_supplier_quotation_request',
   'add_customer',
   'read_customers',
   'update_customer',
