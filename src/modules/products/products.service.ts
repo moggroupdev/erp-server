@@ -9,6 +9,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
+import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 
 @Injectable()
@@ -96,6 +97,29 @@ export class ProductsService {
       where: eq(productDimensions.productCode, productCode),
       orderBy: desc(productDimensions.isDefault),
     });
+  }
+
+  public async updateDimension(
+    productCode: string,
+    dimensionId: string,
+    updateProductDimensionDto: UpdateProductDimensionDto,
+  ) {
+    const [updatedDimension] = await this.db
+      .update(productDimensions)
+      .set(updateProductDimensionDto)
+      .where(and(eq(productDimensions.id, dimensionId), eq(productDimensions.productCode, productCode)))
+      .returning();
+
+    if (!updatedDimension) {
+      throw new NotFoundException(
+        translate(
+          `Dimension with ID ${dimensionId} does not exist for product ${productCode}.`,
+          `لا يوجد مقاس بالمعرف ${dimensionId} للمنتج ${productCode}.`,
+        ),
+      );
+    }
+
+    return updatedDimension;
   }
 
   public async setDefaultDimension(productCode: string, dimensionId: string) {

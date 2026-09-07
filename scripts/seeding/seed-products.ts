@@ -50,6 +50,7 @@ type CleanDimension = {
   diameter: number | null;
   height: number | null;
   isDefault: boolean;
+  notes?: string | null;
 };
 
 type ValidDimension = {
@@ -58,6 +59,7 @@ type ValidDimension = {
   diameter: number | null;
   height: number;
   isDefault: boolean;
+  notes?: string | null;
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -290,6 +292,7 @@ async function main() {
             diameter: dim.diameter,
             height: dim.height,
             isDefault: dim.isDefault,
+            notes: dim.notes ?? null,
             createdBy: user.id,
           });
         }

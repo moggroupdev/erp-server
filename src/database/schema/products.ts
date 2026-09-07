@@ -61,6 +61,7 @@ export const productDimensions = pgTable(
     diameter: numeric('diameter'),
     height: numeric('height').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
+    notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()

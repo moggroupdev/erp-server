@@ -295,6 +295,13 @@
       "when": 1788342485397,
       "tag": "0041_legal_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788757861519,
+      "tag": "0042_fixed_madrox",
+      "breakpoints": true
     }
   ]
 }

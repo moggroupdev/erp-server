@@ -152,10 +152,14 @@ export class ProductsRenderer {
           dim.diameter != null
             ? `<span style="font-size:1.2em;color:#9ca3af;line-height:1">⌀</span>${escapeHtml(String(dim.diameter))} × ${escapeHtml(String(dim.height))} سم`
             : `${escapeHtml(String(dim.length))} × ${escapeHtml(String(dim.depth))} × ${escapeHtml(String(dim.height))} سم`;
+        const notesCell = dim.notes
+          ? `<td class="dim-notes">${escapeHtml(dim.notes)}</td>`
+          : '<td class="dim-notes">—</td>';
 
         return `<tr class="${rowClass}">
           ${statusCell}
           <td class="dim-value">${label}</td>
+          ${notesCell}
         </tr>`;
       })
       .join('');
@@ -166,6 +170,7 @@ export class ProductsRenderer {
           <tr>
             <th class="col-status" aria-label="الحالة"></th>
             <th>المقاس (سم)</th>
+            <th>ملاحظات</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
