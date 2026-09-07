@@ -10,7 +10,12 @@ import * as path from 'path';
 import * as readline from 'node:readline/promises';
 import * as schema from '../../src/database/schema';
 import * as xlsx from 'xlsx';
-import { INVENTORY_TRANSACTION_TYPES, MATERIAL_TYPES, MATERIAL_UNITS, MATERIAL_UNIT_VALUES } from '../../src/utils/constants';
+import {
+  INVENTORY_TRANSACTION_TYPES,
+  MATERIAL_TYPES,
+  MATERIAL_UNITS,
+  MATERIAL_UNIT_VALUES,
+} from '../../src/utils/constants';
 import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 
 dotenv.config();
@@ -30,6 +35,9 @@ Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
   تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt / invoiceIssuedAt,
                    and material_purchase_receipts.receivedAt / createdAt
   تاريخ الإضافة → inventory_transactions.createdAt
+
+Suppliers created by this seed get createdAt on 31/12/2025 (UTC noon), with a
+10ms gap between each insert so SUP-00000001 sorts before SUP-00000002, etc.
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -51,6 +59,11 @@ const DATA_DIR = path.join(__dirname, '../../data/transactions');
 const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
+
+/** Base createdAt for newly seeded suppliers: 31/12/2025 at UTC noon. */
+const SUPPLIER_CREATED_AT_BASE_MS = Date.UTC(2025, 11, 31, 12, 0, 0, 0);
+/** Gap between supplier createdAt values so insert/code order matches createdAt order. */
+const SUPPLIER_CREATED_AT_STEP_MS = 10;
 
 /** Reserved category for materials created from workbook rows that have no legacy code. */
 const MISC_MAIN_LEGACY_CODE = '99';
@@ -459,6 +472,11 @@ function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** createdAt for the Nth supplier created in this run (0-based). */
+function supplierCreatedAt(index: number): Date {
+  return new Date(SUPPLIER_CREATED_AT_BASE_MS + index * SUPPLIER_CREATED_AT_STEP_MS);
+}
+
 function normalizeUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] {
   return resolveMaterialUnit(raw) ?? MATERIAL_UNITS.COUNT;
 }
@@ -712,6 +730,15 @@ async function main() {
       else orderGroups.set(groupKey, [row]);
     }
 
+    // First-appearance order so SUP-00000001 is the first new supplier seen in the workbook.
+    const uniqueSupplierNames: string[] = [];
+    const seenSupplierNames = new Set<string>();
+    for (const row of rows) {
+      if (seenSupplierNames.has(row.supplierName)) continue;
+      seenSupplierNames.add(row.supplierName);
+      uniqueSupplierNames.push(row.supplierName);
+    }
+
     console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
 
     await db.transaction(async (tx) => {
@@ -719,6 +746,23 @@ async function main() {
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
       const miscSubCategoryId = await ensureMiscSubcategory(tx, subcategoryByLegacyPair);
+
+      for (const supplierName of uniqueSupplierNames) {
+        if (supplierIdByName.has(supplierName)) continue;
+
+        const [createdSupplier] = await tx
+          .insert(schema.suppliers)
+          .values({
+            code: sql`DEFAULT`,
+            name: supplierName,
+            createdBy: user.id,
+            createdAt: supplierCreatedAt(summary.suppliersCreated),
+          })
+          .returning({ id: schema.suppliers.id });
+
+        supplierIdByName.set(supplierName, createdSupplier.id);
+        summary.suppliersCreated++;
+      }
 
       let processedGroups = 0;
       for (const [groupKey, groupRows] of orderGroups) {
@@ -728,9 +772,7 @@ async function main() {
         if (existingPermits.length === permitNumbers.length) {
           summary.skippedExistingPermitGroups++;
           skippedExistingPermitGroups.push({ groupKey, permitNumbers });
-          console.log(
-            `Skipping already-seeded order group ${groupKey}; existing permits: ${permitNumbers.join(', ')}`,
-          );
+          console.log(`Skipping already-seeded order group ${groupKey}; existing permits: ${permitNumbers.join(', ')}`);
           continue;
         }
 
@@ -741,21 +783,9 @@ async function main() {
         }
 
         const supplierName = groupRows[0].supplierName;
-        let supplierId = supplierIdByName.get(supplierName);
-
+        const supplierId = supplierIdByName.get(supplierName);
         if (!supplierId) {
-          const [createdSupplier] = await tx
-            .insert(schema.suppliers)
-            .values({
-              code: sql`DEFAULT`,
-              name: supplierName,
-              createdBy: user.id,
-            })
-            .returning({ id: schema.suppliers.id });
-
-          supplierId = createdSupplier.id;
-          supplierIdByName.set(supplierName, supplierId);
-          summary.suppliersCreated++;
+          throw new Error(`Supplier was not resolved before order insert: ${supplierName}`);
         }
 
         const usableRows: Array<
@@ -1108,7 +1138,9 @@ async function main() {
     if (skippedMaterials.length > 0) {
       console.log('\n--- Rows skipped because materials could not be resolved/created ---');
       for (const row of skippedMaterials.slice(0, 30)) {
-        console.log(`  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode || '(no code)'} | ${row.title} | ${row.reason}`);
+        console.log(
+          `  ${row.sourceFile} row ${row.sourceRowNumber}: ${row.legacyCode || '(no code)'} | ${row.title} | ${row.reason}`,
+        );
       }
       if (skippedMaterials.length > 30) {
         console.log(`  ... and ${skippedMaterials.length - 30} more`);
