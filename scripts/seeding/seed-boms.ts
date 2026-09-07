@@ -16,11 +16,13 @@ dotenv.config();
 const USAGE = `Usage: npm run seed:boms [-- --email <email> | --id <uuid>]
 
 Seeds product_standard_boms from data/boms/*.xls.
-Each file is named <productDimensionId>.xls.
+Each file must start with the productDimensionId UUID
+(e.g. "<uuid> - product name.xls"). Any trailing name is ignored.
 
 Requires:
-  - Existing product_dimensions (filenames must match dimension IDs)
+  - Existing product_dimensions (UUID prefix of filename must match dimension IDs)
   - Existing materials (matched by title; fuzzy fallback allowed)
+  - Writes an Arabic seeding report into product_dimensions.notes
 
 If --email / --id are omitted, you will be prompted for an email or user ID.
 The user must be an active admin.
@@ -56,6 +58,7 @@ type SkipReason = 'unit-unresolvable' | 'no-material-match' | 'already-exists' |
 
 type FuzzyMatchDetail = {
   file: string;
+  productDimensionId: string;
   xlsTitle: string;
   materialCode: string;
   materialTitle: string;
@@ -64,6 +67,7 @@ type FuzzyMatchDetail = {
 
 type SkipDetail = {
   file: string;
+  productDimensionId: string;
   xlsTitle: string;
   unitRaw: string;
   reason: SkipReason;
@@ -86,6 +90,7 @@ type FileStats = {
   unmappedSections: string[];
 };
 
+const UUID_PREFIX_RE = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BATCH_SIZE = 100;
 const FUZZY_MATCH_THRESHOLD = 0.5;
@@ -206,7 +211,10 @@ function resolveMaterialUnit(raw: string): MaterialUnit | null {
 
 /** Strip Arabic tatweel/kashida (ـ) and collapse whitespace so elongated headers still match. */
 function normalizeSectionText(headerText: string): string {
-  return headerText.replace(/\u0640+/g, '').replace(/\s+/g, ' ').trim();
+  return headerText
+    .replace(/\u0640+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function mapSectionToDepartment(headerText: string): ProductionSubDepartment | null {
@@ -248,7 +256,14 @@ function isSectionHeader(row: unknown[]): boolean {
     return false;
   }
   // Company / product header rows without "مخزن"
-  if (!text.includes('مخزن') && !text.includes('الواح') && !text.includes('سمكرة') && !text.includes('كهرباء') && !text.includes('تبريد') && !text.includes('حقن')) {
+  if (
+    !text.includes('مخزن') &&
+    !text.includes('الواح') &&
+    !text.includes('سمكرة') &&
+    !text.includes('كهرباء') &&
+    !text.includes('تبريد') &&
+    !text.includes('حقن')
+  ) {
     return false;
   }
   return text.includes('مخزن') || text.includes('الواح معدنية') || text.includes('الالواح المعدنية');
@@ -314,7 +329,9 @@ function findMaterialMatch(
   xlsTitle: string,
   resolvedUnit: MaterialUnit,
   materials: MaterialRef[],
-): { material: MaterialRef; exact: boolean; score: number } | { material: null; closestTitle?: string; closestScore?: number } {
+):
+  | { material: MaterialRef; exact: boolean; score: number }
+  | { material: null; closestTitle?: string; closestScore?: number } {
   const normalized = normalizeTitle(xlsTitle);
   const candidates = materials.filter((m) => materialSupportsUnit(m, resolvedUnit));
 
@@ -364,6 +381,95 @@ function emptyFileStats(file: string): FileStats {
     skippedInvalidQuantity: 0,
     unmappedSections: [],
   };
+}
+
+/** Files are named "<uuid>" or "<uuid> - product name.xls" — always take the leading UUID. */
+function extractDimensionIdFromFilename(file: string): string | null {
+  const basename = path.basename(file, path.extname(file)).trim();
+  const match = basename.match(UUID_PREFIX_RE);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+function formatSeedTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+const SKIP_REASON_AR: Record<SkipReason, string> = {
+  'unit-unresolvable': 'وحدة قياس غير معروفة / غير مدعومة',
+  'no-material-match': 'لا توجد خامة مطابقة',
+  'already-exists': 'موجود مسبقاً في قاعدة البيانات',
+  'invalid-quantity': 'كمية غير صالحة',
+};
+
+function buildDimensionSeedNotes({
+  seededAt,
+  stats,
+  skips,
+}: {
+  seededAt: Date;
+  stats: FileStats;
+  skips: SkipDetail[];
+}): string {
+  const lines: string[] = [];
+  const timestamp = formatSeedTimestamp(seededAt);
+
+  lines.push('تقرير استيراد قائمة المواد (BOM)');
+  lines.push(`وقت الاستيراد: ${timestamp}`);
+  lines.push(`الملف: ${stats.file}`);
+  lines.push('');
+  lines.push('──────── الملخص ────────');
+  lines.push('');
+  lines.push(`• إجمالي صفوف الورقة: ${stats.sheetRowsTotal}`);
+  lines.push(`• صفوف العناصر المكتشفة: ${stats.itemRowsDetected}`);
+  lines.push(`• تم الإدراج (تطابق تام للاسم): ${stats.insertedExact}`);
+  lines.push(`• تم الإدراج (تطابق تقريبي للاسم): ${stats.insertedFuzzy}`);
+  lines.push(`• إجمالي المدرج: ${stats.insertedExact + stats.insertedFuzzy}`);
+  lines.push(`• تم التخطي — لا توجد خامة مطابقة: ${stats.skippedNoMaterial}`);
+  lines.push(`• تم التخطي — وحدة قياس غير معروفة: ${stats.skippedUnitUnresolvable}`);
+  lines.push(`• تم التخطي — موجود مسبقاً: ${stats.skippedAlreadyExists}`);
+  if (stats.skippedInvalidQuantity > 0) {
+    lines.push(`• تم التخطي — كمية غير صالحة: ${stats.skippedInvalidQuantity}`);
+  }
+
+  if (stats.unmappedSections.length > 0) {
+    lines.push('');
+    lines.push('──────── أقسام مخازن لم تُربط بقسم إنتاج ────────');
+    lines.push('');
+    for (const section of stats.unmappedSections) {
+      lines.push(`• ${section}`);
+    }
+  }
+
+  // Only real problems — skip already-inserted / fuzzy-matched items (those live on BOM rows).
+  const problemSkips = skips.filter((s) => s.reason !== 'already-exists');
+
+  if (problemSkips.length > 0) {
+    lines.push('');
+    lines.push('──────── مشاكل / عناصر لم تُدرج ────────');
+    lines.push('');
+    problemSkips.forEach((s, i) => {
+      const reason = SKIP_REASON_AR[s.reason];
+      lines.push(`${i + 1}. السبب: ${reason}`);
+      lines.push(`   الاسم في الملف: ${s.xlsTitle}`);
+      if (s.reason === 'unit-unresolvable') {
+        lines.push(`   الوحدة في الملف: ${s.unitRaw || '(فارغ)'}`);
+      }
+      if (s.reason === 'no-material-match' && s.closestTitle != null) {
+        lines.push(`   أقرب خامة: ${s.closestTitle}`);
+        lines.push(`   درجة التشابه: ${(s.closestScore ?? 0).toFixed(3)}`);
+      }
+      lines.push('');
+    });
+  }
+
+  if (problemSkips.length === 0 && stats.unmappedSections.length === 0) {
+    lines.push('');
+    lines.push('لا توجد مشاكل لهذه المقاس.');
+  }
+
+  // Use CRLF so notes render cleanly in Windows / many textareas.
+  return lines.join('\r\n').trimEnd();
 }
 
 async function main() {
@@ -441,7 +547,7 @@ async function main() {
 
     const dimensionsById = new Map<string, DimensionRef>();
     for (const row of dimensionRows) {
-      dimensionsById.set(row.id, {
+      dimensionsById.set(row.id.toLowerCase(), {
         id: row.id,
         productCode: row.productCode,
         productTitle: row.productTitle,
@@ -469,16 +575,19 @@ async function main() {
     const skipDetails: SkipDetail[] = [];
     const unknownDimensionFiles: string[] = [];
     const deptInsertCounts = new Map<string, number>();
+    const seededAt = new Date();
 
     for (const file of xlsFiles) {
       const stats = emptyFileStats(file);
-      const productDimensionId = path.basename(file, path.extname(file));
+      const productDimensionId = extractDimensionIdFromFilename(file);
 
-      if (!UUID_RE.test(productDimensionId) || !dimensionsById.has(productDimensionId)) {
+      if (!productDimensionId || !dimensionsById.has(productDimensionId)) {
         unknownDimensionFiles.push(file);
-        stats.productLabel = `(unknown dimension id: ${productDimensionId})`;
+        stats.productLabel = `(unknown dimension id: ${productDimensionId ?? 'n/a'})`;
         fileStatsList.push(stats);
-        console.log(`Skipping ${file}: no matching product_dimensions row for id ${productDimensionId}`);
+        console.log(
+          `Skipping ${file}: no matching product_dimensions row for id ${productDimensionId ?? '(not found in filename)'}`,
+        );
         continue;
       }
 
@@ -502,7 +611,7 @@ async function main() {
             const headerText = String(row[0]).trim();
             const mapped = mapSectionToDepartment(headerText);
             currentDept = mapped;
-            if (mapped == null && headerText.includes('مخزن')) {
+            if (mapped == null && normalizeSectionText(headerText).includes('مخزن')) {
               if (!stats.unmappedSections.includes(headerText)) {
                 stats.unmappedSections.push(headerText);
               }
@@ -519,6 +628,7 @@ async function main() {
             stats.skippedUnitUnresolvable++;
             skipDetails.push({
               file,
+              productDimensionId,
               xlsTitle: item.title,
               unitRaw: item.unitRaw,
               reason: 'unit-unresolvable',
@@ -531,6 +641,7 @@ async function main() {
             stats.skippedNoMaterial++;
             skipDetails.push({
               file,
+              productDimensionId,
               xlsTitle: item.title,
               unitRaw: item.unitRaw,
               reason: 'no-material-match',
@@ -545,6 +656,7 @@ async function main() {
             stats.skippedAlreadyExists++;
             skipDetails.push({
               file,
+              productDimensionId,
               xlsTitle: item.title,
               unitRaw: item.unitRaw,
               reason: 'already-exists',
@@ -555,7 +667,7 @@ async function main() {
           const unitOfMeasurementSelected =
             resolvedUnit === match.material.unitOfMeasurement ? null : resolvedUnit;
 
-          const notes = match.exact ? null : `Original BOM name: ${item.title}`;
+          const notes = match.exact ? null : `Original: ${item.title}`;
 
           toInsert.push({
             productDimensionId,
@@ -578,6 +690,7 @@ async function main() {
             stats.insertedFuzzy++;
             fuzzyDetails.push({
               file,
+              productDimensionId,
               xlsTitle: item.title,
               materialCode: match.material.code,
               materialTitle: match.material.title,
@@ -590,24 +703,46 @@ async function main() {
       fileStatsList.push(stats);
     }
 
+    const dimensionNotesUpdates = fileStatsList
+      .filter((s): s is FileStats & { productDimensionId: string } => s.productDimensionId != null)
+      .map((s) => ({
+        productDimensionId: s.productDimensionId,
+        notes: buildDimensionSeedNotes({
+          seededAt,
+          stats: s,
+          skips: skipDetails.filter((sk) => sk.productDimensionId === s.productDimensionId),
+        }),
+      }));
+
     console.log(`\nPrepared ${toInsert.length} BOM row(s) to insert`);
-    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+    console.log(`Prepared ${dimensionNotesUpdates.length} product_dimensions.notes update(s)`);
+    console.log('Writing all inserts and notes in one database transaction. A failure rolls back the entire run.');
 
-    if (toInsert.length > 0) {
-      await db.transaction(async (tx) => {
-        await tx.execute(sql`SET LOCAL statement_timeout = 0`);
-        await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
+      if (toInsert.length > 0) {
         for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
           const batch = toInsert.slice(i, i + BATCH_SIZE);
           await tx.insert(schema.productStandardBoms).values(batch);
           process.stdout.write(`\rInserted ${Math.min(i + BATCH_SIZE, toInsert.length)} / ${toInsert.length}`);
         }
         console.log();
-      });
-    } else {
-      console.log('No new BOM rows to insert.');
-    }
+      } else {
+        console.log('No new BOM rows to insert.');
+      }
+
+      for (const update of dimensionNotesUpdates) {
+        await tx
+          .update(schema.productDimensions)
+          .set({ notes: update.notes })
+          .where(eq(schema.productDimensions.id, update.productDimensionId));
+      }
+      if (dimensionNotesUpdates.length > 0) {
+        console.log(`Updated notes on ${dimensionNotesUpdates.length} product dimension(s).`);
+      }
+    });
 
     // ========== STATS ==========
     console.log('\n========== BOM SEED STATS (PER FILE) ==========');
@@ -675,9 +810,7 @@ async function main() {
     if (fuzzyDetails.length > 0) {
       console.log('\n--- Fuzzy matches (xls -> material) ---');
       for (const d of fuzzyDetails) {
-        console.log(
-          `  [${d.file}] score=${d.score.toFixed(3)} | "${d.xlsTitle}" -> ${d.materialCode} "${d.materialTitle}"`,
-        );
+        console.log(`  [${d.file}] score=${d.score.toFixed(3)} | "${d.xlsTitle}" -> ${d.materialCode} "${d.materialTitle}"`);
       }
     }
 
