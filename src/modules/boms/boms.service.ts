@@ -245,6 +245,35 @@ export class BomsService {
     return deletedItem;
   }
 
+  public async deleteAll(dimensionId: string) {
+    const dimension = await this.db.query.productDimensions.findFirst({
+      where: eq(productDimensions.id, dimensionId),
+      columns: { id: true },
+    });
+
+    if (!dimension) {
+      throw new NotFoundException(
+        translate(`Product dimension with ID ${dimensionId} does not exist.`, `لا يوجد مقاس منتج بالمعرف ${dimensionId}.`),
+      );
+    }
+
+    const deletedItems = await this.db
+      .delete(productStandardBoms)
+      .where(eq(productStandardBoms.productDimensionId, dimensionId))
+      .returning({ id: productStandardBoms.id });
+
+    if (deletedItems.length === 0) {
+      throw new NotFoundException(
+        translate(
+          `No BOM exists for dimension ${dimensionId}.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId}.`,
+        ),
+      );
+    }
+
+    return { deletedCount: deletedItems.length };
+  }
+
   // ============================== PRIVATE METHODS ==============================
 
   private dimensionDepartmentWhere(dimensionId: string, productionSubDepartment: ProductionSubDepartment): SQL {

@@ -54,6 +54,14 @@ export class BomsController {
     return this.bomsService.updateItem(itemId, updateBomItemDto);
   }
 
+  @Delete(':dimensionId/all')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT_BOM)
+  @ApiBearerAuth()
+  deleteAll(@Param('dimensionId', ParseUUIDPipe) dimensionId: string) {
+    return this.bomsService.deleteAll(dimensionId);
+  }
+
   @Delete(':itemId')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT_BOM)
