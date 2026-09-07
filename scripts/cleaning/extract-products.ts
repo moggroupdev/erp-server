@@ -15,6 +15,7 @@ type ProductDimensionJson = {
   diameter: number | null;
   height: number | null;
   isDefault: boolean;
+  notes: string | null;
 };
 
 type ProductJson = {
@@ -206,6 +207,7 @@ function groupByName(valid: ParsedItem[]): ProductJson[] {
       diameter: null,
       height: item.height,
       isDefault: false,
+      notes: null,
     };
 
     if ((dimension.length != null && dimension.depth != null && dimension.height != null) || (dimension.diameter != null && dimension.height != null)) {

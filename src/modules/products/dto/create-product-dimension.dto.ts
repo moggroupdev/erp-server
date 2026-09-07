@@ -1,6 +1,6 @@
-import { IsBoolean, IsNumber, IsOptional, Min, ValidateIf } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, Min, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsLengthDepthXorDiameter } from 'src/utils/decorators';
+import { IsLengthDepthXorDiameter, TrimToNull } from 'src/utils/decorators';
 
 export class CreateProductDimensionDto {
   @ValidateIf((o: CreateProductDimensionDto) => o.diameter == null)
@@ -31,4 +31,10 @@ export class CreateProductDimensionDto {
   @IsOptional()
   @ApiPropertyOptional()
   isDefault: boolean | null;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  notes: string | null;
 }

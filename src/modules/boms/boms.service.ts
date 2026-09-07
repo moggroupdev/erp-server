@@ -83,6 +83,7 @@ export class BomsService {
         diameter: true,
         height: true,
         isDefault: true,
+        notes: true,
       },
       with: {
         product: {
