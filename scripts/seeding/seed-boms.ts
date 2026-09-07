@@ -73,6 +73,8 @@ type SkipDetail = {
   reason: SkipReason;
   closestTitle?: string;
   closestScore?: number;
+  /** Matched system material title (for already-exists skips). */
+  materialTitle?: string;
 };
 
 type FileStats = {
@@ -395,13 +397,6 @@ function formatSeedTimestamp(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-const SKIP_REASON_AR: Record<SkipReason, string> = {
-  'unit-unresolvable': 'وحدة قياس غير معروفة / غير مدعومة',
-  'no-material-match': 'لا توجد خامة مطابقة',
-  'already-exists': 'موجود مسبقاً في قاعدة البيانات',
-  'invalid-quantity': 'كمية غير صالحة',
-};
-
 function buildDimensionSeedNotes({
   seededAt,
   stats,
@@ -420,7 +415,6 @@ function buildDimensionSeedNotes({
   lines.push('');
   lines.push('──────── الملخص ────────');
   lines.push('');
-  lines.push(`• إجمالي صفوف الورقة: ${stats.sheetRowsTotal}`);
   lines.push(`• صفوف العناصر المكتشفة: ${stats.itemRowsDetected}`);
   lines.push(`• تم الإدراج (تطابق تام للاسم): ${stats.insertedExact}`);
   lines.push(`• تم الإدراج (تطابق تقريبي للاسم): ${stats.insertedFuzzy}`);
@@ -441,31 +435,62 @@ function buildDimensionSeedNotes({
     }
   }
 
-  // Only real problems — skip already-inserted / fuzzy-matched items (those live on BOM rows).
-  const problemSkips = skips.filter((s) => s.reason !== 'already-exists');
+  if (skips.length > 0) {
+    lines.push('');
+    lines.push('──────── العناصر التي تم تخطيها ────────');
 
-  if (problemSkips.length > 0) {
-    lines.push('');
-    lines.push('──────── مشاكل / عناصر لم تُدرج ────────');
-    lines.push('');
-    problemSkips.forEach((s, i) => {
-      const reason = SKIP_REASON_AR[s.reason];
-      lines.push(`${i + 1}. السبب: ${reason}`);
-      lines.push(`   الاسم في الملف: ${s.xlsTitle}`);
-      if (s.reason === 'unit-unresolvable') {
-        lines.push(`   الوحدة في الملف: ${s.unitRaw || '(فارغ)'}`);
-      }
-      if (s.reason === 'no-material-match' && s.closestTitle != null) {
-        lines.push(`   أقرب خامة: ${s.closestTitle}`);
-        lines.push(`   درجة التشابه: ${(s.closestScore ?? 0).toFixed(3)}`);
-      }
+    const skipsByReason: { reason: SkipReason; label: string; items: SkipDetail[] }[] = [
+      {
+        reason: 'no-material-match',
+        label: 'لا توجد خامة مطابقة',
+        items: skips.filter((s) => s.reason === 'no-material-match'),
+      },
+      {
+        reason: 'unit-unresolvable',
+        label: 'وحدة قياس غير معروفة / غير مدعومة',
+        items: skips.filter((s) => s.reason === 'unit-unresolvable'),
+      },
+      {
+        reason: 'already-exists',
+        label: 'موجود مسبقاً في قاعدة البيانات',
+        items: skips.filter((s) => s.reason === 'already-exists'),
+      },
+      {
+        reason: 'invalid-quantity',
+        label: 'كمية غير صالحة',
+        items: skips.filter((s) => s.reason === 'invalid-quantity'),
+      },
+    ];
+
+    for (const group of skipsByReason) {
+      if (group.items.length === 0) continue;
+
       lines.push('');
-    });
+      lines.push(`── ${group.label} (${group.items.length}) ──`);
+      lines.push('');
+
+      group.items.forEach((s, i) => {
+        if (s.reason === 'already-exists') {
+          lines.push(`${i + 1}. الاسم في الملف: ${s.xlsTitle}`);
+          lines.push(`   الاسم في النظام: ${s.materialTitle ?? '(غير معروف)'}`);
+          return;
+        }
+
+        lines.push(`${i + 1}. ${s.xlsTitle}`);
+        if (s.reason === 'unit-unresolvable') {
+          lines.push(`   الوحدة في الملف: ${s.unitRaw || '(فارغ)'}`);
+        }
+        if (s.reason === 'no-material-match' && s.closestTitle != null) {
+          lines.push(`   أقرب خامة: ${s.closestTitle}`);
+          lines.push(`   درجة التشابه: ${(s.closestScore ?? 0).toFixed(3)}`);
+        }
+      });
+    }
   }
 
-  if (problemSkips.length === 0 && stats.unmappedSections.length === 0) {
+  if (skips.length === 0 && stats.unmappedSections.length === 0) {
     lines.push('');
-    lines.push('لا توجد مشاكل لهذه المقاس.');
+    lines.push('لا توجد عناصر متخطاة أو مشاكل لهذه المقاس.');
   }
 
   // Use CRLF so notes render cleanly in Windows / many textareas.
@@ -660,6 +685,7 @@ async function main() {
               xlsTitle: item.title,
               unitRaw: item.unitRaw,
               reason: 'already-exists',
+              materialTitle: match.material.title,
             });
             continue;
           }
