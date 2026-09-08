@@ -61,6 +61,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | material_purchase_order_item_requisition_items | uuid        | —    | NO                          | NO        | NO             |
 | material_purchase_receipts                     | uuid        | MPR  | NO                          | YES       | YES (NOT NULL) |
 | material_purchase_receipt_items                | uuid        | —    | NO                          | NO        | NO             |
+| supplier_invoices                              | uuid        | —    | NO                          | YES       | YES (NOT NULL) |
 | outsourcing_orders                             | uuid        | OSO  | cancelledAt field           | YES       | YES (NOT NULL) |
 | outsourcing_order_items                        | uuid        | —    | NO                          | NO        | NO             |
 | outsourcing_receipts                           | uuid        | OSR  | NO                          | YES       | YES (NOT NULL) |

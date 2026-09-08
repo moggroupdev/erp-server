@@ -29,6 +29,7 @@ Set from canonical source on INSERT; immutable unless driving FK changes.
 | `contracts.customer_id`                                 | Copy `inquiries.customer_id`; must match `customer_addresses.customer_id` for `delivery_address_id` |
 | `maintenance_orders.customer_id`                        | From `customer_address_id` or service agreement address when `service_contract`                     |
 | `*_items.product_code` (inquiry/offer/preview/contract) | Copy `product_dimensions.product_code` for `product_dimension_id`                                   |
+| `supplier_invoices.supplier_id`                         | Copy from linked order's `supplier_id` (`material_purchase_orders` or `outsourcing_orders`); must match parent |
 
 On contract creation: when `offer_id` is set, copy `offers.discount_pct` to `contracts.discount_pct` (`@APP_CHECKED`, not snapshot).
 

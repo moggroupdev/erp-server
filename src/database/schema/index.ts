@@ -20,6 +20,7 @@ export * from './supplier-quotation-emails';
 export * from './purchasing-materials';
 export * from './purchasing-products';
 export * from './outsourcing';
+export * from './supplier-invoices';
 export * from './trips';
 export * from './deliveries';
 export * from './installations';

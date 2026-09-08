@@ -6,6 +6,7 @@ import { cities, countries } from './locations';
 import { materialPurchaseOrders } from './purchasing-materials';
 import { productPurchaseOrders } from './purchasing-products';
 import { supplierQuotationEmails } from './supplier-quotation-emails';
+import { supplierInvoices } from './supplier-invoices';
 
 export const suppliers = pgTable(
   'suppliers',
@@ -75,6 +76,7 @@ export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
   materialPurchaseOrders: many(materialPurchaseOrders),
   productPurchaseOrders: many(productPurchaseOrders),
   quotationEmails: many(supplierQuotationEmails),
+  invoices: many(supplierInvoices),
 }));
 
 export const supplierAddressesRelations = relations(supplierAddresses, ({ one }) => ({
