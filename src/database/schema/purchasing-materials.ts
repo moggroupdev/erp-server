@@ -22,7 +22,7 @@ export const materialPurchaseRequisitions = pgTable(
   'material_purchase_requisitions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MPQ-00000001
+    code: text('code').unique().notNull(), // Format: MPReq-00000001
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
     productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
     notes: text('notes'),

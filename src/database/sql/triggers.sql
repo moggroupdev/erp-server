@@ -94,14 +94,14 @@ FOR EACH ROW EXECUTE PROCEDURE generate_contracts_code();
 
 -- ---------------------------------------------------------------------------
 
--- MATERIAL PURCHASE REQUISITIONS: MPQ
+-- MATERIAL PURCHASE REQUISITIONS: MPReq
 CREATE SEQUENCE IF NOT EXISTS material_purchase_requisitions_code_seq START 1 INCREMENT 1;
 
 CREATE OR REPLACE FUNCTION generate_material_purchase_requisitions_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'MPQ-' || LPAD(nextval('material_purchase_requisitions_code_seq')::text, 8, '0');
+    NEW.code := 'MPReq-' || LPAD(nextval('material_purchase_requisitions_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
