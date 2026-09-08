@@ -32,7 +32,8 @@ existing material by exact normalized title, or created without a legacy code
 under a reserved Misc subcategory (main 99 / sub 01) if no title match exists.
 
 Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
-  تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt / invoiceIssuedAt,
+  تاريخ الفاتورة → material_purchase_orders.createdAt / completedAt,
+                   supplier_invoices.issuedAt / createdAt,
                    and material_purchase_receipts.receivedAt / createdAt
   تاريخ الإضافة → inventory_transactions.createdAt
 
@@ -152,6 +153,12 @@ type DuplicateOrderItemWarning = {
   titles: string[];
   quantities: number[];
   unitPrices: number[];
+};
+
+type DuplicateInvoiceWarning = {
+  groupKey: string;
+  invoiceNumber: string;
+  supplierName: string;
 };
 
 type NoCodeMaterialEvent = {
@@ -639,6 +646,7 @@ async function main() {
   const skippedMaterials: SkippedMaterial[] = [];
   const skippedUnitRows: SkippedUnitRow[] = [];
   const duplicateOrderItemWarnings: DuplicateOrderItemWarning[] = [];
+  const duplicateInvoiceWarnings: DuplicateInvoiceWarning[] = [];
   const noCodeMaterialEvents: NoCodeMaterialEvent[] = [];
   const skippedExistingPermitGroups: Array<{ groupKey: string; permitNumbers: string[] }> = [];
 
@@ -746,6 +754,7 @@ async function main() {
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
       const miscSubCategoryId = await ensureMiscSubcategory(tx, subcategoryByLegacyPair);
+      const createdInvoiceKeys = new Set<string>();
 
       for (const supplierName of uniqueSupplierNames) {
         if (supplierIdByName.has(supplierName)) continue;
@@ -978,8 +987,6 @@ async function main() {
           .values({
             code: sql`DEFAULT`,
             supplierId,
-            invoiceNumber: usableRows[0].invoiceNumber,
-            invoiceIssuedAt: invoiceDate,
             totalAmount,
             completedAt: invoiceDate,
             notes: SEED_IMPORT_NOTE,
@@ -989,6 +996,25 @@ async function main() {
           .returning({ id: schema.materialPurchaseOrders.id });
 
         summary.ordersCreated++;
+
+        const invoiceKey = `${supplierId}|${usableRows[0].invoiceNumber}`;
+        if (createdInvoiceKeys.has(invoiceKey)) {
+          duplicateInvoiceWarnings.push({
+            groupKey,
+            invoiceNumber: usableRows[0].invoiceNumber,
+            supplierName: usableRows[0].supplierName,
+          });
+        } else {
+          await tx.insert(schema.supplierInvoices).values({
+            invoiceNumber: usableRows[0].invoiceNumber,
+            issuedAt: invoiceDate,
+            materialPurchaseOrderId: createdOrder.id,
+            supplierId,
+            createdAt: invoiceDate,
+            createdBy: user.id,
+          });
+          createdInvoiceKeys.add(invoiceKey);
+        }
 
         const createdOrderItems = await tx
           .insert(schema.materialPurchaseOrderItems)
@@ -1168,6 +1194,18 @@ async function main() {
       }
       if (duplicateOrderItemWarnings.length > 20) {
         console.log(`  ... and ${duplicateOrderItemWarnings.length - 20} more`);
+      }
+    }
+
+    if (duplicateInvoiceWarnings.length > 0) {
+      console.log('\n--- Duplicate supplier invoices skipped (unique per supplier) ---');
+      for (const warning of duplicateInvoiceWarnings.slice(0, 20)) {
+        console.log(
+          `  ${warning.groupKey} | invoice=${warning.invoiceNumber} | supplier=${warning.supplierName}`,
+        );
+      }
+      if (duplicateInvoiceWarnings.length > 20) {
+        console.log(`  ... and ${duplicateInvoiceWarnings.length - 20} more`);
       }
     }
 

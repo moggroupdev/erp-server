@@ -1,4 +1,4 @@
-import { eq, isNotNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { parseArgs } from 'node:util';
@@ -15,14 +15,15 @@ const USAGE = `Usage: npm run seed:invoice-totals
 Seeds legacy e-invoice tax totals from:
   data/invoices/totals.xlsx
 
-Matches workbook rows to material_purchase_orders by invoice_number.
+Matches workbook rows to supplier_invoices by invoice_number.
 invoice_number is unique per supplier, not globally:
   - Unique invoice number in both the workbook and the DB → match by invoice number
-  - Duplicated invoice number → disambiguate by the supplier linked to the MPO,
+  - Duplicated invoice number → disambiguate by the supplier linked to the invoice,
     using the supplier name embedded in اسم الملف
 
 When تاريخ الإصدار is present, it also overrides:
-  material_purchase_orders.createdAt / completedAt / invoiceIssuedAt
+  supplier_invoices.issuedAt
+  material_purchase_orders.createdAt / completedAt (parent order)
   material_purchase_receipts.receivedAt / createdAt (all receipts for that order)
 
 Unresolved or conflicting rows are logged and skipped.
@@ -48,10 +49,11 @@ type InvoiceTotalRow = {
   totalAmount: number;
 };
 
-type DbOrder = {
+type DbInvoice = {
   id: string;
-  code: string;
   invoiceNumber: string;
+  materialPurchaseOrderId: string | null;
+  orderCode: string | null;
   supplierId: string;
   supplierName: string;
 };
@@ -69,7 +71,7 @@ type Problem = {
 
 type Match = {
   workbookRow: InvoiceTotalRow;
-  order: DbOrder;
+  invoice: DbInvoice;
   method: 'invoice' | 'invoice+supplier';
 };
 
@@ -146,10 +148,10 @@ function supplierNamesMatch(left: string, right: string): boolean {
   return a === b || a.includes(b) || b.includes(a);
 }
 
-function resolveOrdersBySupplier(hint: string, candidates: DbOrder[]): DbOrder[] {
-  const exact = candidates.filter((order) => normalizeSupplierName(order.supplierName) === normalizeSupplierName(hint));
+function resolveInvoicesBySupplier(hint: string, candidates: DbInvoice[]): DbInvoice[] {
+  const exact = candidates.filter((invoice) => normalizeSupplierName(invoice.supplierName) === normalizeSupplierName(hint));
   if (exact.length > 0) return exact;
-  return candidates.filter((order) => supplierNamesMatch(order.supplierName, hint));
+  return candidates.filter((invoice) => supplierNamesMatch(invoice.supplierName, hint));
 }
 
 function normalizeNumber(value: unknown, label: string): number {
@@ -313,11 +315,12 @@ function formatWorkbookRow(row: InvoiceTotalRow): string {
   return `invoice=${row.invoiceNumber} | supplier=${supplier} | row ${row.sourceRowNumber} | file=${fileName}`;
 }
 
-function formatOrder(order: DbOrder): string {
-  return `invoice=${order.invoiceNumber} | supplier=${order.supplierName} | ${order.code}`;
+function formatInvoice(invoice: DbInvoice): string {
+  const orderLabel = invoice.orderCode ?? '(no MPO)';
+  return `invoice=${invoice.invoiceNumber} | supplier=${invoice.supplierName} | ${orderLabel}`;
 }
 
-function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matches: Match[]; problems: Problem[] } {
+function matchRowsToInvoices(rows: InvoiceTotalRow[], invoices: DbInvoice[]): { matches: Match[]; problems: Problem[] } {
   const problems: Problem[] = [];
   const matches: Match[] = [];
 
@@ -328,41 +331,41 @@ function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matche
     else workbookByInvoice.set(row.invoiceNumber, [row]);
   }
 
-  const dbByInvoice = new Map<string, DbOrder[]>();
-  for (const order of orders) {
-    const existing = dbByInvoice.get(order.invoiceNumber);
-    if (existing) existing.push(order);
-    else dbByInvoice.set(order.invoiceNumber, [order]);
+  const dbByInvoice = new Map<string, DbInvoice[]>();
+  for (const invoice of invoices) {
+    const existing = dbByInvoice.get(invoice.invoiceNumber);
+    if (existing) existing.push(invoice);
+    else dbByInvoice.set(invoice.invoiceNumber, [invoice]);
   }
 
   const usedWorkbookRows = new Set<number>();
-  const usedOrderIds = new Set<string>();
+  const usedInvoiceIds = new Set<string>();
 
   for (const [invoiceNumber, workbookGroup] of workbookByInvoice) {
     const dbGroup = dbByInvoice.get(invoiceNumber) ?? [];
 
     if (workbookGroup.length === 1 && dbGroup.length === 1) {
       const workbookRow = workbookGroup[0];
-      const order = dbGroup[0];
-      matches.push({ workbookRow, order, method: 'invoice' });
+      const invoice = dbGroup[0];
+      matches.push({ workbookRow, invoice, method: 'invoice' });
       usedWorkbookRows.add(workbookRow.sourceRowNumber);
-      usedOrderIds.add(order.id);
+      usedInvoiceIds.add(invoice.id);
 
-      if (workbookRow.supplierNameHint && !supplierNamesMatch(workbookRow.supplierNameHint, order.supplierName)) {
+      if (workbookRow.supplierNameHint && !supplierNamesMatch(workbookRow.supplierNameHint, invoice.supplierName)) {
         problems.push({
           level: 'warning',
-          message: `Invoice ${invoiceNumber} matched by number only, but filename supplier "${workbookRow.supplierNameHint}" does not match MPO supplier "${order.supplierName}" (${order.code}, row ${workbookRow.sourceRowNumber}).`,
+          message: `Invoice ${invoiceNumber} matched by number only, but filename supplier "${workbookRow.supplierNameHint}" does not match invoice supplier "${invoice.supplierName}" (${invoice.orderCode ?? invoice.id}, row ${workbookRow.sourceRowNumber}).`,
         });
       }
       continue;
     }
 
     const remainingWorkbook = workbookGroup.filter((row) => !usedWorkbookRows.has(row.sourceRowNumber));
-    const remainingOrders = dbGroup.filter((order) => !usedOrderIds.has(order.id));
+    const remainingInvoices = dbGroup.filter((invoice) => !usedInvoiceIds.has(invoice.id));
 
-    if (remainingWorkbook.length === 0 && remainingOrders.length === 0) continue;
+    if (remainingWorkbook.length === 0 && remainingInvoices.length === 0) continue;
 
-    const claimedOrderIds = new Set<string>();
+    const claimedInvoiceIds = new Set<string>();
 
     for (const workbookRow of remainingWorkbook) {
       if (!workbookRow.supplierNameHint) {
@@ -374,13 +377,13 @@ function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matche
         continue;
       }
 
-      const resolved = resolveOrdersBySupplier(workbookRow.supplierNameHint, remainingOrders);
+      const resolved = resolveInvoicesBySupplier(workbookRow.supplierNameHint, remainingInvoices);
 
       if (resolved.length === 0) {
         problems.push({
           level: 'error',
-          message: `No MPO for ${formatWorkbookRow(workbookRow)}. DB orders with this invoice: ${
-            remainingOrders.length > 0 ? remainingOrders.map((order) => order.supplierName).join(', ') : '(none)'
+          message: `No supplier invoice for ${formatWorkbookRow(workbookRow)}. DB invoices with this number: ${
+            remainingInvoices.length > 0 ? remainingInvoices.map((invoice) => invoice.supplierName).join(', ') : '(none)'
           }.`,
         });
         usedWorkbookRows.add(workbookRow.sourceRowNumber);
@@ -390,28 +393,28 @@ function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matche
       if (resolved.length > 1) {
         problems.push({
           level: 'error',
-          message: `Invoice ${invoiceNumber} + supplier "${workbookRow.supplierNameHint}" matches multiple MPOs: ${resolved
-            .map((order) => order.code)
+          message: `Invoice ${invoiceNumber} + supplier "${workbookRow.supplierNameHint}" matches multiple supplier invoices: ${resolved
+            .map((invoice) => invoice.orderCode ?? invoice.id)
             .join(', ')} (row ${workbookRow.sourceRowNumber}).`,
         });
         usedWorkbookRows.add(workbookRow.sourceRowNumber);
         continue;
       }
 
-      const order = resolved[0];
-      if (claimedOrderIds.has(order.id)) {
+      const invoice = resolved[0];
+      if (claimedInvoiceIds.has(invoice.id)) {
         problems.push({
           level: 'error',
-          message: `Multiple workbook rows map to the same MPO ${order.code} for invoice ${invoiceNumber} / supplier "${order.supplierName}" (row ${workbookRow.sourceRowNumber}).`,
+          message: `Multiple workbook rows map to the same supplier invoice ${invoice.orderCode ?? invoice.id} for invoice ${invoiceNumber} / supplier "${invoice.supplierName}" (row ${workbookRow.sourceRowNumber}).`,
         });
         usedWorkbookRows.add(workbookRow.sourceRowNumber);
         continue;
       }
 
-      claimedOrderIds.add(order.id);
-      matches.push({ workbookRow, order, method: 'invoice+supplier' });
+      claimedInvoiceIds.add(invoice.id);
+      matches.push({ workbookRow, invoice, method: 'invoice+supplier' });
       usedWorkbookRows.add(workbookRow.sourceRowNumber);
-      usedOrderIds.add(order.id);
+      usedInvoiceIds.add(invoice.id);
     }
   }
 
@@ -419,16 +422,16 @@ function matchRowsToOrders(rows: InvoiceTotalRow[], orders: DbOrder[]): { matche
     if (!usedWorkbookRows.has(row.sourceRowNumber) && !matches.some((match) => match.workbookRow.sourceRowNumber === row.sourceRowNumber)) {
       problems.push({
         level: 'error',
-        message: `Workbook row has no matching MPO: ${formatWorkbookRow(row)}.`,
+        message: `Workbook row has no matching supplier invoice: ${formatWorkbookRow(row)}.`,
       });
     }
   }
 
-  for (const order of orders) {
-    if (usedOrderIds.has(order.id)) continue;
+  for (const invoice of invoices) {
+    if (usedInvoiceIds.has(invoice.id)) continue;
     problems.push({
       level: 'error',
-      message: `DB order has no matching workbook row: ${formatOrder(order)}.`,
+      message: `DB supplier invoice has no matching workbook row: ${formatInvoice(invoice)}.`,
     });
   }
 
@@ -480,48 +483,53 @@ async function main() {
       });
     }
 
-    const orderRows = await db
+    const invoiceRows = await db
       .select({
-        id: schema.materialPurchaseOrders.id,
-        code: schema.materialPurchaseOrders.code,
-        invoiceNumber: schema.materialPurchaseOrders.invoiceNumber,
-        supplierId: schema.materialPurchaseOrders.supplierId,
+        id: schema.supplierInvoices.id,
+        invoiceNumber: schema.supplierInvoices.invoiceNumber,
+        materialPurchaseOrderId: schema.supplierInvoices.materialPurchaseOrderId,
+        orderCode: schema.materialPurchaseOrders.code,
+        supplierId: schema.supplierInvoices.supplierId,
         supplierName: schema.suppliers.name,
       })
-      .from(schema.materialPurchaseOrders)
-      .innerJoin(schema.suppliers, eq(schema.materialPurchaseOrders.supplierId, schema.suppliers.id))
-      .where(isNotNull(schema.materialPurchaseOrders.invoiceNumber));
+      .from(schema.supplierInvoices)
+      .innerJoin(schema.suppliers, eq(schema.supplierInvoices.supplierId, schema.suppliers.id))
+      .leftJoin(
+        schema.materialPurchaseOrders,
+        eq(schema.supplierInvoices.materialPurchaseOrderId, schema.materialPurchaseOrders.id),
+      );
 
-    const orders: DbOrder[] = [];
-    for (const order of orderRows) {
-      const invoiceNumber = normalizeIdentifier(order.invoiceNumber);
+    const invoices: DbInvoice[] = [];
+    for (const row of invoiceRows) {
+      const invoiceNumber = normalizeIdentifier(row.invoiceNumber);
       if (!invoiceNumber) {
         problems.push({
           level: 'warning',
-          message: `MPO ${order.code} has a blank invoice number after normalization; skipped.`,
+          message: `Supplier invoice ${row.id} has a blank invoice number after normalization; skipped.`,
         });
         continue;
       }
 
-      orders.push({
-        id: order.id,
-        code: order.code,
+      invoices.push({
+        id: row.id,
         invoiceNumber,
-        supplierId: order.supplierId,
-        supplierName: order.supplierName,
+        materialPurchaseOrderId: row.materialPurchaseOrderId,
+        orderCode: row.orderCode,
+        supplierId: row.supplierId,
+        supplierName: row.supplierName,
       });
     }
 
-    const { matches, problems: matchProblems } = matchRowsToOrders(rows, orders);
+    const { matches, problems: matchProblems } = matchRowsToInvoices(rows, invoices);
     problems.push(...matchProblems);
 
     for (const problem of matchProblems) {
       if (problem.level !== 'error') continue;
-      if (problem.message.startsWith('DB order has no matching workbook row')) {
+      if (problem.message.startsWith('DB supplier invoice has no matching workbook row')) {
         summary.unmatchedInDb++;
       } else if (
-        problem.message.startsWith('Workbook row has no matching MPO') ||
-        problem.message.startsWith('No MPO for')
+        problem.message.startsWith('Workbook row has no matching supplier invoice') ||
+        problem.message.startsWith('No supplier invoice for')
       ) {
         summary.unmatchedInWorkbook++;
       } else {
@@ -529,7 +537,7 @@ async function main() {
       }
     }
 
-    console.log(`Updating ${matches.length} matched order(s)...`);
+    console.log(`Updating ${matches.length} matched supplier invoice(s)...`);
     console.log('Writing all updates in one database transaction. A failure rolls back the entire run.');
 
     await db.transaction(async (tx) => {
@@ -537,52 +545,58 @@ async function main() {
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
       for (const match of matches) {
-        const { workbookRow, order, method } = match;
+        const { workbookRow, invoice, method } = match;
 
-        const orderUpdate: {
-          invoiceIssuedAt: Date | null;
-          invoiceTotalPurchases: number;
-          invoiceTotalDiscount: number;
-          invoiceVatAmount: number;
-          invoiceWithholdingTaxAmount: number;
-          invoiceTotalAmount: number;
-          createdAt?: Date;
-          completedAt?: Date;
+        const invoiceUpdate: {
+          issuedAt: Date | null;
+          totalPurchases: number;
+          totalDiscount: number;
+          vatAmount: number;
+          withholdingTaxAmount: number;
+          totalAmount: number;
         } = {
-          invoiceIssuedAt: workbookRow.issuedAt,
-          invoiceTotalPurchases: workbookRow.totalPurchases,
-          invoiceTotalDiscount: workbookRow.totalDiscount,
-          invoiceVatAmount: workbookRow.vatAmount,
-          invoiceWithholdingTaxAmount: workbookRow.withholdingTaxAmount,
-          invoiceTotalAmount: workbookRow.totalAmount,
+          issuedAt: workbookRow.issuedAt,
+          totalPurchases: workbookRow.totalPurchases,
+          totalDiscount: workbookRow.totalDiscount,
+          vatAmount: workbookRow.vatAmount,
+          withholdingTaxAmount: workbookRow.withholdingTaxAmount,
+          totalAmount: workbookRow.totalAmount,
         };
 
         if (workbookRow.issuedAt) {
-          orderUpdate.createdAt = workbookRow.issuedAt;
-          orderUpdate.completedAt = workbookRow.issuedAt;
-          orderUpdate.invoiceIssuedAt = workbookRow.issuedAt;
+          invoiceUpdate.issuedAt = workbookRow.issuedAt;
 
-          await tx
-            .update(schema.materialPurchaseReceipts)
-            .set({
-              receivedAt: workbookRow.issuedAt,
-              createdAt: workbookRow.issuedAt,
-            })
-            .where(eq(schema.materialPurchaseReceipts.materialPurchaseOrderId, order.id));
+          if (invoice.materialPurchaseOrderId) {
+            await tx
+              .update(schema.materialPurchaseOrders)
+              .set({
+                createdAt: workbookRow.issuedAt,
+                completedAt: workbookRow.issuedAt,
+              })
+              .where(eq(schema.materialPurchaseOrders.id, invoice.materialPurchaseOrderId));
+
+            await tx
+              .update(schema.materialPurchaseReceipts)
+              .set({
+                receivedAt: workbookRow.issuedAt,
+                createdAt: workbookRow.issuedAt,
+              })
+              .where(eq(schema.materialPurchaseReceipts.materialPurchaseOrderId, invoice.materialPurchaseOrderId));
+          }
 
           summary.datesOverridden++;
         } else {
           summary.datesSkippedMissingIssuedAt++;
           problems.push({
             level: 'warning',
-            message: `Matched ${order.code} (invoice ${workbookRow.invoiceNumber}) but تاريخ الإصدار is empty; tax totals updated, dates left unchanged.`,
+            message: `Matched supplier invoice ${invoice.orderCode ?? invoice.id} (invoice ${workbookRow.invoiceNumber}) but تاريخ الإصدار is empty; tax totals updated, dates left unchanged.`,
           });
         }
 
         await tx
-          .update(schema.materialPurchaseOrders)
-          .set(orderUpdate)
-          .where(eq(schema.materialPurchaseOrders.id, order.id));
+          .update(schema.supplierInvoices)
+          .set(invoiceUpdate)
+          .where(eq(schema.supplierInvoices.id, invoice.id));
 
         if (method === 'invoice') summary.matchedByInvoice++;
         else summary.matchedByInvoiceAndSupplier++;

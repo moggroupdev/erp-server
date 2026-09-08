@@ -23,6 +23,7 @@ Tables deleted (child rows first):
   inventory_transactions
   material_purchase_receipt_items
   material_purchase_receipts
+  supplier_invoices
   material_purchase_order_item_contract_items   (required FK child)
   material_purchase_order_items
   material_purchase_orders
@@ -47,6 +48,7 @@ const PURCHASING_INVENTORY_TABLES = [
   { name: 'inventory_transactions', table: schema.inventoryTransactions },
   { name: 'material_purchase_receipt_items', table: schema.materialPurchaseReceiptItems },
   { name: 'material_purchase_receipts', table: schema.materialPurchaseReceipts },
+  { name: 'supplier_invoices', table: schema.supplierInvoices },
   { name: 'material_purchase_order_item_contract_items', table: schema.materialPurchaseOrderItemContractItems },
   { name: 'material_purchase_order_items', table: schema.materialPurchaseOrderItems },
   { name: 'material_purchase_orders', table: schema.materialPurchaseOrders },
