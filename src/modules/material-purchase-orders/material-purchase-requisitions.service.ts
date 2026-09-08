@@ -36,7 +36,7 @@ const MATERIAL_COLUMNS = {
 const USER_COLUMNS = { id: true, name: true } as const;
 
 type RequisitionRow = typeof materialPurchaseRequisitions.$inferSelect;
-type ApprovalSlot = 'planning' | 'purchasingManager' | 'manager';
+type ApprovalSlot = 'planning' | 'inventoryControl' | 'manager';
 type LastPurchaseSnapshot = {
   lastPurchasePrice: number;
   lastPurchaseDate: Date;
@@ -102,7 +102,7 @@ export class MaterialPurchaseRequisitionsService {
         createdBy: { columns: USER_COLUMNS },
         productionSubDepartmentManager: { columns: USER_COLUMNS },
         planningDecidedBy: { columns: USER_COLUMNS },
-        purchasingManagerDecidedBy: { columns: USER_COLUMNS },
+        inventoryControlDecidedBy: { columns: USER_COLUMNS },
         managerDecidedBy: { columns: USER_COLUMNS },
         items: { with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } } },
       },
@@ -236,12 +236,12 @@ export class MaterialPurchaseRequisitionsService {
     return this.decideGate(id, user, 'planning', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
   }
 
-  public async approvePurchasingManager(id: string, user: User) {
-    return this.decideGate(id, user, 'purchasingManager', APPROVAL_DECISIONS.APPROVED);
+  public async approveInventoryControl(id: string, user: User) {
+    return this.decideGate(id, user, 'inventoryControl', APPROVAL_DECISIONS.APPROVED);
   }
 
-  public async rejectPurchasingManager(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
-    return this.decideGate(id, user, 'purchasingManager', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
+  public async rejectInventoryControl(id: string, rejectDto: RejectMaterialPurchaseRequisitionDto, user: User) {
+    return this.decideGate(id, user, 'inventoryControl', APPROVAL_DECISIONS.REJECTED, rejectDto.reason);
   }
 
   public async approveManager(id: string, user: User) {
@@ -288,12 +288,12 @@ export class MaterialPurchaseRequisitionsService {
             planningDecidedBy: user.id,
             planningDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
           }
-        : slot === 'purchasingManager'
+        : slot === 'inventoryControl'
           ? {
-              purchasingManagerDecision: decision,
-              purchasingManagerDecidedAt: now,
-              purchasingManagerDecidedBy: user.id,
-              purchasingManagerDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
+              inventoryControlDecision: decision,
+              inventoryControlDecidedAt: now,
+              inventoryControlDecidedBy: user.id,
+              inventoryControlDecisionReason: decision === APPROVAL_DECISIONS.REJECTED ? trimmedReason : null,
             }
           : {
               managerDecision: decision,
@@ -353,14 +353,14 @@ export class MaterialPurchaseRequisitionsService {
 
   private gateDecision(requisition: RequisitionRow, slot: ApprovalSlot): ApprovalDecision {
     if (slot === 'planning') return requisition.planningDecision as ApprovalDecision;
-    if (slot === 'purchasingManager') return requisition.purchasingManagerDecision as ApprovalDecision;
+    if (slot === 'inventoryControl') return requisition.inventoryControlDecision as ApprovalDecision;
     return requisition.managerDecision as ApprovalDecision;
   }
 
   private hasAnyDecision(requisition: RequisitionRow) {
     return (
       this.gateDecision(requisition, 'planning') !== APPROVAL_DECISIONS.PENDING ||
-      this.gateDecision(requisition, 'purchasingManager') !== APPROVAL_DECISIONS.PENDING ||
+      this.gateDecision(requisition, 'inventoryControl') !== APPROVAL_DECISIONS.PENDING ||
       this.gateDecision(requisition, 'manager') !== APPROVAL_DECISIONS.PENDING
     );
   }
@@ -368,7 +368,7 @@ export class MaterialPurchaseRequisitionsService {
   private isRejected(requisition: RequisitionRow) {
     return (
       this.gateDecision(requisition, 'planning') === APPROVAL_DECISIONS.REJECTED ||
-      this.gateDecision(requisition, 'purchasingManager') === APPROVAL_DECISIONS.REJECTED ||
+      this.gateDecision(requisition, 'inventoryControl') === APPROVAL_DECISIONS.REJECTED ||
       this.gateDecision(requisition, 'manager') === APPROVAL_DECISIONS.REJECTED
     );
   }

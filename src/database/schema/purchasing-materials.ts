@@ -27,7 +27,7 @@ export const materialPurchaseRequisitions = pgTable(
     productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
     notes: text('notes'),
     ...approvalGateColumns('planning'),
-    ...approvalGateColumns('purchasingManager'),
+    ...approvalGateColumns('inventoryControl'),
     ...approvalGateColumns('manager'),
     createdAt,
     createdBy: uuid('created_by')
@@ -41,7 +41,7 @@ export const materialPurchaseRequisitions = pgTable(
       foreignColumns: [users.id],
     }),
     ...approvalGateConstraints(table, 'planning', 'mprq', users.id),
-    ...approvalGateConstraints(table, 'purchasingManager', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'inventoryControl', 'mprq', users.id),
     ...approvalGateConstraints(table, 'manager', 'mprq', users.id),
     index('mprq_production_sub_department_idx').on(table.productionSubDepartment),
     index('mprq_psd_manager_id_idx').on(table.productionSubDepartmentManagerId),
@@ -260,10 +260,10 @@ export const materialPurchaseRequisitionsRelations = relations(materialPurchaseR
     references: [users.id],
     relationName: 'materialPurchaseRequisitionPlanningDecidedBy',
   }),
-  purchasingManagerDecidedBy: one(users, {
-    fields: [materialPurchaseRequisitions.purchasingManagerDecidedBy],
+  inventoryControlDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.inventoryControlDecidedBy],
     references: [users.id],
-    relationName: 'materialPurchaseRequisitionPurchasingManagerDecidedBy',
+    relationName: 'materialPurchaseRequisitionInventoryControlDecidedBy',
   }),
   managerDecidedBy: one(users, {
     fields: [materialPurchaseRequisitions.managerDecidedBy],

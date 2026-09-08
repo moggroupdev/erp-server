@@ -58,7 +58,7 @@ export const PERMISSION_VALUES = [
   'read_material_purchase_requisitions',
   'update_material_purchase_requisition',
   'approve_material_purchase_requisition_planning',
-  'approve_material_purchase_requisition_purchasing_manager',
+  'approve_material_purchase_requisition_inventory_control',
   'approve_material_purchase_requisition_manager',
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',

@@ -87,7 +87,7 @@ All sources live on the header — one source event per transaction; items only 
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase requisitions (`material_purchase_requisitions`):
-  - Three parallel header gates (planning, purchasing manager, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
+  - Three parallel header gates (planning, inventory control, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
   - Overall status is derived: `rejected` if any gate is `rejected`; `approved` if all three are `approved`; else `pending`
   - First rejection is terminal — remaining pending gates stay pending forever; no further decisions or edits
   - Lock header/item edits once **any** gate leaves `pending`

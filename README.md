@@ -47,7 +47,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Procurement
 
 - Approved suppliers with contact details, tax number, material classification (aluminum, stainless steel, sheet steel, and similar), addresses, and a blacklist timestamp when a supplier is blocked
-- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production department; parallel approvals from planning, purchasing manager, and manager (each gate records yes/no with reason and timestamp); after full approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
+- Material purchase requisitions (طلبات الشراء): warehouse requests materials for a production department; parallel approvals from planning, inventory control, and manager (each gate records yes/no with reason and timestamp); after full approval, purchasing may create MPOs that allocate quantity from one or more requisition lines (partial fulfillment across MPOs allowed; MPOs may still be created without a requisition)
 - Material purchasing: purchase orders, goods receipt, quality inspection with accepted and rejected quantities, and stock intake; purchase lines may optionally be attributed to the contract line(s) driving the demand and/or to approved purchase requisition lines
 - Supplier invoices: tax/e-invoice documents linked to exactly one of a material purchase order, product purchase order, or outsourcing order; one order may have multiple invoices over time
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with supplier serial numbers where applicable
