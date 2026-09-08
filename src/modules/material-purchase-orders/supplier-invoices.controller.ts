@@ -13,7 +13,7 @@ export class SupplierInvoicesController {
 
   @Get()
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIER_INVOICES)
   @ApiBearerAuth()
   @ApiListQueries()
   list(@Query() query: QueryParams) {
@@ -22,7 +22,7 @@ export class SupplierInvoicesController {
 
   @Get(':id')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIER_INVOICES)
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.supplierInvoicesService.get(id);
