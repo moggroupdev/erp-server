@@ -45,9 +45,9 @@ export class MaterialPurchaseOrdersService {
         items: {
           with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } },
         },
-        invoices: true,
       },
     });
+
 
     if (!order)
       throw new NotFoundException(

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { contractItems, inventoryTransactions, supplierInvoices } from 'src/database/schema';
+import { contractItems, inventoryTransactions } from 'src/database/schema';
 import { QueryParams } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
@@ -12,7 +12,6 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
  * Drizzle aliases the full path (e.g. inventoryTransactions_productionPlanItem_…)
  * and Postgres silently truncates identifiers past 63 chars, breaking deeper joins.
  * Contract for a production-plan source is loaded separately in getContractForUnit().
- * Supplier invoices for a material-purchase receipt are loaded separately in getInvoicesForOrder().
  *
  * Perf note: only one of these 5 source FKs is ever non-null (inv_tx_source_non_conflicting
  * check), but all 5 are still always joined here rather than checking which FK is set first.
@@ -23,7 +22,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 const TRANSACTION_SOURCE_RELATIONS = {
   materialPurchaseReceipt: {
     columns: { id: true, code: true },
-    with: { materialPurchaseOrder: { columns: { id: true } } },
+    with: { materialPurchaseOrder: { columns: { id: true, code: true } } },
   },
   outsourcingReceipt: {
     columns: { id: true, code: true },
@@ -83,19 +82,7 @@ export class InventoryTransactionsService {
         translate(`Inventory transaction with ID ${id} does not exist.`, `لا توجد حركة مخزون بالمعرف ${id}.`),
       );
 
-    const receipt = transaction.materialPurchaseReceipt;
     const planItem = transaction.productionPlanItem;
-
-    if (receipt) {
-      const invoices = await this.getInvoicesForOrder(receipt.materialPurchaseOrder.id);
-      return {
-        ...transaction,
-        materialPurchaseReceipt: {
-          ...receipt,
-          materialPurchaseOrder: { ...receipt.materialPurchaseOrder, invoices },
-        },
-      };
-    }
 
     if (!planItem) return transaction;
 
@@ -105,13 +92,6 @@ export class InventoryTransactionsService {
   }
 
   // ========================= PRIVATE METHODS =========================
-
-  private async getInvoicesForOrder(materialPurchaseOrderId: string) {
-    return await this.db.query.supplierInvoices.findMany({
-      where: eq(supplierInvoices.materialPurchaseOrderId, materialPurchaseOrderId),
-      columns: { id: true, invoiceNumber: true },
-    });
-  }
 
   private async getContractForUnit(contractItemId: string) {
     return (

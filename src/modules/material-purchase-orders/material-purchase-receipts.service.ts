@@ -36,10 +36,8 @@ export class MaterialPurchaseReceiptsService {
     const receipt = await this.db.query.materialPurchaseReceipts.findFirst({
       where: eq(materialPurchaseReceipts.id, id),
       with: {
-        materialPurchaseOrder: {
-          columns: { id: true },
-          with: { invoices: { columns: { id: true, invoiceNumber: true } } },
-        },
+        materialPurchaseOrder: { columns: { id: true, code: true } },
+
         inventoryTransactions: { columns: { id: true, legacyNumber: true } },
         createdBy: { columns: { id: true, name: true } },
         receivedBy: { columns: { id: true, name: true } },
