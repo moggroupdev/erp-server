@@ -48,7 +48,6 @@ export class MaterialPurchaseOrdersService {
       },
     });
 
-
     if (!order)
       throw new NotFoundException(
         translate(`Material purchase order with ID ${id} does not exist.`, `لا يوجد أمر شراء مواد بالمعرف ${id}.`),

@@ -37,6 +37,10 @@ Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
                    and material_purchase_receipts.receivedAt / createdAt
   تاريخ الإضافة → inventory_transactions.createdAt
 
+Serial codes (MPO / MPR / IVT) are assigned by DB sequences on insert order.
+This seed inserts those entities in chronological date order so earlier dates
+get lower serials (MPO-00000001 before later invoices, etc.).
+
 Suppliers created by this seed get createdAt on 31/12/2025 (UTC noon), with a
 10ms gap between each insert so SUP-00000001 sorts before SUP-00000002, etc.
 
@@ -479,10 +483,59 @@ function isoDay(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function compareByTime(a: Date, b: Date): number {
+  return a.getTime() - b.getTime();
+}
+
 /** createdAt for the Nth supplier created in this run (0-based). */
 function supplierCreatedAt(index: number): Date {
   return new Date(SUPPLIER_CREATED_AT_BASE_MS + index * SUPPLIER_CREATED_AT_STEP_MS);
 }
+
+type UsableWorkbookRow = WorkbookRow & {
+  materialCode: string;
+  quantityBase: number;
+  unitPriceBase: number;
+};
+
+type PlannedOrderItem = {
+  materialCode: string;
+  quantityOrdered: number;
+  unitPrice: number;
+};
+
+type PlannedReceipt = {
+  permitNumber: string;
+  invoiceDate: Date;
+  receiptDate: Date;
+  rows: UsableWorkbookRow[];
+  materialPurchaseOrderId: string;
+  orderItemIdByMaterialCode: Map<string, string>;
+};
+
+type PlannedInventoryTransaction = {
+  permitNumber: string;
+  receiptDate: Date;
+  materialPurchaseReceiptId: string;
+  rows: UsableWorkbookRow[];
+};
+
+type PlannedOrder = {
+  groupKey: string;
+  invoiceDate: Date;
+  supplierId: string;
+  invoiceNumber: string;
+  supplierName: string;
+  totalAmount: number;
+  mergedOrderItems: PlannedOrderItem[];
+  /** Receipts keyed by permit; order id / item map filled after the MPO insert. */
+  receiptDrafts: Array<{
+    permitNumber: string;
+    invoiceDate: Date;
+    receiptDate: Date;
+    rows: UsableWorkbookRow[];
+  }>;
+};
 
 function normalizeUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] {
   return resolveMaterialUnit(raw) ?? MATERIAL_UNITS.COUNT;
@@ -754,7 +807,6 @@ async function main() {
       await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
 
       const miscSubCategoryId = await ensureMiscSubcategory(tx, subcategoryByLegacyPair);
-      const createdInvoiceKeys = new Set<string>();
 
       for (const supplierName of uniqueSupplierNames) {
         if (supplierIdByName.has(supplierName)) continue;
@@ -773,7 +825,10 @@ async function main() {
         summary.suppliersCreated++;
       }
 
-      let processedGroups = 0;
+      // Phase 1: resolve materials and build planned orders (no MPO/MPR/IVT inserts yet).
+      const plannedOrders: PlannedOrder[] = [];
+      let preparedGroups = 0;
+
       for (const [groupKey, groupRows] of orderGroups) {
         const permitNumbers = [...new Set(groupRows.map((row) => row.permitNumber))];
         const existingPermits = permitNumbers.filter((permitNumber) => existingPermitNumbers.has(permitNumber));
@@ -797,13 +852,7 @@ async function main() {
           throw new Error(`Supplier was not resolved before order insert: ${supplierName}`);
         }
 
-        const usableRows: Array<
-          WorkbookRow & {
-            materialCode: string;
-            quantityBase: number;
-            unitPriceBase: number;
-          }
-        > = [];
+        const usableRows: UsableWorkbookRow[] = [];
         for (const row of groupRows) {
           let material: MaterialRef | undefined;
 
@@ -952,10 +1001,7 @@ async function main() {
 
         const invoiceDate = usableRows[0].invoiceDate;
 
-        const orderItemGroups = new Map<
-          string,
-          Array<WorkbookRow & { materialCode: string; quantityBase: number; unitPriceBase: number }>
-        >();
+        const orderItemGroups = new Map<string, UsableWorkbookRow[]>();
         for (const row of usableRows) {
           const existing = orderItemGroups.get(row.materialCode);
           if (existing) existing.push(row);
@@ -982,35 +1028,76 @@ async function main() {
           return { materialCode, quantityOrdered, unitPrice };
         });
 
+        const receiptGroups = new Map<string, UsableWorkbookRow[]>();
+        for (const row of usableRows) {
+          const existing = receiptGroups.get(row.permitNumber);
+          if (existing) existing.push(row);
+          else receiptGroups.set(row.permitNumber, [row]);
+        }
+
+        plannedOrders.push({
+          groupKey,
+          invoiceDate,
+          supplierId,
+          invoiceNumber: usableRows[0].invoiceNumber,
+          supplierName: usableRows[0].supplierName,
+          totalAmount,
+          mergedOrderItems,
+          receiptDrafts: [...receiptGroups.entries()].map(([permitNumber, receiptRows]) => ({
+            permitNumber,
+            invoiceDate: receiptRows[0].invoiceDate,
+            receiptDate: receiptRows[0].receiptDate,
+            rows: receiptRows,
+          })),
+        });
+
+        preparedGroups++;
+        process.stdout.write(`\rPrepared ${preparedGroups} / ${orderGroups.size} order groups`);
+      }
+
+      console.log();
+      console.log(
+        `Inserting ${plannedOrders.length} orders chronologically by invoice date (MPO → MPR → IVT sequences).`,
+      );
+
+      // Earliest invoice date first so MPO-00000001 aligns with the oldest order date.
+      plannedOrders.sort((a, b) => compareByTime(a.invoiceDate, b.invoiceDate) || a.groupKey.localeCompare(b.groupKey));
+
+      const plannedReceipts: PlannedReceipt[] = [];
+      const createdInvoiceKeys = new Set<string>();
+      let insertedOrders = 0;
+
+      // Phase 2: insert MPOs (and invoices / line items) in date order.
+      for (const plan of plannedOrders) {
         const [createdOrder] = await tx
           .insert(schema.materialPurchaseOrders)
           .values({
             code: sql`DEFAULT`,
-            supplierId,
-            totalAmount,
-            completedAt: invoiceDate,
+            supplierId: plan.supplierId,
+            totalAmount: plan.totalAmount,
+            completedAt: plan.invoiceDate,
             notes: SEED_IMPORT_NOTE,
-            createdAt: invoiceDate,
+            createdAt: plan.invoiceDate,
             createdBy: user.id,
           })
           .returning({ id: schema.materialPurchaseOrders.id });
 
         summary.ordersCreated++;
 
-        const invoiceKey = `${supplierId}|${usableRows[0].invoiceNumber}`;
+        const invoiceKey = `${plan.supplierId}|${plan.invoiceNumber}`;
         if (createdInvoiceKeys.has(invoiceKey)) {
           duplicateInvoiceWarnings.push({
-            groupKey,
-            invoiceNumber: usableRows[0].invoiceNumber,
-            supplierName: usableRows[0].supplierName,
+            groupKey: plan.groupKey,
+            invoiceNumber: plan.invoiceNumber,
+            supplierName: plan.supplierName,
           });
         } else {
           await tx.insert(schema.supplierInvoices).values({
-            invoiceNumber: usableRows[0].invoiceNumber,
-            issuedAt: invoiceDate,
+            invoiceNumber: plan.invoiceNumber,
+            issuedAt: plan.invoiceDate,
             materialPurchaseOrderId: createdOrder.id,
-            supplierId,
-            createdAt: invoiceDate,
+            supplierId: plan.supplierId,
+            createdAt: plan.invoiceDate,
             createdBy: user.id,
           });
           createdInvoiceKeys.add(invoiceKey);
@@ -1019,7 +1106,7 @@ async function main() {
         const createdOrderItems = await tx
           .insert(schema.materialPurchaseOrderItems)
           .values(
-            mergedOrderItems.map((item) => ({
+            plan.mergedOrderItems.map((item) => ({
               materialPurchaseOrderId: createdOrder.id,
               materialCode: item.materialCode,
               quantityOrdered: item.quantityOrdered,
@@ -1034,80 +1121,113 @@ async function main() {
         summary.orderItemsCreated += createdOrderItems.length;
 
         const orderItemIdByMaterialCode = new Map(createdOrderItems.map((item) => [item.materialCode, item.id]));
-        const receiptGroups = new Map<
-          string,
-          Array<WorkbookRow & { materialCode: string; quantityBase: number; unitPriceBase: number }>
-        >();
-        for (const row of usableRows) {
-          const existing = receiptGroups.get(row.permitNumber);
-          if (existing) existing.push(row);
-          else receiptGroups.set(row.permitNumber, [row]);
+        for (const draft of plan.receiptDrafts) {
+          plannedReceipts.push({
+            ...draft,
+            materialPurchaseOrderId: createdOrder.id,
+            orderItemIdByMaterialCode,
+          });
         }
 
-        for (const [permitNumber, receiptRows] of receiptGroups) {
-          const invoiceDateForReceipt = receiptRows[0].invoiceDate;
-          const receiptDate = receiptRows[0].receiptDate;
+        insertedOrders++;
+        process.stdout.write(`\rInserted orders ${insertedOrders} / ${plannedOrders.length}`);
+      }
 
-          const [createdReceipt] = await tx
-            .insert(schema.materialPurchaseReceipts)
-            .values({
-              code: sql`DEFAULT`,
-              materialPurchaseOrderId: createdOrder.id,
-              receivedAt: invoiceDateForReceipt,
-              receivedBy: user.id,
-              notes: SEED_IMPORT_NOTE,
-              createdAt: invoiceDateForReceipt,
-              createdBy: user.id,
-            })
-            .returning({ id: schema.materialPurchaseReceipts.id });
+      console.log();
 
-          summary.receiptsCreated++;
+      // Earliest receipt / invoice date first so MPR serials follow chronology.
+      plannedReceipts.sort(
+        (a, b) =>
+          compareByTime(a.invoiceDate, b.invoiceDate) ||
+          compareByTime(a.receiptDate, b.receiptDate) ||
+          a.permitNumber.localeCompare(b.permitNumber),
+      );
 
-          const createdReceiptItems = await tx
-            .insert(schema.materialPurchaseReceiptItems)
-            .values(
-              receiptRows.map((row) => ({
-                materialPurchaseReceiptId: createdReceipt.id,
-                materialPurchaseOrderItemId: orderItemIdByMaterialCode.get(row.materialCode)!,
-                quantityReceived: row.quantityBase,
-                quantityRejected: 0,
-              })),
-            )
-            .returning({ id: schema.materialPurchaseReceiptItems.id });
+      const plannedTransactions: PlannedInventoryTransaction[] = [];
+      let insertedReceipts = 0;
 
-          summary.receiptItemsCreated += createdReceiptItems.length;
+      // Phase 3: insert MPRs in date order.
+      for (const receipt of plannedReceipts) {
+        const [createdReceipt] = await tx
+          .insert(schema.materialPurchaseReceipts)
+          .values({
+            code: sql`DEFAULT`,
+            materialPurchaseOrderId: receipt.materialPurchaseOrderId,
+            receivedAt: receipt.invoiceDate,
+            receivedBy: user.id,
+            notes: SEED_IMPORT_NOTE,
+            createdAt: receipt.invoiceDate,
+            createdBy: user.id,
+          })
+          .returning({ id: schema.materialPurchaseReceipts.id });
 
-          const [createdTransaction] = await tx
-            .insert(schema.inventoryTransactions)
-            .values({
-              code: sql`DEFAULT`,
-              legacyNumber: permitNumber,
-              transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
+        summary.receiptsCreated++;
+
+        const createdReceiptItems = await tx
+          .insert(schema.materialPurchaseReceiptItems)
+          .values(
+            receipt.rows.map((row) => ({
               materialPurchaseReceiptId: createdReceipt.id,
-              notes: SEED_IMPORT_NOTE,
-              createdAt: receiptDate,
-              createdBy: user.id,
-            })
-            .returning({ id: schema.inventoryTransactions.id });
-
-          summary.inventoryTransactionsCreated++;
-          existingPermitNumbers.add(permitNumber);
-
-          const createdInventoryItems = await tx.insert(schema.inventoryTransactionItems).values(
-            receiptRows.map((row) => ({
-              transactionId: createdTransaction.id,
-              materialCode: row.materialCode,
-              quantity: row.quantityBase,
-              unitPrice: row.unitPriceBase,
+              materialPurchaseOrderItemId: receipt.orderItemIdByMaterialCode.get(row.materialCode)!,
+              quantityReceived: row.quantityBase,
+              quantityRejected: 0,
             })),
-          );
+          )
+          .returning({ id: schema.materialPurchaseReceiptItems.id });
 
-          summary.inventoryTransactionItemsCreated += receiptRows.length;
-          void createdInventoryItems;
-        }
+        summary.receiptItemsCreated += createdReceiptItems.length;
 
-        processedGroups++;
-        process.stdout.write(`\rProcessed ${processedGroups} / ${orderGroups.size} order groups`);
+        plannedTransactions.push({
+          permitNumber: receipt.permitNumber,
+          receiptDate: receipt.receiptDate,
+          materialPurchaseReceiptId: createdReceipt.id,
+          rows: receipt.rows,
+        });
+
+        insertedReceipts++;
+        process.stdout.write(`\rInserted receipts ${insertedReceipts} / ${plannedReceipts.length}`);
+      }
+
+      console.log();
+
+      // Earliest إضافة date first so IVT serials follow chronology.
+      plannedTransactions.sort(
+        (a, b) => compareByTime(a.receiptDate, b.receiptDate) || a.permitNumber.localeCompare(b.permitNumber),
+      );
+
+      let insertedTransactions = 0;
+
+      // Phase 4: insert IVTs in date order.
+      for (const transaction of plannedTransactions) {
+        const [createdTransaction] = await tx
+          .insert(schema.inventoryTransactions)
+          .values({
+            code: sql`DEFAULT`,
+            legacyNumber: transaction.permitNumber,
+            transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
+            materialPurchaseReceiptId: transaction.materialPurchaseReceiptId,
+            notes: SEED_IMPORT_NOTE,
+            createdAt: transaction.receiptDate,
+            createdBy: user.id,
+          })
+          .returning({ id: schema.inventoryTransactions.id });
+
+        summary.inventoryTransactionsCreated++;
+        existingPermitNumbers.add(transaction.permitNumber);
+
+        await tx.insert(schema.inventoryTransactionItems).values(
+          transaction.rows.map((row) => ({
+            transactionId: createdTransaction.id,
+            materialCode: row.materialCode,
+            quantity: row.quantityBase,
+            unitPrice: row.unitPriceBase,
+          })),
+        );
+
+        summary.inventoryTransactionItemsCreated += transaction.rows.length;
+
+        insertedTransactions++;
+        process.stdout.write(`\rInserted inventory txs ${insertedTransactions} / ${plannedTransactions.length}`);
       }
     });
 
