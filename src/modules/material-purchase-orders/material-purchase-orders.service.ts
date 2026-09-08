@@ -25,11 +25,14 @@ export class MaterialPurchaseOrdersService {
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(materialPurchaseOrders, queryParams, {
       filtering: true,
-      searchableFields: ['code', 'invoiceNumber', 'notes'],
+      searchableFields: ['code', 'notes'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      withRelations: { supplier: { columns: { id: true, name: true } } },
+      withRelations: {
+        supplier: { columns: { id: true, name: true } },
+        invoices: { columns: { id: true, invoiceNumber: true, issuedAt: true, totalPurchases: true } },
+      },
     });
   }
 

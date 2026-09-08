@@ -109,24 +109,24 @@ export class MaterialPurchaseRequisitionsController {
     return this.materialPurchaseRequisitionsService.rejectPlanning(id, rejectDto, user);
   }
 
-  @Post(':id/purchasing-manager/approve')
+  @Post(':id/inventory-control/approve')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PURCHASING_MANAGER)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_INVENTORY_CONTROL)
   @ApiBearerAuth()
-  approvePurchasingManager(@Param('id', ParseUUIDPipe) id: string, @RequestUser() user: User) {
-    return this.materialPurchaseRequisitionsService.approvePurchasingManager(id, user);
+  approveInventoryControl(@Param('id', ParseUUIDPipe) id: string, @RequestUser() user: User) {
+    return this.materialPurchaseRequisitionsService.approveInventoryControl(id, user);
   }
 
-  @Post(':id/purchasing-manager/reject')
+  @Post(':id/inventory-control/reject')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_PURCHASING_MANAGER)
+  @AllowedPermission(PERMISSIONS.APPROVE_MATERIAL_PURCHASE_REQUISITION_INVENTORY_CONTROL)
   @ApiBearerAuth()
-  rejectPurchasingManager(
+  rejectInventoryControl(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() rejectDto: RejectMaterialPurchaseRequisitionDto,
     @RequestUser() user: User,
   ) {
-    return this.materialPurchaseRequisitionsService.rejectPurchasingManager(id, rejectDto, user);
+    return this.materialPurchaseRequisitionsService.rejectInventoryControl(id, rejectDto, user);
   }
 
   @Post(':id/manager/approve')

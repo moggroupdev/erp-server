@@ -22,7 +22,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 const TRANSACTION_SOURCE_RELATIONS = {
   materialPurchaseReceipt: {
     columns: { id: true, code: true },
-    with: { materialPurchaseOrder: { columns: { id: true, invoiceNumber: true } } },
+    with: { materialPurchaseOrder: { columns: { id: true, code: true } } },
   },
   outsourcingReceipt: {
     columns: { id: true, code: true },
@@ -83,6 +83,7 @@ export class InventoryTransactionsService {
       );
 
     const planItem = transaction.productionPlanItem;
+
     if (!planItem) return transaction;
 
     const contractItem = await this.getContractForUnit(planItem.productUnit.contractItemId);

@@ -29,6 +29,7 @@ Set from canonical source on INSERT; immutable unless driving FK changes.
 | `contracts.customer_id`                                 | Copy `inquiries.customer_id`; must match `customer_addresses.customer_id` for `delivery_address_id` |
 | `maintenance_orders.customer_id`                        | From `customer_address_id` or service agreement address when `service_contract`                     |
 | `*_items.product_code` (inquiry/offer/preview/contract) | Copy `product_dimensions.product_code` for `product_dimension_id`                                   |
+| `supplier_invoices.supplier_id`                         | Copy from linked order's `supplier_id` (`material_purchase_orders`, `product_purchase_orders`, or `outsourcing_orders`); must match parent |
 
 On contract creation: when `offer_id` is set, copy `offers.discount_pct` to `contracts.discount_pct` (`@APP_CHECKED`, not snapshot).
 
@@ -86,7 +87,7 @@ All sources live on the header — one source event per transaction; items only 
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase requisitions (`material_purchase_requisitions`):
-  - Three parallel header gates (planning, purchasing manager, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
+  - Three parallel header gates (planning, inventory control, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
   - Overall status is derived: `rejected` if any gate is `rejected`; `approved` if all three are `approved`; else `pending`
   - First rejection is terminal — remaining pending gates stay pending forever; no further decisions or edits
   - Lock header/item edits once **any** gate leaves `pending`

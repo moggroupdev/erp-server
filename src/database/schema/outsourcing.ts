@@ -5,6 +5,7 @@ import { users } from './users';
 import { suppliers } from './suppliers';
 import { materials } from './materials';
 import { inventoryTransactions } from './inventory-transactions';
+import { supplierInvoices } from './supplier-invoices';
 
 export const outsourcingOrders = pgTable(
   'outsourcing_orders',
@@ -131,6 +132,7 @@ export const outsourcingOrdersRelations = relations(outsourcingOrders, ({ one, m
   }),
   items: many(outsourcingOrderItems),
   receipts: many(outsourcingReceipts),
+  invoices: many(supplierInvoices),
   materialIssueTransactions: many(inventoryTransactions),
 }));
 

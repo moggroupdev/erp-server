@@ -4,7 +4,6 @@ import {
   createdAt,
   numeric,
   nonNegativeQuantityCheck,
-  nonNegativeNullableQuantityCheck,
   positiveQuantityCheck,
   positiveNullableQuantityCheck,
   productionSubDepartmentEnum,
@@ -17,17 +16,18 @@ import { suppliers } from './suppliers';
 import { materials } from './materials';
 import { contractItems } from './contracts';
 import { inventoryTransactions } from './inventory-transactions';
+import { supplierInvoices } from './supplier-invoices';
 
 export const materialPurchaseRequisitions = pgTable(
   'material_purchase_requisitions',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: MPQ-00000001
+    code: text('code').unique().notNull(), // Format: MPReq-00000001
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department').notNull(),
     productionSubDepartmentManagerId: uuid('production_sub_department_manager_id'), // @HISTORICAL_SNAPSHOT - Manager at requisition create / sub-dept change; live assignment may change later
     notes: text('notes'),
     ...approvalGateColumns('planning'),
-    ...approvalGateColumns('purchasingManager'),
+    ...approvalGateColumns('inventoryControl'),
     ...approvalGateColumns('manager'),
     createdAt,
     createdBy: uuid('created_by')
@@ -41,7 +41,7 @@ export const materialPurchaseRequisitions = pgTable(
       foreignColumns: [users.id],
     }),
     ...approvalGateConstraints(table, 'planning', 'mprq', users.id),
-    ...approvalGateConstraints(table, 'purchasingManager', 'mprq', users.id),
+    ...approvalGateConstraints(table, 'inventoryControl', 'mprq', users.id),
     ...approvalGateConstraints(table, 'manager', 'mprq', users.id),
     index('mprq_production_sub_department_idx').on(table.productionSubDepartment),
     index('mprq_psd_manager_id_idx').on(table.productionSubDepartmentManagerId),
@@ -83,13 +83,6 @@ export const materialPurchaseOrders = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: MPO-00000001
-    invoiceNumber: text('invoice_number'),
-    invoiceIssuedAt: timestamp('invoice_issued_at', { withTimezone: true }),
-    invoiceTotalPurchases: numeric('invoice_total_purchases'),
-    invoiceTotalDiscount: numeric('invoice_total_discount'),
-    invoiceVatAmount: numeric('invoice_vat_amount'),
-    invoiceWithholdingTaxAmount: numeric('invoice_withholding_tax_amount'),
-    invoiceTotalAmount: numeric('invoice_total_amount'),
     supplierId: uuid('supplier_id')
       .notNull()
       .references(() => suppliers.id),
@@ -110,11 +103,6 @@ export const materialPurchaseOrders = pgTable(
     index('mpo_created_by_idx').on(table.createdBy),
     check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
-    nonNegativeNullableQuantityCheck('mpo_invoice_total_purchases_non_negative', table.invoiceTotalPurchases),
-    nonNegativeNullableQuantityCheck('mpo_invoice_total_discount_non_negative', table.invoiceTotalDiscount),
-    nonNegativeNullableQuantityCheck('mpo_invoice_vat_amount_non_negative', table.invoiceVatAmount),
-    nonNegativeNullableQuantityCheck('mpo_invoice_withholding_tax_amount_non_negative', table.invoiceWithholdingTaxAmount),
-    nonNegativeNullableQuantityCheck('mpo_invoice_total_amount_non_negative', table.invoiceTotalAmount),
   ],
 );
 
@@ -272,10 +260,10 @@ export const materialPurchaseRequisitionsRelations = relations(materialPurchaseR
     references: [users.id],
     relationName: 'materialPurchaseRequisitionPlanningDecidedBy',
   }),
-  purchasingManagerDecidedBy: one(users, {
-    fields: [materialPurchaseRequisitions.purchasingManagerDecidedBy],
+  inventoryControlDecidedBy: one(users, {
+    fields: [materialPurchaseRequisitions.inventoryControlDecidedBy],
     references: [users.id],
-    relationName: 'materialPurchaseRequisitionPurchasingManagerDecidedBy',
+    relationName: 'materialPurchaseRequisitionInventoryControlDecidedBy',
   }),
   managerDecidedBy: one(users, {
     fields: [materialPurchaseRequisitions.managerDecidedBy],
@@ -309,6 +297,7 @@ export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders,
   }),
   items: many(materialPurchaseOrderItems),
   receipts: many(materialPurchaseReceipts),
+  invoices: many(supplierInvoices),
 }));
 
 export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrderItems, ({ one, many }) => ({
