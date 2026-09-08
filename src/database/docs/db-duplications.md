@@ -24,7 +24,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `offer_items.product_code`       | Same                                                                                                             | Same                                                   |
 | `preview_items.product_code`     | Same                                                                                                             | Same                                                   |
 | `contract_items.product_code`    | Same                                                                                                             | Same                                                   |
-| `supplier_invoices.supplier_id`  | Linked order's `supplier_id` (`material_purchase_orders` or `outsourcing_orders`)                                | Unique (supplier, invoice number) and supplier filters without joining the parent order |
+| `supplier_invoices.supplier_id`  | Linked order's `supplier_id` (`material_purchase_orders`, `product_purchase_orders`, or `outsourcing_orders`) | Unique (supplier, invoice number) and supplier filters without joining the parent order |
 
 **Sync:** copy from canonical source on INSERT; immutable unless the driving FK changes (re-validate in service).
 

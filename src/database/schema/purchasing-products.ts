@@ -5,6 +5,7 @@ import { users } from './users';
 import { suppliers } from './suppliers';
 import { contractItems } from './contracts';
 import { productUnits } from './product-units';
+import { supplierInvoices } from './supplier-invoices';
 
 export const productPurchaseOrders = pgTable(
   'product_purchase_orders',
@@ -135,6 +136,7 @@ export const productPurchaseOrdersRelations = relations(productPurchaseOrders, (
   }),
   items: many(productPurchaseOrderItems),
   receipts: many(productPurchaseReceipts),
+  invoices: many(supplierInvoices),
 }));
 
 export const productPurchaseOrderItemsRelations = relations(productPurchaseOrderItems, ({ one, many }) => ({

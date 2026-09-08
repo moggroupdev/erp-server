@@ -26,6 +26,7 @@ export class SupplierInvoicesService {
       withRelations: {
         supplier: { columns: SUPPLIER_COLUMNS },
         materialPurchaseOrder: { columns: ORDER_COLUMNS },
+        productPurchaseOrder: { columns: ORDER_COLUMNS },
         outsourcingOrder: { columns: ORDER_COLUMNS },
       },
     });
@@ -37,6 +38,7 @@ export class SupplierInvoicesService {
       with: {
         supplier: { columns: SUPPLIER_COLUMNS },
         materialPurchaseOrder: { columns: ORDER_COLUMNS },
+        productPurchaseOrder: { columns: ORDER_COLUMNS },
         outsourcingOrder: { columns: ORDER_COLUMNS },
         createdBy: { columns: { id: true, name: true } },
       },
