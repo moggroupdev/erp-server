@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams } from 'src/utils/types';
@@ -18,5 +18,13 @@ export class SupplierInvoicesController {
   @ApiListQueries()
   list(@Query() query: QueryParams) {
     return this.supplierInvoicesService.list(query);
+  }
+
+  @Get(':id')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
+  @ApiBearerAuth()
+  get(@Param('id', ParseUUIDPipe) id: string) {
+    return this.supplierInvoicesService.get(id);
   }
 }
