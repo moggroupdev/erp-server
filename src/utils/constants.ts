@@ -25,6 +25,8 @@ export const PERMISSION_VALUES = [
   'add_department',
   'read_departments',
   'update_department',
+  'read_production_department_managers',
+  'update_production_department_managers',
   'add_supplier',
   'read_suppliers',
   'update_supplier',

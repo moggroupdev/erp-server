@@ -365,6 +365,13 @@
       "when": 1788942993909,
       "tag": "0051_futuristic_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1788955885135,
+      "tag": "0052_gigantic_husk",
+      "breakpoints": true
     }
   ]
 }
