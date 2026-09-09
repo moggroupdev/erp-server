@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { ProductionDepartmentManagersModule } from './modules/production-department-managers/production-department-managers.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
@@ -28,6 +29,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     DatabaseModule,
     AuthModule,
     DepartmentsModule,
+    ProductionDepartmentManagersModule,
     LocationsModule,
     RolesModule,
     UsersModule,
