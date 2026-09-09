@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProfileModule } from './modules/profile/profile.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { ProductionDepartmentManagersModule } from './modules/production-department-managers/production-department-managers.module';
 import { LocationsModule } from './modules/locations/locations.module';
@@ -28,6 +29,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     AuthModule,
+    ProfileModule,
     DepartmentsModule,
     ProductionDepartmentManagersModule,
     LocationsModule,

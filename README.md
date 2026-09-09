@@ -77,6 +77,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Organization & Access
 
 - User accounts with role-based permissions
+- Logged-in users can view their own profile and change their password (no other self-service field updates)
 - Department hierarchy for org-chart departments (Administration, HR, Finance, Production, and others) with optional parent-child structure and department managers
 - Production staff belong to the Production org-chart department and are additionally assigned to one of fixed production departments (work-centers)
 
