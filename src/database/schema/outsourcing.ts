@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
-import { createdAt, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import { createdAt, materialUnitEnum, numeric, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { suppliers } from './suppliers';
 import { materials } from './materials';
@@ -43,6 +43,7 @@ export const outsourcingOrderItems = pgTable(
     manufacturedMaterialCode: text('manufactured_material_code')
       .notNull()
       .references(() => materials.code), // @APP_CHECKED - materials.code with material_type = 'manufactured_material'
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitManufacturingCost: numeric('unit_manufacturing_cost').notNull(),
     notes: text('notes'),
@@ -95,6 +96,7 @@ export const outsourcingReceiptItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     outsourcingReceiptId: uuid('outsourcing_receipt_id').notNull(),
     outsourcingOrderItemId: uuid('outsourcing_order_item_id').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityReceived: numeric('quantity_received').notNull(),
     quantityRejected: numeric('quantity_rejected').notNull().default(0),
     inspectionNotes: text('inspection_notes'),

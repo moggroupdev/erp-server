@@ -1,6 +1,13 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, boolean, index, check, foreignKey, unique } from 'drizzle-orm/pg-core';
-import { createdAt, maintenanceTypeEnum, maintenanceServiceLocationEnum, numeric, positiveQuantityCheck } from './common';
+import {
+  createdAt,
+  maintenanceTypeEnum,
+  maintenanceServiceLocationEnum,
+  materialUnitEnum,
+  numeric,
+  positiveQuantityCheck,
+} from './common';
 import { customers, customerAddresses } from './customers';
 import { serviceAgreements } from './service-agreements';
 import { productUnits } from './product-units';
@@ -96,6 +103,7 @@ export const maintenanceOrderMaterials = pgTable(
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantity: numeric('quantity').notNull(),
     unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Selling price at time of use
     isBillable: boolean('is_billable').notNull(),

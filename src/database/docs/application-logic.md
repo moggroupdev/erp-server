@@ -71,10 +71,11 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 
 ### Inventory (`inventory_transactions` / `inventory_transaction_items`)
 
-All sources live on the header — one source event per transaction; items only carry material, quantity, and price. Source exclusivity and source-vs-`transaction_type` matching are DB checks (`inv_tx_source_non_conflicting`, `inv_tx_receipt_source_type_match`, `inv_tx_issue_source_type_match`), so `return` transactions can carry no source at all.
+All sources live on the header — one source event per transaction; items only carry material, selected unit, quantity, and price. Source exclusivity and source-vs-`transaction_type` matching are DB checks (`inv_tx_source_non_conflicting`, `inv_tx_receipt_source_type_match`, `inv_tx_issue_source_type_match`), so `return` transactions can carry no source at all.
 
 - A production issue is scoped to one `production_plan_item_id` (one unit + stage) per transaction
 - Each item's `material_code` must belong to the header source (e.g. a line of the linked purchase receipt, a `maintenance_order_materials` row of the linked maintenance order, or the plan item's product BOM)
+- `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity` / `unit_price` are in this unit. Syncing into `materials.quantity` (always base-unit) requires converting each line to the material's base unit
 
 ### Warehouse (legacy issue permits)
 
@@ -83,9 +84,13 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Purchasing
 
-- Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered`
+- Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered` — convert both sides to the material's base unit when the receipt line's `unit_of_measurement_selected` differs from the order line's
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
+- Material purchase order items (`material_purchase_order_items`):
+  - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
+- Material purchase receipt items (`material_purchase_receipt_items`):
+  - `unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
 - Material purchase requisitions (`material_purchase_requisitions`):
   - Three parallel header gates (planning, inventory control, manager) via `approvalGateColumns` — each gate is `decision` / `decided_at` / `decided_by` / `decision_reason`
   - Overall status is derived: `rejected` if any gate is `rejected`; `approved` if all three are `approved`; else `pending`
@@ -100,7 +105,7 @@ All sources live on the header — one source event per transaction; items only 
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (same unit as the requisition line's `unit_of_measurement_selected`)
-  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered`
+  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered` (same unit as the MPO line's `unit_of_measurement_selected`, or convert both sides to base when units differ)
   - MPO lines may have zero allocations (MPO created without a requisition)
 
 ### Outsourcing
@@ -109,10 +114,12 @@ All sources live on the header — one source event per transaction; items only 
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
+- `outsourcing_order_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the manufactured material's base unit or one of its conversions; `quantity_ordered` / `unit_manufacturing_cost` are in this unit
+- `outsourcing_receipt_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
 - Materials issued to the supplier are recorded as an `inventory_transactions` header (`transaction_type = 'issue'`) linked via `outsourcing_order_id` — no separate issue header table (mirrors the maintenance order flow)
 - `inventory_transaction_items.material_code` — when the header's `outsourcing_order_id` is set, must exist in the `manufactured_material_boms` of one of the order's manufactured materials
 - Issue quantities — pre-fill from `manufactured_material_boms.quantity_required ×` remaining ordered qty; user may adjust before confirming
-- Outsourcing receipt: sum of `quantity_received + quantity_rejected` per order line ≤ `quantity_ordered`
+- Outsourcing receipt: sum of `quantity_received + quantity_rejected` per order line ≤ `quantity_ordered` — convert both sides to the material's base unit when the receipt line's `unit_of_measurement_selected` differs from the order line's
 
 ### Production
 
@@ -147,6 +154,7 @@ All sources live on the header — one source event per transaction; items only 
 
 - `maintenance_order_items.product_unit_id` — belongs to MO `customer_id`; not cancelled; in-warranty rules when `in_warranty`; address match when `service_contract`
 - `maintenance_order_materials` — one row per material per order (DB unique); repeated use of the same material accumulates into that row's `quantity`
+- `maintenance_order_materials.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity` / `unit_price` are in this unit
 
 ### Catalog pricing
 
@@ -158,7 +166,7 @@ All sources live on the header — one source event per transaction; items only 
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
 - `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`
-- Quantity-entry line items (BOMs, requisitions, legacy issue permits) store `quantity` in `unit_of_measurement_selected` as entered by the user; conversion to base unit happens only at calculation/display time (costing, aggregation, inventory sync)
+- Quantity-entry line items (BOMs, requisitions, legacy issue permits, material purchase order/receipt items, inventory transaction items, maintenance order materials, outsourcing order/receipt items) store `quantity` in `unit_of_measurement_selected` as entered by the user; conversion to base unit happens only at calculation/display time (costing, aggregation, inventory sync, order-vs-receipt quantity caps)
 
 ### Supplier addresses
 

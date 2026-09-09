@@ -50,6 +50,41 @@ const orderLinesTotal = sql`(
 )`;
 const allocatedInvoiceSpend = sql`${invoiceTotalPurchases} * (${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}) / nullif(${orderLinesTotal}, 0)`;
 
+/** Convert a line's quantity_ordered into the material's base unit (1 when selected unit is base). */
+const quantityOrderedInBase = sql`${materialPurchaseOrderItems.quantityOrdered} * coalesce(
+  (
+    select muc.conversion_factor_to_base
+    from material_unit_conversions muc
+    where muc.material_code = ${materialPurchaseOrderItems.materialCode}
+      and muc.unit = ${materialPurchaseOrderItems.unitOfMeasurementSelected}
+  ),
+  case
+    when ${materialPurchaseOrderItems.unitOfMeasurementSelected} = (
+      select m.unit_of_measurement from materials m where m.code = ${materialPurchaseOrderItems.materialCode}
+    ) then 1
+    else null
+  end
+)`;
+
+/** Convert a line's unit_price into price-per-base-unit. */
+const unitPriceInBase = sql`${materialPurchaseOrderItems.unitPrice} / nullif(
+  coalesce(
+    (
+      select muc.conversion_factor_to_base
+      from material_unit_conversions muc
+      where muc.material_code = ${materialPurchaseOrderItems.materialCode}
+        and muc.unit = ${materialPurchaseOrderItems.unitOfMeasurementSelected}
+    ),
+    case
+      when ${materialPurchaseOrderItems.unitOfMeasurementSelected} = (
+        select m.unit_of_measurement from materials m where m.code = ${materialPurchaseOrderItems.materialCode}
+      ) then 1
+      else null
+    end
+  ),
+  0
+)`;
+
 @Injectable()
 export class PurchasingMaterialsReportsService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
@@ -96,8 +131,8 @@ export class PurchasingMaterialsReportsService {
         orderDate: materialPurchaseOrders.createdAt,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
-        unitPrice: materialPurchaseOrderItems.unitPrice,
-        quantityOrdered: materialPurchaseOrderItems.quantityOrdered,
+        unitPrice: unitPriceInBase,
+        quantityOrdered: quantityOrderedInBase,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -473,7 +508,7 @@ export class PurchasingMaterialsReportsService {
         materialTitle: materials.title,
         unitOfMeasurement: materials.unitOfMeasurement,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -503,7 +538,7 @@ export class PurchasingMaterialsReportsService {
         mainCategoryId: materialCategoryMains.id,
         mainCategoryTitle: materialCategoryMains.title,
         materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -584,7 +619,7 @@ export class PurchasingMaterialsReportsService {
         subCategoryId: materialCategorySubs.id,
         subCategoryTitle: materialCategorySubs.title,
         materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -708,7 +743,7 @@ export class PurchasingMaterialsReportsService {
         materialTitle: materials.title,
         unitOfMeasurement: materials.unitOfMeasurement,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -777,7 +812,7 @@ export class PurchasingMaterialsReportsService {
         mainCategoryId: materialCategoryMains.id,
         mainCategoryTitle: materialCategoryMains.title,
         materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -806,7 +841,7 @@ export class PurchasingMaterialsReportsService {
         subCategoryId: materialCategorySubs.id,
         subCategoryTitle: materialCategorySubs.title,
         materialCount: sql<number>`count(distinct ${materialPurchaseOrderItems.materialCode})`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
       })
       .from(materialPurchaseOrderItems)
@@ -871,7 +906,7 @@ export class PurchasingMaterialsReportsService {
         materialTitle: materials.title,
         unitOfMeasurement: materials.unitOfMeasurement,
         totalSpend: sql<number>`coalesce(sum(${allocatedInvoiceSpend}), 0)`,
-        totalQuantity: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered}), 0)`,
+        totalQuantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))

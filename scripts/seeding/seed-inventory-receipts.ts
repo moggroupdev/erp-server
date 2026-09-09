@@ -494,12 +494,15 @@ function supplierCreatedAt(index: number): Date {
 
 type UsableWorkbookRow = WorkbookRow & {
   materialCode: string;
+  resolvedUnit: (typeof MATERIAL_UNIT_VALUES)[number];
+  baseUnit: (typeof MATERIAL_UNIT_VALUES)[number];
   quantityBase: number;
   unitPriceBase: number;
 };
 
 type PlannedOrderItem = {
   materialCode: string;
+  unitOfMeasurementSelected: (typeof MATERIAL_UNIT_VALUES)[number];
   quantityOrdered: number;
   unitPrice: number;
 };
@@ -988,10 +991,13 @@ async function main() {
             continue;
           }
 
+          const resolvedUnit = resolveMaterialUnit(row.unitRaw)!;
           const baseValues = toBaseValues(row.quantity, row.unitPrice, conversionResult.factor);
           usableRows.push({
             ...row,
             materialCode: material.code,
+            resolvedUnit,
+            baseUnit: material.unitOfMeasurement,
             quantityBase: baseValues.quantity,
             unitPriceBase: baseValues.unitPrice,
           });
@@ -1010,9 +1016,23 @@ async function main() {
 
         let totalAmount = 0;
         const mergedOrderItems = [...orderItemGroups.entries()].map(([materialCode, itemRows]) => {
-          const quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantityBase, 0);
-          const totalCost = itemRows.reduce((sum, row) => sum + row.quantityBase * row.unitPriceBase, 0);
-          const unitPrice = totalCost / quantityOrdered;
+          const allSameResolvedUnit = itemRows.every((row) => row.resolvedUnit === itemRows[0].resolvedUnit);
+
+          let unitOfMeasurementSelected: (typeof MATERIAL_UNIT_VALUES)[number];
+          let quantityOrdered: number;
+          let unitPrice: number;
+
+          if (allSameResolvedUnit) {
+            unitOfMeasurementSelected = itemRows[0].resolvedUnit;
+            quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantity, 0);
+            const totalCost = itemRows.reduce((sum, row) => sum + row.quantity * row.unitPrice, 0);
+            unitPrice = totalCost / quantityOrdered;
+          } else {
+            unitOfMeasurementSelected = itemRows[0].baseUnit;
+            quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantityBase, 0);
+            const totalCost = itemRows.reduce((sum, row) => sum + row.quantityBase * row.unitPriceBase, 0);
+            unitPrice = totalCost / quantityOrdered;
+          }
 
           if (itemRows.length > 1) {
             duplicateOrderItemWarnings.push({
@@ -1025,7 +1045,7 @@ async function main() {
           }
 
           totalAmount += quantityOrdered * unitPrice;
-          return { materialCode, quantityOrdered, unitPrice };
+          return { materialCode, unitOfMeasurementSelected, quantityOrdered, unitPrice };
         });
 
         const receiptGroups = new Map<string, UsableWorkbookRow[]>();
@@ -1109,6 +1129,7 @@ async function main() {
             plan.mergedOrderItems.map((item) => ({
               materialPurchaseOrderId: createdOrder.id,
               materialCode: item.materialCode,
+              unitOfMeasurementSelected: item.unitOfMeasurementSelected,
               quantityOrdered: item.quantityOrdered,
               unitPrice: item.unitPrice,
             })),
@@ -1169,7 +1190,8 @@ async function main() {
             receipt.rows.map((row) => ({
               materialPurchaseReceiptId: createdReceipt.id,
               materialPurchaseOrderItemId: receipt.orderItemIdByMaterialCode.get(row.materialCode)!,
-              quantityReceived: row.quantityBase,
+              unitOfMeasurementSelected: row.resolvedUnit,
+              quantityReceived: row.quantity,
               quantityRejected: 0,
             })),
           )
@@ -1219,8 +1241,9 @@ async function main() {
           transaction.rows.map((row) => ({
             transactionId: createdTransaction.id,
             materialCode: row.materialCode,
-            quantity: row.quantityBase,
-            unitPrice: row.unitPriceBase,
+            unitOfMeasurementSelected: row.resolvedUnit,
+            quantity: row.quantity,
+            unitPrice: row.unitPrice,
           })),
         );
 

@@ -1,10 +1,11 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialPurchaseOrderItems, materialPurchaseOrders, materials, suppliers } from 'src/database/schema';
+import { materialPurchaseOrderItems, materialPurchaseOrders, suppliers } from 'src/database/schema';
 import { QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
 
@@ -21,13 +22,14 @@ export class MaterialPurchaseOrdersService {
   constructor(
     @Inject(DRIZZLE) private db: DrizzleDB,
     private queryBuilderService: QueryBuilderService,
+    private materialUnitValidationService: MaterialUnitValidationService,
   ) {}
 
   public async create(createDto: CreateMaterialPurchaseOrderDto, user: User) {
     const { items, supplierId, notes } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertSupplierExists(supplierId);
-    await this.assertMaterialsExist(items.map((item) => item.materialCode));
+    await this.materialUnitValidationService.assertValidSelectedUnits(items);
 
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
 
@@ -49,6 +51,7 @@ export class MaterialPurchaseOrdersService {
           items.map((item) => ({
             materialPurchaseOrderId: order.id,
             materialCode: item.materialCode,
+            unitOfMeasurementSelected: item.unitOfMeasurementSelected,
             quantityOrdered: item.quantityOrdered,
             unitPrice: item.unitPrice,
             notes: item.notes,
@@ -116,23 +119,6 @@ export class MaterialPurchaseOrdersService {
     if (!supplier) {
       throw new NotFoundException(
         translate(`Supplier with ID ${supplierId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierId}.`),
-      );
-    }
-  }
-
-  private async assertMaterialsExist(materialCodes: string[]) {
-    const uniqueCodes = [...new Set(materialCodes)];
-    const found = await this.db.query.materials.findMany({
-      where: and(inArray(materials.code, uniqueCodes), isNull(materials.deletedAt)),
-      columns: { code: true },
-    });
-
-    const foundCodes = new Set(found.map((row) => row.code));
-    const missing = uniqueCodes.filter((code) => !foundCodes.has(code));
-
-    if (missing.length > 0) {
-      throw new NotFoundException(
-        translate(`Material(s) not found: ${missing.join(', ')}.`, `المواد غير موجودة: ${missing.join(', ')}.`),
       );
     }
   }

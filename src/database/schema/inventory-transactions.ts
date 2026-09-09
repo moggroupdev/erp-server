@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, index, check, foreignKey } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
-import { createdAt, inventoryTransactionTypeEnum, numeric, positiveQuantityCheck } from './common';
+import { createdAt, inventoryTransactionTypeEnum, materialUnitEnum, numeric, positiveQuantityCheck } from './common';
 import { users } from './users';
 import { materialPurchaseReceipts } from './purchasing-materials';
 import { productionPlanItems } from './production-plans';
@@ -86,6 +86,7 @@ export const inventoryTransactionItems = pgTable(
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantity: numeric('quantity').notNull(),
     unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual price at transaction time
   },

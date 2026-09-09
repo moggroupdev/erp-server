@@ -114,6 +114,7 @@ export const materialPurchaseOrderItems = pgTable(
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitPrice: numeric('unit_price').notNull(),
     notes: text('notes'),
@@ -219,6 +220,7 @@ export const materialPurchaseReceiptItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseReceiptId: uuid('material_purchase_receipt_id').notNull(),
     materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityReceived: numeric('quantity_received').notNull(),
     quantityRejected: numeric('quantity_rejected').notNull().default(0),
     inspectionNotes: text('inspection_notes'),
