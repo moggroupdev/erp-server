@@ -1,6 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, boolean, check, primaryKey, index, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { createdAt, deletedAt, percentage, permissionEnum, productionSubDepartmentEnum } from './common';
+import { createdAt, deletedAt, genderEnum, percentage, permissionEnum, productionSubDepartmentEnum } from './common';
 import { loginHistory } from './login-history';
 import { departments } from './departments';
 
@@ -10,6 +10,7 @@ export const users = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: USR-00000001
     name: text('name').notNull(),
+    gender: genderEnum('gender'),
     phone: text('phone').unique(),
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),
     email: text('email').unique(),

@@ -23,6 +23,7 @@ export class UsersService {
   public async create(createUserDto: CreateUserDto, user: User) {
     const email = createUserDto.email || null;
     const phone = createUserDto.phone || null;
+    const gender = createUserDto.gender || null;
     const departmentId = createUserDto.departmentId || null;
     const productionSubDepartment = createUserDto.productionSubDepartment || null;
 
@@ -44,6 +45,7 @@ export class UsersService {
       .values({
         code: sql`DEFAULT`,
         name: createUserDto.name,
+        gender,
         email,
         phone,
         password: hashedPassword,

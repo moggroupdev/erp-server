@@ -300,3 +300,11 @@ export const SERVICE_CONTRACT_INTERVALS = Object.fromEntries(
 ) as {
   [K in Uppercase<(typeof SERVICE_CONTRACT_INTERVAL_VALUES)[number]>]: Lowercase<K>;
 };
+
+// ==================== GENDERS ====================
+
+export const GENDER_VALUES = ['male', 'female'] as const;
+
+export const GENDERS = Object.fromEntries(GENDER_VALUES.map((gender) => [gender.toUpperCase(), gender])) as {
+  [K in Uppercase<(typeof GENDER_VALUES)[number]>]: Lowercase<K>;
+};
