@@ -33,11 +33,21 @@ export class ProfileService {
 
   public async updatePassword(user: User, dto: UpdatePasswordDto) {
     if (!user.password)
-      throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
+      throw new UnauthorizedException(
+        translate(
+          'This account does not have a password set. Please contact an administrator.',
+          'لا توجد كلمة مرور لهذا الحساب. يرجى التواصل مع المسؤول.',
+        ),
+      );
 
     const isCurrentValid = await bcrypt.compare(dto.currentPassword, user.password);
     if (!isCurrentValid)
-      throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
+      throw new UnauthorizedException(
+        translate(
+          'The current password you entered is incorrect. Please try again.',
+          'كلمة المرور الحالية التي أدخلتها غير صحيحة. يرجى المحاولة مرة أخرى.',
+        ),
+      );
 
     if (dto.newPassword === dto.currentPassword)
       throw new BadRequestException(
