@@ -132,32 +132,6 @@ export const materialPurchaseOrderItems = pgTable(
   ],
 );
 
-export const materialPurchaseOrderItemContractItems = pgTable(
-  'material_purchase_order_item_contract_items',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
-    contractItemId: uuid('contract_item_id').notNull(),
-    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
-  },
-  (table) => [
-    foreignKey({
-      name: 'mpoici_mpoi_id_fk',
-      columns: [table.materialPurchaseOrderItemId],
-      foreignColumns: [materialPurchaseOrderItems.id],
-    }),
-    foreignKey({
-      name: 'mpoici_contract_item_id_fk',
-      columns: [table.contractItemId],
-      foreignColumns: [contractItems.id],
-    }),
-    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
-    index('mpoici_contract_item_id_idx').on(table.contractItemId),
-    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
-    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
-  ],
-);
-
 // Links MPO lines to requisition lines; qty required (unlike optional contract allocations).
 export const materialPurchaseOrderItemRequisitionItems = pgTable(
   'material_purchase_order_item_requisition_items',
@@ -182,6 +156,32 @@ export const materialPurchaseOrderItemRequisitionItems = pgTable(
     index('mpoirqi_mprqi_id_idx').on(table.materialPurchaseRequisitionItemId),
     unique('mpoirqi_mpoi_mprqi_unique').on(table.materialPurchaseOrderItemId, table.materialPurchaseRequisitionItemId),
     positiveQuantityCheck('mpoirqi_quantity_allocated_positive', table.quantityAllocated),
+  ],
+);
+
+export const materialPurchaseOrderItemContractItems = pgTable(
+  'material_purchase_order_item_contract_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    contractItemId: uuid('contract_item_id').notNull(),
+    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
+  },
+  (table) => [
+    foreignKey({
+      name: 'mpoici_mpoi_id_fk',
+      columns: [table.materialPurchaseOrderItemId],
+      foreignColumns: [materialPurchaseOrderItems.id],
+    }),
+    foreignKey({
+      name: 'mpoici_contract_item_id_fk',
+      columns: [table.contractItemId],
+      foreignColumns: [contractItems.id],
+    }),
+    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    index('mpoici_contract_item_id_idx').on(table.contractItemId),
+    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
+    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
   ],
 );
 
