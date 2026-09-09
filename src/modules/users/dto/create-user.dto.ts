@@ -1,8 +1,8 @@
 import { IsPhone, IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
 import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
-import { ProductionSubDepartment } from 'src/utils/types';
+import { GENDER_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { Gender, ProductionSubDepartment } from 'src/utils/types';
 
 export class CreateUserDto {
   @Trim()
@@ -10,6 +10,11 @@ export class CreateUserDto {
   @IsNotEmpty()
   @ApiProperty()
   name: string;
+
+  @IsIn(GENDER_VALUES)
+  @IsOptional()
+  @ApiPropertyOptional({ enum: GENDER_VALUES })
+  gender: Gender | null;
 
   @TrimToNull()
   @IsPhone()

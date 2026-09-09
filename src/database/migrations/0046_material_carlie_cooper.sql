@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'add_material_purchase_order' BEFORE 'read_supplier_invoices';

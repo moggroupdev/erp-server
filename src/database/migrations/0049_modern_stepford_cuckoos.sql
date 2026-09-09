@@ -1,0 +1,1 @@
+ALTER TYPE "public"."production_sub_department" ADD VALUE 'kitchens';

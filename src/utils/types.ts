@@ -14,6 +14,7 @@ import {
   APPROVAL_DECISION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
+  GENDER_VALUES,
 } from './constants';
 import { departments, users, roles, suppliers, customers } from 'src/database/schema';
 
@@ -63,6 +64,8 @@ export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES
 export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number];
 
 export type LegacyIssuePermitWorkOrderType = (typeof LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)[number];
+
+export type Gender = (typeof GENDER_VALUES)[number];
 
 // ==================== ENTITIES ====================
 

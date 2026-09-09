@@ -44,7 +44,13 @@ export class MaterialPurchaseReceiptsService {
         items: {
           with: {
             materialPurchaseOrderItem: {
-              columns: { id: true, materialCode: true, quantityOrdered: true, unitPrice: true },
+              columns: {
+                id: true,
+                materialCode: true,
+                unitOfMeasurementSelected: true,
+                quantityOrdered: true,
+                unitPrice: true,
+              },
               with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } },
             },
           },

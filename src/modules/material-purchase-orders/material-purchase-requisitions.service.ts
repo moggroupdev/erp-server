@@ -6,15 +6,14 @@ import {
   materialPurchaseOrders,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
-  materials,
-  materialUnitConversions,
   productionSubDepartmentManagers,
   suppliers,
 } from 'src/database/schema';
 import { APPROVAL_DECISIONS } from 'src/utils/constants';
-import { QueryParams, User, type ApprovalDecision, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
+import { QueryParams, User, type ApprovalDecision, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseRequisitionDto } from './dto/create-material-purchase-requisition.dto';
 import { CreateMaterialPurchaseRequisitionItemDto } from './dto/create-material-purchase-requisition-item.dto';
@@ -48,12 +47,13 @@ export class MaterialPurchaseRequisitionsService {
   constructor(
     @Inject(DRIZZLE) private db: DrizzleDB,
     private queryBuilderService: QueryBuilderService,
+    private materialUnitValidationService: MaterialUnitValidationService,
   ) {}
 
   public async create(createDto: CreateMaterialPurchaseRequisitionDto, user: User) {
     const { items, ...header } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
-    await this.assertMaterialsAndSelectedUnits(items);
+    await this.materialUnitValidationService.assertValidSelectedUnits(items);
     const productionSubDepartmentManagerId = await this.resolveSubDepartmentManagerId(header.productionSubDepartment);
 
     return await this.db.transaction(async (tx) => {
@@ -161,7 +161,7 @@ export class MaterialPurchaseRequisitionsService {
   public async addItem(id: string, createDto: CreateMaterialPurchaseRequisitionItemDto) {
     const requisition = await this.requireRequisition(id);
     this.assertEditable(requisition);
-    await this.assertMaterialsAndSelectedUnits([createDto]);
+    await this.materialUnitValidationService.assertValidSelectedUnits([createDto]);
     await this.assertMaterialNotOnRequisition(id, createDto.materialCode);
 
     const [inserted] = await this.db
@@ -188,7 +188,7 @@ export class MaterialPurchaseRequisitionsService {
     const nextUnit = updateDto.unitOfMeasurementSelected ?? existing.unitOfMeasurementSelected;
 
     if (updateDto.materialCode !== undefined || updateDto.unitOfMeasurementSelected !== undefined) {
-      await this.assertMaterialsAndSelectedUnits([{ materialCode: nextMaterialCode, unitOfMeasurementSelected: nextUnit }]);
+      await this.materialUnitValidationService.assertValidSelectedUnits([{ materialCode: nextMaterialCode, unitOfMeasurementSelected: nextUnit }]);
     }
 
     if (updateDto.materialCode !== undefined && updateDto.materialCode !== existing.materialCode) {
@@ -391,48 +391,6 @@ export class MaterialPurchaseRequisitionsService {
     });
 
     return assignment?.managerId ?? null;
-  }
-
-  private async assertMaterialsAndSelectedUnits(items: { materialCode: string; unitOfMeasurementSelected: MaterialUnit }[]) {
-    const uniqueCodes = [...new Set(items.map((item) => item.materialCode))];
-    const found = await this.db.query.materials.findMany({
-      where: and(inArray(materials.code, uniqueCodes), isNull(materials.deletedAt)),
-      columns: { code: true, unitOfMeasurement: true },
-    });
-
-    const byCode = new Map(found.map((row) => [row.code, row]));
-    const missing = uniqueCodes.filter((code) => !byCode.has(code));
-
-    if (missing.length > 0) {
-      throw new NotFoundException(
-        translate(`Material(s) not found: ${missing.join(', ')}.`, `المواد غير موجودة: ${missing.join(', ')}.`),
-      );
-    }
-
-    const conversions = await this.db.query.materialUnitConversions.findMany({
-      where: inArray(materialUnitConversions.materialCode, uniqueCodes),
-      columns: { materialCode: true, unit: true },
-    });
-
-    const allowedByCode = new Map<string, Set<string>>();
-    for (const material of found) {
-      allowedByCode.set(material.code, new Set([material.unitOfMeasurement]));
-    }
-    for (const conversion of conversions) {
-      allowedByCode.get(conversion.materialCode)?.add(conversion.unit);
-    }
-
-    for (const item of items) {
-      const allowed = allowedByCode.get(item.materialCode);
-      if (!allowed?.has(item.unitOfMeasurementSelected)) {
-        throw new BadRequestException(
-          translate(
-            `Unit "${item.unitOfMeasurementSelected}" is not valid for material ${item.materialCode}.`,
-            `الوحدة "${item.unitOfMeasurementSelected}" غير صالحة للمادة ${item.materialCode}.`,
-          ),
-        );
-      }
-    }
   }
 
   private async assertMaterialNotOnRequisition(requisitionId: string, materialCode: string, excludeItemId?: string) {

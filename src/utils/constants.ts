@@ -53,6 +53,7 @@ export const PERMISSION_VALUES = [
   'update_product_bom',
   'read_inventory_transactions',
   'read_material_purchase_orders',
+  'add_material_purchase_order',
   'read_supplier_invoices',
   'add_material_purchase_requisition',
   'read_material_purchase_requisitions',
@@ -249,6 +250,7 @@ export const PRODUCTION_SUB_DEPARTMENT_VALUES = [
   'sheet_metal_cold',
   'sheet_metal_hot',
   'blacksmithing',
+  'kitchens',
 ] as const;
 
 export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
@@ -298,4 +300,12 @@ export const SERVICE_CONTRACT_INTERVALS = Object.fromEntries(
   SERVICE_CONTRACT_INTERVAL_VALUES.map((interval) => [interval.toUpperCase(), interval]),
 ) as {
   [K in Uppercase<(typeof SERVICE_CONTRACT_INTERVAL_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== GENDERS ====================
+
+export const GENDER_VALUES = ['male', 'female'] as const;
+
+export const GENDERS = Object.fromEntries(GENDER_VALUES.map((gender) => [gender.toUpperCase(), gender])) as {
+  [K in Uppercase<(typeof GENDER_VALUES)[number]>]: Lowercase<K>;
 };

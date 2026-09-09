@@ -114,6 +114,7 @@ export const materialPurchaseOrderItems = pgTable(
     materialCode: text('material_code')
       .notNull()
       .references(() => materials.code),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitPrice: numeric('unit_price').notNull(),
     notes: text('notes'),
@@ -129,32 +130,6 @@ export const materialPurchaseOrderItems = pgTable(
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
     positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
     positiveQuantityCheck('mpoi_unit_price_positive', table.unitPrice),
-  ],
-);
-
-export const materialPurchaseOrderItemContractItems = pgTable(
-  'material_purchase_order_item_contract_items',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
-    contractItemId: uuid('contract_item_id').notNull(),
-    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
-  },
-  (table) => [
-    foreignKey({
-      name: 'mpoici_mpoi_id_fk',
-      columns: [table.materialPurchaseOrderItemId],
-      foreignColumns: [materialPurchaseOrderItems.id],
-    }),
-    foreignKey({
-      name: 'mpoici_contract_item_id_fk',
-      columns: [table.contractItemId],
-      foreignColumns: [contractItems.id],
-    }),
-    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
-    index('mpoici_contract_item_id_idx').on(table.contractItemId),
-    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
-    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
   ],
 );
 
@@ -182,6 +157,32 @@ export const materialPurchaseOrderItemRequisitionItems = pgTable(
     index('mpoirqi_mprqi_id_idx').on(table.materialPurchaseRequisitionItemId),
     unique('mpoirqi_mpoi_mprqi_unique').on(table.materialPurchaseOrderItemId, table.materialPurchaseRequisitionItemId),
     positiveQuantityCheck('mpoirqi_quantity_allocated_positive', table.quantityAllocated),
+  ],
+);
+
+export const materialPurchaseOrderItemContractItems = pgTable(
+  'material_purchase_order_item_contract_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    contractItemId: uuid('contract_item_id').notNull(),
+    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
+  },
+  (table) => [
+    foreignKey({
+      name: 'mpoici_mpoi_id_fk',
+      columns: [table.materialPurchaseOrderItemId],
+      foreignColumns: [materialPurchaseOrderItems.id],
+    }),
+    foreignKey({
+      name: 'mpoici_contract_item_id_fk',
+      columns: [table.contractItemId],
+      foreignColumns: [contractItems.id],
+    }),
+    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
+    index('mpoici_contract_item_id_idx').on(table.contractItemId),
+    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
+    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
   ],
 );
 
@@ -219,6 +220,7 @@ export const materialPurchaseReceiptItems = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseReceiptId: uuid('material_purchase_receipt_id').notNull(),
     materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
+    unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityReceived: numeric('quantity_received').notNull(),
     quantityRejected: numeric('quantity_rejected').notNull().default(0),
     inspectionNotes: text('inspection_notes'),
