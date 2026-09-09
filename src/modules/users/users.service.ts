@@ -26,6 +26,7 @@ export class UsersService {
     const gender = createUserDto.gender || null;
     const departmentId = createUserDto.departmentId || null;
     const productionSubDepartment = createUserDto.productionSubDepartment || null;
+    const isLoginEnabled = createUserDto.isLoginEnabled;
 
     this.validateUserFields({
       email,
@@ -34,11 +35,15 @@ export class UsersService {
       productionSubDepartment,
       isAdmin: false,
       roleId: createUserDto.roleId,
+      isLoginEnabled,
     });
+
+    if (isLoginEnabled && !createUserDto.password)
+      throw new BadRequestException(translate('Password is required.', 'كلمة المرور مطلوبة.'));
 
     if (departmentId) await this.validateRoleDepartment(createUserDto.roleId, departmentId);
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 12);
+    const hashedPassword = isLoginEnabled ? await bcrypt.hash(createUserDto.password!, 12) : null;
 
     const [newUser] = await this.db
       .insert(users)
@@ -48,6 +53,7 @@ export class UsersService {
         gender,
         email,
         phone,
+        isLoginEnabled,
         password: hashedPassword,
         departmentId,
         productionSubDepartment,
@@ -108,6 +114,8 @@ export class UsersService {
         ? updateUserDto.productionSubDepartment
         : existing.productionSubDepartment;
     const roleId = updateUserDto.roleId !== undefined ? updateUserDto.roleId : existing.roleId;
+    const isLoginEnabled =
+      updateUserDto.isLoginEnabled !== undefined ? updateUserDto.isLoginEnabled : existing.isLoginEnabled;
 
     this.validateUserFields({
       email,
@@ -116,7 +124,11 @@ export class UsersService {
       productionSubDepartment,
       isAdmin: existing.isAdmin,
       roleId,
+      isLoginEnabled,
     });
+
+    if (isLoginEnabled && updateUserDto.password === undefined && existing.password === null)
+      throw new BadRequestException(translate('Password is required.', 'كلمة المرور مطلوبة.'));
 
     if (roleId && departmentId) await this.validateRoleDepartment(roleId, departmentId);
 
@@ -162,10 +174,11 @@ export class UsersService {
     productionSubDepartment: string | null;
     isAdmin: boolean;
     roleId: string | null;
+    isLoginEnabled: boolean;
   }) {
-    const { email, phone, isAdmin, roleId, departmentId, productionSubDepartment } = fields;
+    const { email, phone, isAdmin, roleId, departmentId, productionSubDepartment, isLoginEnabled } = fields;
 
-    if (!email && !phone)
+    if (isLoginEnabled && !email && !phone)
       throw new BadRequestException(
         translate('Either email or phone must be provided.', 'يجب إدخال البريد الإلكتروني أو رقم الهاتف.'),
       );

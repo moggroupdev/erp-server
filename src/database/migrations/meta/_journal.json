@@ -351,6 +351,13 @@
       "when": 1788937004180,
       "tag": "0049_modern_stepford_cuckoos",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1788942492063,
+      "tag": "0050_clever_blue_marvel",
+      "breakpoints": true
     }
   ]
 }

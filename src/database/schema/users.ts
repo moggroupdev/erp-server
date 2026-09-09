@@ -15,7 +15,8 @@ export const users = pgTable(
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),
     email: text('email').unique(),
     isEmailVerified: boolean('is_email_verified').notNull().default(false),
-    password: text('password').notNull(), // Store hashed password
+    isLoginEnabled: boolean('is_login_enabled').notNull().default(true),
+    password: text('password'), // Store hashed password; required when isLoginEnabled (see users_login_enabled_check)
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id),
     departmentId: uuid('department_id').references(() => departments.id),
@@ -32,6 +33,10 @@ export const users = pgTable(
     check(
       'users_admin_or_role_check',
       sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.roleId} IS NOT NULL)`,
+    ),
+    check(
+      'users_login_enabled_check',
+      sql`${table.isLoginEnabled} = false OR (${table.password} IS NOT NULL AND (${table.email} IS NOT NULL OR ${table.phone} IS NOT NULL))`,
     ),
   ],
 );

@@ -130,6 +130,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Users & roles
 
+- `users.is_login_enabled` — when true, `password` and (`email` or `phone`) are required (DB-checked via `users_login_enabled_check`); when false, all three are optional (employee-only records with no system access)
 - `users.production_sub_department` — required if `department_id = PRODUCTION_DEPARTMENT_ID`
 - `roles.max_discount_pct` — cap company negotiation rounds and direct contract discounts; `NULL` = no discount; admins exempt
 - `roles.department_id` — when set, user's `department_id` must match on role assignment
