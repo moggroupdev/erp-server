@@ -1,0 +1,3 @@
+ALTER TABLE "users" DROP CONSTRAINT "users_admin_or_role_check";--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "job_title" text;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_admin_or_role_check" CHECK (("users"."is_admin" = true AND "users"."role_id" IS NULL) OR ("users"."is_admin" = false AND "users"."is_login_enabled" = true AND "users"."role_id" IS NOT NULL) OR ("users"."is_admin" = false AND "users"."is_login_enabled" = false AND "users"."role_id" IS NULL));

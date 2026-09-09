@@ -1,5 +1,5 @@
 import { IsPhone, IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GENDER_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import { Gender, ProductionSubDepartment } from 'src/utils/types';
@@ -10,6 +10,12 @@ export class CreateUserDto {
   @IsNotEmpty()
   @ApiProperty()
   name: string;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  jobTitle: string | null;
 
   @IsIn(GENDER_VALUES)
   @IsOptional()
@@ -28,10 +34,15 @@ export class CreateUserDto {
   @ApiPropertyOptional()
   email: string | null;
 
+  @IsBoolean()
+  @ApiProperty()
+  isLoginEnabled: boolean;
+
+  @ValidateIf((o: CreateUserDto) => o.isLoginEnabled)
   @IsString()
   @IsNotEmpty()
-  @ApiProperty()
-  password: string;
+  @ApiPropertyOptional()
+  password?: string;
 
   @IsUuidString()
   @IsOptional()
@@ -43,8 +54,9 @@ export class CreateUserDto {
   @ApiPropertyOptional({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
   productionSubDepartment: ProductionSubDepartment | null;
 
+  @ValidateIf((o: CreateUserDto) => o.isLoginEnabled)
   @IsUuidString()
   @IsNotEmpty()
-  @ApiProperty()
-  roleId: string;
+  @ApiPropertyOptional()
+  roleId?: string | null;
 }

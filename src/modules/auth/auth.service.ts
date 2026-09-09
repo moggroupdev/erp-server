@@ -84,15 +84,19 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
 
-    // Step 3: Verify password
+    // Step 3: Reject users without login access (employee-only records) — same message as invalid credentials
+    if (!user.isLoginEnabled || !user.password)
+      throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
+
+    // Step 4: Verify password
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) throw new UnauthorizedException(translate('Invalid credentials.', 'بيانات الاعتماد غير صحيحة.'));
 
-    // Step 4: Generate tokens and set refresh token cookie
+    // Step 5: Generate tokens and set refresh token cookie
     const tokens = this.generateTokens(user.id);
     this.setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Step 5: Fetch user with role and permissions for the response
+    // Step 6: Fetch user with role and permissions for the response
     const sanitizedUser = await this.getSanitizedUserWithRoleWithPermissions(user.id);
 
     return {
