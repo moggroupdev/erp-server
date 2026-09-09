@@ -24,9 +24,11 @@ export class UsersService {
     const email = createUserDto.email || null;
     const phone = createUserDto.phone || null;
     const gender = createUserDto.gender || null;
+    const jobTitle = createUserDto.jobTitle || null;
     const departmentId = createUserDto.departmentId || null;
     const productionSubDepartment = createUserDto.productionSubDepartment || null;
     const isLoginEnabled = createUserDto.isLoginEnabled;
+    const roleId = isLoginEnabled ? (createUserDto.roleId ?? null) : null;
 
     this.validateUserFields({
       email,
@@ -34,14 +36,14 @@ export class UsersService {
       departmentId,
       productionSubDepartment,
       isAdmin: false,
-      roleId: createUserDto.roleId,
+      roleId,
       isLoginEnabled,
     });
 
     if (isLoginEnabled && !createUserDto.password)
       throw new BadRequestException(translate('Password is required.', 'كلمة المرور مطلوبة.'));
 
-    if (departmentId) await this.validateRoleDepartment(createUserDto.roleId, departmentId);
+    if (roleId && departmentId) await this.validateRoleDepartment(roleId, departmentId);
 
     const hashedPassword = isLoginEnabled ? await bcrypt.hash(createUserDto.password!, 12) : null;
 
@@ -50,6 +52,7 @@ export class UsersService {
       .values({
         code: sql`DEFAULT`,
         name: createUserDto.name,
+        jobTitle,
         gender,
         email,
         phone,
@@ -57,7 +60,7 @@ export class UsersService {
         password: hashedPassword,
         departmentId,
         productionSubDepartment,
-        roleId: createUserDto.roleId,
+        roleId,
         createdBy: user.id,
       })
       .returning(userColumnsWithoutPassword);
@@ -113,9 +116,14 @@ export class UsersService {
       updateUserDto.productionSubDepartment !== undefined
         ? updateUserDto.productionSubDepartment
         : existing.productionSubDepartment;
-    const roleId = updateUserDto.roleId !== undefined ? updateUserDto.roleId : existing.roleId;
     const isLoginEnabled =
       updateUserDto.isLoginEnabled !== undefined ? updateUserDto.isLoginEnabled : existing.isLoginEnabled;
+    // Admins and non-login users never have a role; login-enabled non-admins require one
+    const roleId = existing.isAdmin || !isLoginEnabled
+      ? null
+      : updateUserDto.roleId !== undefined
+        ? updateUserDto.roleId
+        : existing.roleId;
 
     this.validateUserFields({
       email,
@@ -134,7 +142,7 @@ export class UsersService {
 
     const { password, ...rest } = updateUserDto;
 
-    const setValues: Partial<typeof users.$inferInsert> = { ...rest, roleId: existing.isAdmin ? null : roleId };
+    const setValues: Partial<typeof users.$inferInsert> = { ...rest, roleId };
 
     // Only write unique fields when they actually change (avoids false unique conflicts)
     if (updateUserDto.phone !== undefined && updateUserDto.phone === existing.phone) delete setValues.phone;
@@ -186,8 +194,13 @@ export class UsersService {
     if (isAdmin && roleId !== null)
       throw new BadRequestException(translate("You can't assign a role to an admin.", 'لا يمكن تعيين دور لمستخدم مسؤول.'));
 
-    if (!isAdmin && roleId === null)
+    if (!isAdmin && isLoginEnabled && roleId === null)
       throw new BadRequestException(translate('User role is required.', 'يجب أن يكون للمستخدم دور.'));
+
+    if (!isAdmin && !isLoginEnabled && roleId !== null)
+      throw new BadRequestException(
+        translate("You can't assign a role to a user who cannot log in.", 'لا يمكن تعيين دور لمستخدم لا يمكنه تسجيل الدخول.'),
+      );
 
     if (departmentId === PRODUCTION_DEPARTMENT_ID) {
       if (!productionSubDepartment)

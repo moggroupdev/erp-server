@@ -11,6 +11,12 @@ export class CreateUserDto {
   @ApiProperty()
   name: string;
 
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  jobTitle: string | null;
+
   @IsIn(GENDER_VALUES)
   @IsOptional()
   @ApiPropertyOptional({ enum: GENDER_VALUES })
@@ -48,8 +54,9 @@ export class CreateUserDto {
   @ApiPropertyOptional({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
   productionSubDepartment: ProductionSubDepartment | null;
 
+  @ValidateIf((o: CreateUserDto) => o.isLoginEnabled)
   @IsUuidString()
   @IsNotEmpty()
-  @ApiProperty()
-  roleId: string;
+  @ApiPropertyOptional()
+  roleId?: string | null;
 }

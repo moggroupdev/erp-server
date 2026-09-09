@@ -10,6 +10,7 @@ export const users = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: USR-00000001
     name: text('name').notNull(),
+    jobTitle: text('job_title'),
     gender: genderEnum('gender'),
     phone: text('phone').unique(),
     isPhoneVerified: boolean('is_phone_verified').notNull().default(false),
@@ -18,7 +19,7 @@ export const users = pgTable(
     isLoginEnabled: boolean('is_login_enabled').notNull().default(true),
     password: text('password'), // Store hashed password; required when isLoginEnabled (see users_login_enabled_check)
     isAdmin: boolean('is_admin').notNull().default(false),
-    roleId: uuid('role_id').references(() => roles.id),
+    roleId: uuid('role_id').references(() => roles.id), // Required only for login-enabled non-admin users
     departmentId: uuid('department_id').references(() => departments.id),
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'), // @APP_CHECKED - Required only when department_id is Production
     createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // Self-referencing foreign key
@@ -30,9 +31,10 @@ export const users = pgTable(
     index('users_role_id_idx').on(table.roleId),
     index('users_department_id_idx').on(table.departmentId),
     index('users_production_sub_department_idx').on(table.productionSubDepartment),
+    // Admin: no role. Login-enabled non-admin: role required. Non-login (employee-only): no role.
     check(
       'users_admin_or_role_check',
-      sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.roleId} IS NOT NULL)`,
+      sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.isLoginEnabled} = true AND ${table.roleId} IS NOT NULL) OR (${table.isAdmin} = false AND ${table.isLoginEnabled} = false AND ${table.roleId} IS NULL)`,
     ),
     check(
       'users_login_enabled_check',
