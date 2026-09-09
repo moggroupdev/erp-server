@@ -17,7 +17,7 @@ export const users = pgTable(
     email: text('email').unique(),
     isEmailVerified: boolean('is_email_verified').notNull().default(false),
     isLoginEnabled: boolean('is_login_enabled').notNull().default(true),
-    password: text('password'), // Store hashed password; required when isLoginEnabled (see users_login_enabled_check)
+    password: text('password'), // Hashed; NULL iff isLoginEnabled is false (see users_login_enabled_check)
     isAdmin: boolean('is_admin').notNull().default(false),
     roleId: uuid('role_id').references(() => roles.id), // Required only for login-enabled non-admin users
     departmentId: uuid('department_id').references(() => departments.id),
@@ -36,9 +36,14 @@ export const users = pgTable(
       'users_admin_or_role_check',
       sql`(${table.isAdmin} = true AND ${table.roleId} IS NULL) OR (${table.isAdmin} = false AND ${table.isLoginEnabled} = true AND ${table.roleId} IS NOT NULL) OR (${table.isAdmin} = false AND ${table.isLoginEnabled} = false AND ${table.roleId} IS NULL)`,
     ),
+    // Login enabled: password + (email or phone). Login disabled: password must be NULL.
     check(
       'users_login_enabled_check',
-      sql`${table.isLoginEnabled} = false OR (${table.password} IS NOT NULL AND (${table.email} IS NOT NULL OR ${table.phone} IS NOT NULL))`,
+      sql`(
+        (${table.isLoginEnabled} = true AND ${table.password} IS NOT NULL AND (${table.email} IS NOT NULL OR ${table.phone} IS NOT NULL))
+        OR
+        (${table.isLoginEnabled} = false AND ${table.password} IS NULL)
+      )`,
     ),
   ],
 );
