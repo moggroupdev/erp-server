@@ -148,7 +148,8 @@ export class UsersService {
     if (updateUserDto.phone !== undefined && updateUserDto.phone === existing.phone) delete setValues.phone;
     if (updateUserDto.email !== undefined && updateUserDto.email === existing.email) delete setValues.email;
 
-    if (password !== undefined) setValues.password = await bcrypt.hash(password, 12);
+    if (!isLoginEnabled) setValues.password = null;
+    else if (password !== undefined) setValues.password = await bcrypt.hash(password, 12);
 
     const [updatedUser] = await this.db
       .update(users)
