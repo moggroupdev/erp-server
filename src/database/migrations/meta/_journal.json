@@ -372,6 +372,13 @@
       "when": 1788955885135,
       "tag": "0052_gigantic_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1788958539305,
+      "tag": "0053_natural_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

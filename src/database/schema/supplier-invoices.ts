@@ -24,6 +24,7 @@ export const supplierInvoices = pgTable(
     supplierId: uuid('supplier_id') // @RFP_APP_CHECKED - Copy from linked order's supplier_id on insert; must match parent
       .notNull()
       .references(() => suppliers.id),
+    pdfFilename: text('pdf_filename'), // Stored under uploads/supplier-invoices/; optional until uploaded
     createdAt,
     createdBy: uuid('created_by')
       .notNull()

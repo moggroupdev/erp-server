@@ -26,32 +26,50 @@ export class UploaderService {
     if (!fs.existsSync(this.uploadsDir)) fs.mkdirSync(this.uploadsDir, { recursive: true });
   }
 
-  public saveFile(file: MulterFile | undefined, subdirectory: string): string | null {
+  public saveFile(file: MulterFile | undefined, subdirectory: string, filename?: string): string | null {
     if (!file) return null;
+
+    const fileData = resolveFileBuffer(file);
+    if (!fileData) return null;
 
     // Ensure subdirectory exists
     this.ensureSubdirectoryExists(subdirectory);
 
-    // Generate unique filename
-    const fileExtension = path.extname(file.originalname);
-    const filename = `${randomUUID()}${fileExtension}`;
-    const filepath = path.join(this.getSubdirectoryPath(subdirectory), filename);
+    // Use provided filename, or generate a unique UUID-based one
+    const fileExtension = path.extname(file.originalname) || '.bin';
+    const resolvedFilename = filename ?? `${randomUUID()}${fileExtension}`;
+    const filepath = path.join(this.getSubdirectoryPath(subdirectory), resolvedFilename);
 
-    // Write file to disk
-    fs.writeFileSync(filepath, file.buffer);
+    // Write file to disk (overwrites when the same filename is reused)
+    fs.writeFileSync(filepath, fileData);
 
-    return filename;
+    return resolvedFilename;
   }
 
-  public deleteFile(filename: string | null, subdirectory: string): void {
+  public deleteFile(filename: string | null | undefined, subdirectory: string): void {
     if (!filename) return;
-    const filepath = path.join(this.getSubdirectoryPath(subdirectory), filename);
-    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+    // Prevent path traversal; only the basename is ever deleted
+    const safeName = path.basename(filename.trim());
+    if (!safeName || safeName === '.' || safeName === '..') return;
+
+    const filepath = path.join(this.getSubdirectoryPath(subdirectory), safeName);
+    if (fs.existsSync(filepath)) {
+      try {
+        fs.unlinkSync(filepath);
+      } catch {
+        // Best-effort: file may be locked by a viewer/antivirus on Windows
+      }
+    }
   }
 
   public getFileUrl(filename: string | null, subdirectory: string): string | null {
     if (!filename) return null;
     return `${this.baseUrl}/${subdirectory}/${filename}`;
+  }
+
+  public getFilePath(filename: string | null, subdirectory: string): string | null {
+    if (!filename) return null;
+    return path.join(this.getSubdirectoryPath(subdirectory), filename);
   }
 
   // ========== Private Helpers ==========
@@ -64,4 +82,10 @@ export class UploaderService {
     const subdirectoryPath = this.getSubdirectoryPath(subdirectory);
     if (!fs.existsSync(subdirectoryPath)) fs.mkdirSync(subdirectoryPath, { recursive: true });
   }
+}
+
+function resolveFileBuffer(file: MulterFile & { path?: string }): Buffer | null {
+  if (file.buffer && file.buffer.length > 0) return file.buffer;
+  if (file.path && fs.existsSync(file.path)) return fs.readFileSync(file.path);
+  return null;
 }
