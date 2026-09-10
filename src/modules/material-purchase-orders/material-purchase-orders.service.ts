@@ -100,14 +100,18 @@ export class MaterialPurchaseOrdersService {
         translate(`Material purchase order with ID ${id} does not exist.`, `لا يوجد أمر شراء مواد بالمعرف ${id}.`),
       );
 
-    const remainingByItemId = await this.getQuantityRemainingByOrderItemId(order.items);
+    const progressByItemId = await this.getQuantityProgressByOrderItemId(order.items);
 
     return {
       ...order,
-      items: order.items.map((item) => ({
-        ...item,
-        quantityRemaining: remainingByItemId.get(item.id) ?? Number(item.quantityOrdered),
-      })),
+      items: order.items.map((item) => {
+        const progress = progressByItemId.get(item.id);
+        return {
+          ...item,
+          quantityReceived: progress?.quantityReceived ?? 0,
+          quantityRemaining: progress?.quantityRemaining ?? Number(item.quantityOrdered),
+        };
+      }),
     };
   }
 
@@ -137,8 +141,11 @@ export class MaterialPurchaseOrdersService {
     }
   }
 
-  /** Remaining qty per order line, expressed in that line's `unitOfMeasurementSelected`. */
-  private async getQuantityRemainingByOrderItemId(
+  /**
+   * Progress per order line, expressed in that line's `unitOfMeasurementSelected`.
+   * `quantityReceived` = accepted qty only; remaining subtracts accepted + rejected.
+   */
+  private async getQuantityProgressByOrderItemId(
     orderItems: {
       id: string;
       quantityOrdered: string | number;
@@ -149,14 +156,14 @@ export class MaterialPurchaseOrdersService {
       };
     }[],
   ) {
-    const remaining = new Map<string, number>();
+    const progress = new Map<string, { quantityReceived: number; quantityRemaining: number }>();
     const orderItemIds = orderItems.map((item) => item.id);
 
     for (const item of orderItems) {
-      remaining.set(item.id, Number(item.quantityOrdered));
+      progress.set(item.id, { quantityReceived: 0, quantityRemaining: Number(item.quantityOrdered) });
     }
 
-    if (orderItemIds.length === 0) return remaining;
+    if (orderItemIds.length === 0) return progress;
 
     const receiptItems = await this.db.query.materialPurchaseReceiptItems.findMany({
       where: inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, orderItemIds),
@@ -169,7 +176,8 @@ export class MaterialPurchaseOrdersService {
     });
 
     const orderItemById = new Map(orderItems.map((item) => [item.id, item]));
-    const receivedBaseById = new Map<string, number>();
+    const acceptedBaseById = new Map<string, number>();
+    const coveredBaseById = new Map<string, number>();
 
     for (const row of receiptItems) {
       const orderItem = orderItemById.get(row.materialPurchaseOrderItemId);
@@ -181,9 +189,16 @@ export class MaterialPurchaseOrdersService {
         orderItem.material.unitOfMeasurement,
         conversions,
       );
-      const baseQty =
-        toBaseQuantity(Number(row.quantityReceived), factor) + toBaseQuantity(Number(row.quantityRejected), factor);
-      receivedBaseById.set(row.materialPurchaseOrderItemId, (receivedBaseById.get(row.materialPurchaseOrderItemId) ?? 0) + baseQty);
+      const acceptedBase = toBaseQuantity(Number(row.quantityReceived), factor);
+      const coveredBase = acceptedBase + toBaseQuantity(Number(row.quantityRejected), factor);
+      acceptedBaseById.set(
+        row.materialPurchaseOrderItemId,
+        (acceptedBaseById.get(row.materialPurchaseOrderItemId) ?? 0) + acceptedBase,
+      );
+      coveredBaseById.set(
+        row.materialPurchaseOrderItemId,
+        (coveredBaseById.get(row.materialPurchaseOrderItemId) ?? 0) + coveredBase,
+      );
     }
 
     for (const item of orderItems) {
@@ -194,11 +209,16 @@ export class MaterialPurchaseOrdersService {
         conversions,
       );
       const orderedBase = toBaseQuantity(Number(item.quantityOrdered), orderFactor);
-      const receivedBase = receivedBaseById.get(item.id) ?? 0;
-      const remainingBase = Math.max(0, orderedBase - receivedBase);
-      remaining.set(item.id, orderFactor === 0 ? remainingBase : remainingBase / orderFactor);
+      const acceptedBase = acceptedBaseById.get(item.id) ?? 0;
+      const coveredBase = coveredBaseById.get(item.id) ?? 0;
+      const remainingBase = Math.max(0, orderedBase - coveredBase);
+
+      progress.set(item.id, {
+        quantityReceived: orderFactor === 0 ? acceptedBase : acceptedBase / orderFactor,
+        quantityRemaining: orderFactor === 0 ? remainingBase : remainingBase / orderFactor,
+      });
     }
 
-    return remaining;
+    return progress;
   }
 }
