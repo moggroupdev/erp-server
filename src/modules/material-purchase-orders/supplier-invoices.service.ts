@@ -105,7 +105,7 @@ export class SupplierInvoicesService {
     const safeDownloadName = sanitizeFilenamePart(invoice.invoiceNumber);
     return new StreamableFile(stream, {
       type: 'application/pdf',
-      disposition: `attachment; filename="${safeDownloadName}.pdf"`,
+      disposition: `inline; filename="${safeDownloadName}.pdf"`,
     });
   }
 }
