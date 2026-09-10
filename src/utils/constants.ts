@@ -57,6 +57,8 @@ export const PERMISSION_VALUES = [
   'read_material_purchase_orders',
   'add_material_purchase_order',
   'read_supplier_invoices',
+  'add_supplier_invoice',
+  'update_supplier_invoice',
   'add_material_purchase_requisition',
   'read_material_purchase_requisitions',
   'update_material_purchase_requisition',

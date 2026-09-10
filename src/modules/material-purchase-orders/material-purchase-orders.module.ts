@@ -8,8 +8,9 @@ import { MaterialPurchaseRequisitionsService } from './material-purchase-requisi
 import { MaterialPurchaseRequisitionsController } from './material-purchase-requisitions.controller';
 import { SupplierInvoicesService } from './supplier-invoices.service';
 import { SupplierInvoicesController } from './supplier-invoices.controller';
-import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
+import { QueryBuilderService } from 'src/utils/services/query-builder.service';
+import { UploaderService } from 'src/utils/services/uploader.service';
 
 @Module({
   imports: [DatabaseModule],
@@ -24,8 +25,9 @@ import { MaterialUnitValidationService } from 'src/utils/services/material-unit-
     MaterialPurchaseReceiptsService,
     MaterialPurchaseRequisitionsService,
     SupplierInvoicesService,
-    QueryBuilderService,
     MaterialUnitValidationService,
+    QueryBuilderService,
+    UploaderService,
   ],
 })
 export class MaterialPurchaseOrdersModule {}
