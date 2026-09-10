@@ -1,10 +1,16 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialPurchaseOrderItems, materialPurchaseOrders, suppliers } from 'src/database/schema';
-import { QueryParams, type User } from 'src/utils/types';
+import {
+  materialPurchaseOrderItems,
+  materialPurchaseOrders,
+  materialPurchaseReceiptItems,
+  suppliers,
+} from 'src/database/schema';
+import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import { resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
@@ -94,7 +100,15 @@ export class MaterialPurchaseOrdersService {
         translate(`Material purchase order with ID ${id} does not exist.`, `لا يوجد أمر شراء مواد بالمعرف ${id}.`),
       );
 
-    return order;
+    const remainingByItemId = await this.getQuantityRemainingByOrderItemId(order.items);
+
+    return {
+      ...order,
+      items: order.items.map((item) => ({
+        ...item,
+        quantityRemaining: remainingByItemId.get(item.id) ?? Number(item.quantityOrdered),
+      })),
+    };
   }
 
   // ============================== PRIVATE METHODS ==============================
@@ -121,5 +135,70 @@ export class MaterialPurchaseOrdersService {
         translate(`Supplier with ID ${supplierId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierId}.`),
       );
     }
+  }
+
+  /** Remaining qty per order line, expressed in that line's `unitOfMeasurementSelected`. */
+  private async getQuantityRemainingByOrderItemId(
+    orderItems: {
+      id: string;
+      quantityOrdered: string | number;
+      unitOfMeasurementSelected: MaterialUnit;
+      material: {
+        unitOfMeasurement: MaterialUnit;
+        unitConversions: { unit: MaterialUnit; conversionFactorToBase: number }[];
+      };
+    }[],
+  ) {
+    const remaining = new Map<string, number>();
+    const orderItemIds = orderItems.map((item) => item.id);
+
+    for (const item of orderItems) {
+      remaining.set(item.id, Number(item.quantityOrdered));
+    }
+
+    if (orderItemIds.length === 0) return remaining;
+
+    const receiptItems = await this.db.query.materialPurchaseReceiptItems.findMany({
+      where: inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, orderItemIds),
+      columns: {
+        materialPurchaseOrderItemId: true,
+        unitOfMeasurementSelected: true,
+        quantityReceived: true,
+        quantityRejected: true,
+      },
+    });
+
+    const orderItemById = new Map(orderItems.map((item) => [item.id, item]));
+    const receivedBaseById = new Map<string, number>();
+
+    for (const row of receiptItems) {
+      const orderItem = orderItemById.get(row.materialPurchaseOrderItemId);
+      if (!orderItem) continue;
+
+      const conversions = orderItem.material.unitConversions ?? [];
+      const factor = resolveConversionFactor(
+        row.unitOfMeasurementSelected,
+        orderItem.material.unitOfMeasurement,
+        conversions,
+      );
+      const baseQty =
+        toBaseQuantity(Number(row.quantityReceived), factor) + toBaseQuantity(Number(row.quantityRejected), factor);
+      receivedBaseById.set(row.materialPurchaseOrderItemId, (receivedBaseById.get(row.materialPurchaseOrderItemId) ?? 0) + baseQty);
+    }
+
+    for (const item of orderItems) {
+      const conversions = item.material.unitConversions ?? [];
+      const orderFactor = resolveConversionFactor(
+        item.unitOfMeasurementSelected,
+        item.material.unitOfMeasurement,
+        conversions,
+      );
+      const orderedBase = toBaseQuantity(Number(item.quantityOrdered), orderFactor);
+      const receivedBase = receivedBaseById.get(item.id) ?? 0;
+      const remainingBase = Math.max(0, orderedBase - receivedBase);
+      remaining.set(item.id, orderFactor === 0 ? remainingBase : remainingBase / orderFactor);
+    }
+
+    return remaining;
   }
 }

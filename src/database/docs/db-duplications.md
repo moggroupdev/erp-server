@@ -39,8 +39,8 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_price)` from `material_purchase_order_items`                   |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_price)` from `product_purchase_order_items`                    |
 | `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)` from `outsourcing_order_items`            |
-| `materials.quantity`                    | Net from `inventory_transaction_items` by `transaction_type` (receipt +, issue −, return +) |
-| `materials.unit_price`                  | Derived from `inventory_transaction_items.unit_price` per costing method                    |
+| `materials.quantity`                    | Net from `inventory_transaction_items` by `transaction_type` (receipt +, issue −, return +). **Not yet applied** when creating material-purchase receipt IVTs (issue flow unfinished). |
+| `materials.unit_price`                  | Derived from `inventory_transaction_items.unit_price` per costing method. **Not yet applied** on material-purchase receipt IVT create (same reason). |
 | `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
 | `outsourcing_orders.completed_at`       | All lines fully received (`received + rejected = ordered`) across receipts                  |
