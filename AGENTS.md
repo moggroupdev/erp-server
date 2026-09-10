@@ -6,9 +6,9 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 ## Enums & constants
 
-| Layer | File                          | Role                                                                                                                                      |
-| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                         |
+| Layer | File                          | Role                                                                                                                                                           |
+| ----- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App   | `src/utils/constants.ts`      | Single source for enum values (`*_VALUES` + derived `*_STATUSES` objects). Never hardcode enum strings elsewhere.                                              |
 | DB    | `src/database/schema/common/` | Shared schema primitives: `enums.ts`, `properties.ts` (shared columns), `types.ts`, `constraints.ts`, `approval-gates.ts`. Imports enum values from constants. |
 
 **New enum:** constants → `common/enums.ts` → schema. Migration is done manually by a developer (see Migrations).
@@ -42,6 +42,7 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - Drizzle `with` aliases are `{table}_{rel}_{rel}_…` and Postgres truncates identifiers at 63 chars. Do not nest another `with` on a deep path — load the leaf via `extras` (see `src/utils/extras/`) or a second query.
 - Use `src/utils/services/query-builder.service.ts` for list/filter/pagination.
 - Quantity updates: `sql\`quantity + ${n}` in transactions — never read-modify-write in Node.
+- After a mutation, avoid a second `get()` just to build the response. Prefer Drizzle `.returning()` on the same `insert`/`update`, or compose `{ ...entity, updatedField }` from data already in hand when the client revalidates anyway. Spotlight: fewer DB round-trips.
 
 ---
 

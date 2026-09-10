@@ -1,13 +1,7 @@
 import { createReadStream, existsSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { eq } from 'drizzle-orm';
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-  NotFoundException,
-  StreamableFile,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { supplierInvoices } from 'src/database/schema';
 import { QueryParams } from 'src/utils/types';
@@ -74,10 +68,7 @@ export class SupplierInvoicesService {
   }
 
   public async uploadPdf(id: string, file: MulterFile | undefined) {
-    if (!file)
-      throw new BadRequestException(
-        translate('A PDF file is required.', 'ملف PDF مطلوب.'),
-      );
+    if (!file) throw new BadRequestException(translate('A PDF file is required.', 'ملف PDF مطلوب.'));
 
     const invoice = await this.get(id);
     const previousFilename = invoice.pdfFilename;
@@ -86,20 +77,14 @@ export class SupplierInvoicesService {
       INVOICE_PDF_SUBDIRECTORY,
       buildInvoicePdfFilename(invoice.invoiceNumber),
     );
-    if (!pdfFilename)
-      throw new BadRequestException(
-        translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'),
-      );
+    if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
 
-    await this.db
-      .update(supplierInvoices)
-      .set({ pdfFilename })
-      .where(eq(supplierInvoices.id, id));
+    await this.db.update(supplierInvoices).set({ pdfFilename }).where(eq(supplierInvoices.id, id));
 
     if (previousFilename && previousFilename !== pdfFilename)
       this.uploaderService.deleteFile(previousFilename, INVOICE_PDF_SUBDIRECTORY);
 
-    return this.get(id);
+    return { ...invoice, pdfFilename };
   }
 
   public async getPdf(id: string): Promise<StreamableFile> {
