@@ -379,6 +379,13 @@
       "when": 1788958539305,
       "tag": "0053_natural_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1789024444672,
+      "tag": "0054_dry_solo",
+      "breakpoints": true
     }
   ]
 }
