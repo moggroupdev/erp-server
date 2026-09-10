@@ -110,8 +110,9 @@ All sources live on the header — one source event per transaction; items only 
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):
   - Create via authenticated multipart upload (`POST /supplier-invoices`): PDF required; `supplier_id` copied from the linked material purchase order (`@RFP_APP_CHECKED`); do not accept `supplier_id` from the client; reject cancelled orders; enforce unique `(supplier_id, invoice_number)` with a clear conflict message
   - `pdf_filename` optional on existing rows; set on create and/or via authenticated upload (`PATCH /supplier-invoices/:id/pdf`)
-  - Accept PDF only (`application/pdf`), max 10 MB; store under `uploads/supplier-invoices/` as `{invoiceNumber}_{shortId}.pdf`; upload and replace use the same path (save → update `pdf_filename` → delete previous file if any)
-  - Replacing a PDF deletes the previous file on disk before saving the new one
+  - Attach or replace PDF on an existing invoice via `PATCH /supplier-invoices/:id/pdf`: app parses the ETA PDF and the user confirms; then overwrite `invoice_number`, `issued_at`, amount fields, and `pdf_filename` from the confirmed values; enforce unique `(supplier_id, invoice_number)` excluding the current row when the number changes
+  - Accept PDF only (`application/pdf`), max 10 MB; store under `uploads/supplier-invoices/` as `{invoiceNumber}_{shortId}.pdf`; upload and replace use the same path (save → update row → delete previous file if any)
+  - Replacing a PDF deletes the previous file on disk after the new file is saved successfully
   - Download is authenticated (`GET /supplier-invoices/:id/pdf`); do not rely on public static serving for invoice PDFs
 
 ### Outsourcing
