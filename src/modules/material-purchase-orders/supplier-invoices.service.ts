@@ -1,13 +1,21 @@
 import { createReadStream, existsSync } from 'fs';
 import { randomUUID } from 'crypto';
-import { eq } from 'drizzle-orm';
-import { BadRequestException, Inject, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  StreamableFile,
+} from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { supplierInvoices } from 'src/database/schema';
-import { QueryParams } from 'src/utils/types';
+import { materialPurchaseOrders, supplierInvoices } from 'src/database/schema';
+import { QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { UploaderService } from 'src/utils/services/uploader.service';
+import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
 
 const ORDER_COLUMNS = { id: true, code: true } as const;
 const SUPPLIER_COLUMNS = { id: true, name: true } as const;
@@ -30,6 +38,83 @@ export class SupplierInvoicesService {
     private queryBuilderService: QueryBuilderService,
     private uploaderService: UploaderService,
   ) {}
+
+  public async create(dto: CreateSupplierInvoiceDto, file: MulterFile | undefined, user: User) {
+    if (!file) throw new BadRequestException(translate('A PDF file is required.', 'ملف PDF مطلوب.'));
+
+    const order = await this.db.query.materialPurchaseOrders.findFirst({
+      where: eq(materialPurchaseOrders.id, dto.materialPurchaseOrderId),
+      columns: { id: true, code: true, supplierId: true, cancelledAt: true },
+      with: { supplier: { columns: SUPPLIER_COLUMNS } },
+    });
+
+    if (!order)
+      throw new NotFoundException(
+        translate(
+          `Material purchase order with ID ${dto.materialPurchaseOrderId} does not exist.`,
+          `لا يوجد أمر توريد خامات بالمعرف ${dto.materialPurchaseOrderId}.`,
+        ),
+      );
+
+    if (order.cancelledAt)
+      throw new BadRequestException(
+        translate(
+          'Cannot add an invoice to a cancelled purchase order.',
+          'لا يمكن إضافة فاتورة إلى أمر توريد ملغي.',
+        ),
+      );
+
+    const invoiceNumber = dto.invoiceNumber.trim();
+    const existing = await this.db.query.supplierInvoices.findFirst({
+      where: and(eq(supplierInvoices.supplierId, order.supplierId), eq(supplierInvoices.invoiceNumber, invoiceNumber)),
+      columns: { id: true },
+    });
+
+    if (existing)
+      throw new ConflictException(
+        translate(
+          `Invoice number \`${invoiceNumber}\` already exists for this supplier.`,
+          `رقم الفاتورة \`${invoiceNumber}\` موجود بالفعل لهذا المورد.`,
+        ),
+      );
+
+    const pdfFilename = this.uploaderService.saveFile(
+      file,
+      INVOICE_PDF_SUBDIRECTORY,
+      buildInvoicePdfFilename(invoiceNumber),
+    );
+    if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
+
+    try {
+      const [inserted] = await this.db
+        .insert(supplierInvoices)
+        .values({
+          invoiceNumber,
+          issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : null,
+          totalPurchases: dto.totalPurchases ?? null,
+          totalDiscount: dto.totalDiscount ?? null,
+          vatAmount: dto.vatAmount ?? null,
+          withholdingTaxAmount: dto.withholdingTaxAmount ?? null,
+          totalAmount: dto.totalAmount ?? null,
+          materialPurchaseOrderId: order.id,
+          supplierId: order.supplierId, // @RFP_APP_CHECKED - copy from linked MPO
+          pdfFilename,
+          createdBy: user.id,
+        })
+        .returning();
+
+      return {
+        ...inserted,
+        supplier: order.supplier,
+        materialPurchaseOrder: { id: order.id, code: order.code },
+        productPurchaseOrder: null,
+        outsourcingOrder: null,
+      };
+    } catch (error) {
+      this.uploaderService.deleteFile(pdfFilename, INVOICE_PDF_SUBDIRECTORY);
+      throw error;
+    }
+  }
 
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(supplierInvoices, queryParams, {
