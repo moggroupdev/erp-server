@@ -1,12 +1,17 @@
 import { eq, inArray, sql } from 'drizzle-orm';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
+  materialPurchaseOrderItemRequisitionItems,
   materialPurchaseOrderItems,
   materialPurchaseOrders,
   materialPurchaseReceiptItems,
+  materialPurchaseRequisitionItems,
+  materialPurchaseRequisitions,
+  materials,
   suppliers,
 } from 'src/database/schema';
+import { APPROVAL_DECISIONS } from 'src/utils/constants';
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
@@ -14,6 +19,7 @@ import { resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
+import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purchase-order-item.dto';
 
 const MATERIAL_COLUMNS = {
   code: true,
@@ -22,6 +28,10 @@ const MATERIAL_COLUMNS = {
   unitOfMeasurement: true,
   subCategoryId: true,
 } as const;
+
+type Tx = Parameters<Parameters<DrizzleDB['transaction']>[0]>[0];
+
+type UnitConversionRow = { unit: MaterialUnit; conversionFactorToBase: number };
 
 @Injectable()
 export class MaterialPurchaseOrdersService {
@@ -36,6 +46,7 @@ export class MaterialPurchaseOrdersService {
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertSupplierExists(supplierId);
     await this.materialUnitValidationService.assertValidSelectedUnits(items);
+    this.assertNoDuplicateAllocationsPerItem(items);
 
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
 
@@ -64,6 +75,8 @@ export class MaterialPurchaseOrdersService {
           })),
         )
         .returning();
+
+      await this.insertRequisitionAllocations(tx, items, insertedItems);
 
       return { ...order, items: insertedItems };
     });
@@ -101,6 +114,7 @@ export class MaterialPurchaseOrdersService {
       );
 
     const progressByItemId = await this.getQuantityProgressByOrderItemId(order.items);
+    const allocationsByOrderItemId = await this.getRequisitionAllocationsByOrderItemIds(order.items.map((item) => item.id));
 
     return {
       ...order,
@@ -110,6 +124,7 @@ export class MaterialPurchaseOrdersService {
           ...item,
           quantityReceived: progress?.quantityReceived ?? 0,
           quantityRemaining: progress?.quantityRemaining ?? Number(item.quantityOrdered),
+          requisitionAllocations: allocationsByOrderItemId.get(item.id) ?? [],
         };
       }),
     };
@@ -128,6 +143,21 @@ export class MaterialPurchaseOrdersService {
     }
   }
 
+  private assertNoDuplicateAllocationsPerItem(items: CreateMaterialPurchaseOrderItemDto[]) {
+    for (const item of items) {
+      const allocations = item.requisitionAllocations ?? [];
+      const ids = allocations.map((row) => row.materialPurchaseRequisitionItemId);
+      if (new Set(ids).size !== ids.length) {
+        throw new BadRequestException(
+          translate(
+            `Duplicate requisition allocations are not allowed on material ${item.materialCode}.`,
+            `لا يُسمح بتكرار توزيعات طلب الشراء على المادة ${item.materialCode}.`,
+          ),
+        );
+      }
+    }
+  }
+
   private async assertSupplierExists(supplierId: string) {
     const supplier = await this.db.query.suppliers.findFirst({
       where: eq(suppliers.id, supplierId),
@@ -139,6 +169,203 @@ export class MaterialPurchaseOrdersService {
         translate(`Supplier with ID ${supplierId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierId}.`),
       );
     }
+  }
+
+  private async insertRequisitionAllocations(
+    tx: Tx,
+    items: CreateMaterialPurchaseOrderItemDto[],
+    insertedItems: { id: string; materialCode: string }[],
+  ) {
+    const allocationRows: {
+      materialPurchaseOrderItemId: string;
+      materialPurchaseRequisitionItemId: string;
+      quantityAllocated: number;
+      materialCode: string;
+      quantityOrdered: number;
+      unitOfMeasurementSelected: MaterialUnit;
+    }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const inserted = insertedItems[i];
+      for (const allocation of item.requisitionAllocations ?? []) {
+        allocationRows.push({
+          materialPurchaseOrderItemId: inserted.id,
+          materialPurchaseRequisitionItemId: allocation.materialPurchaseRequisitionItemId,
+          quantityAllocated: Number(allocation.quantityAllocated),
+          materialCode: item.materialCode,
+          quantityOrdered: Number(item.quantityOrdered),
+          unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+        });
+      }
+    }
+
+    if (allocationRows.length === 0) return;
+
+    const requisitionItemIds = [...new Set(allocationRows.map((row) => row.materialPurchaseRequisitionItemId))];
+
+    // Lock requisition lines so concurrent MPO creates cannot over-allocate remaining qty.
+    await tx
+      .select({ id: materialPurchaseRequisitionItems.id })
+      .from(materialPurchaseRequisitionItems)
+      .where(inArray(materialPurchaseRequisitionItems.id, requisitionItemIds))
+      .for('update');
+
+    const requisitionItems = await tx.query.materialPurchaseRequisitionItems.findMany({
+      where: inArray(materialPurchaseRequisitionItems.id, requisitionItemIds),
+      with: {
+        materialPurchaseRequisition: {
+          columns: {
+            id: true,
+            code: true,
+            planningDecision: true,
+            inventoryControlDecision: true,
+            managerDecision: true,
+          },
+        },
+      },
+    });
+
+    if (requisitionItems.length !== requisitionItemIds.length) {
+      const found = new Set(requisitionItems.map((row) => row.id));
+      const missing = requisitionItemIds.filter((id) => !found.has(id));
+      throw new NotFoundException(
+        translate(
+          `Purchase requisition item(s) not found: ${missing.join(', ')}.`,
+          `بنود طلب الشراء غير موجودة: ${missing.join(', ')}.`,
+        ),
+      );
+    }
+
+    const reqItemById = new Map(requisitionItems.map((row) => [row.id, row]));
+    const materialCodes = [...new Set(allocationRows.map((row) => row.materialCode))];
+
+    const materialRows = await tx.query.materials.findMany({
+      where: inArray(materials.code, materialCodes),
+      columns: { code: true, unitOfMeasurement: true },
+      extras: materialUnitConversionsExtra,
+    });
+    const materialByCode = new Map(materialRows.map((row) => [row.code, row]));
+
+    const existingAllocations = await tx
+      .select({
+        materialPurchaseRequisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+        totalAllocated: sql<string>`coalesce(sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated}), 0)`,
+      })
+      .from(materialPurchaseOrderItemRequisitionItems)
+      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, requisitionItemIds))
+      .groupBy(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId);
+
+    const existingAllocatedByReqItemId = new Map(
+      existingAllocations.map((row) => [row.materialPurchaseRequisitionItemId, Number(row.totalAllocated)]),
+    );
+
+    const newAllocatedByReqItemId = new Map<string, number>();
+    const newAllocatedBaseByOrderItemId = new Map<string, number>();
+
+    for (const row of allocationRows) {
+      const reqItem = reqItemById.get(row.materialPurchaseRequisitionItemId)!;
+      const requisition = reqItem.materialPurchaseRequisition;
+      const material = materialByCode.get(row.materialCode);
+
+      if (!material) {
+        throw new NotFoundException(
+          translate(`Material ${row.materialCode} does not exist.`, `المادة ${row.materialCode} غير موجودة.`),
+        );
+      }
+
+      if (
+        requisition.planningDecision !== APPROVAL_DECISIONS.APPROVED ||
+        requisition.inventoryControlDecision !== APPROVAL_DECISIONS.APPROVED ||
+        requisition.managerDecision !== APPROVAL_DECISIONS.APPROVED
+      ) {
+        throw new BadRequestException(
+          translate(
+            `Requisition ${requisition.code} must be fully approved before allocating its lines.`,
+            `يجب اعتماد طلب الشراء ${requisition.code} بالكامل قبل توزيع بنوده.`,
+          ),
+        );
+      }
+
+      if (reqItem.materialCode !== row.materialCode) {
+        throw new BadRequestException(
+          translate(
+            `Requisition item material ${reqItem.materialCode} does not match order line material ${row.materialCode}.`,
+            `مادة بند طلب الشراء ${reqItem.materialCode} لا تطابق مادة بند أمر التوريد ${row.materialCode}.`,
+          ),
+        );
+      }
+
+      const conversions = (material.unitConversions ?? []) as UnitConversionRow[];
+      const reqFactor = resolveConversionFactor(
+        reqItem.unitOfMeasurementSelected as MaterialUnit,
+        material.unitOfMeasurement as MaterialUnit,
+        conversions,
+      );
+
+      newAllocatedByReqItemId.set(
+        row.materialPurchaseRequisitionItemId,
+        (newAllocatedByReqItemId.get(row.materialPurchaseRequisitionItemId) ?? 0) + row.quantityAllocated,
+      );
+      newAllocatedBaseByOrderItemId.set(
+        row.materialPurchaseOrderItemId,
+        (newAllocatedBaseByOrderItemId.get(row.materialPurchaseOrderItemId) ?? 0) +
+          toBaseQuantity(row.quantityAllocated, reqFactor),
+      );
+    }
+
+    for (const [reqItemId, newQty] of newAllocatedByReqItemId) {
+      const reqItem = reqItemById.get(reqItemId)!;
+      const existing = existingAllocatedByReqItemId.get(reqItemId) ?? 0;
+      const requested = Number(reqItem.quantityRequested);
+      if (existing + newQty > requested + 1e-9) {
+        throw new BadRequestException(
+          translate(
+            `Allocated quantity for requisition item exceeds quantity requested (${requested}).`,
+            `الكمية الموزعة لبند طلب الشراء تتجاوز الكمية المطلوبة (${requested}).`,
+          ),
+        );
+      }
+    }
+
+    const orderItemById = new Map(
+      allocationRows.map((row) => [
+        row.materialPurchaseOrderItemId,
+        {
+          quantityOrdered: row.quantityOrdered,
+          unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+          materialCode: row.materialCode,
+        },
+      ]),
+    );
+
+    for (const [orderItemId, allocatedBase] of newAllocatedBaseByOrderItemId) {
+      const orderItem = orderItemById.get(orderItemId)!;
+      const material = materialByCode.get(orderItem.materialCode)!;
+      const conversions = (material.unitConversions ?? []) as UnitConversionRow[];
+      const orderFactor = resolveConversionFactor(
+        orderItem.unitOfMeasurementSelected,
+        material.unitOfMeasurement as MaterialUnit,
+        conversions,
+      );
+      const orderedBase = toBaseQuantity(orderItem.quantityOrdered, orderFactor);
+      if (allocatedBase > orderedBase + 1e-9) {
+        throw new BadRequestException(
+          translate(
+            `Allocated quantity for material ${orderItem.materialCode} exceeds quantity ordered.`,
+            `الكمية الموزعة للمادة ${orderItem.materialCode} تتجاوز الكمية المطلوبة في أمر التوريد.`,
+          ),
+        );
+      }
+    }
+
+    await tx.insert(materialPurchaseOrderItemRequisitionItems).values(
+      allocationRows.map((row) => ({
+        materialPurchaseOrderItemId: row.materialPurchaseOrderItemId,
+        materialPurchaseRequisitionItemId: row.materialPurchaseRequisitionItemId,
+        quantityAllocated: row.quantityAllocated,
+      })),
+    );
   }
 
   /**
@@ -220,5 +447,62 @@ export class MaterialPurchaseOrdersService {
     }
 
     return progress;
+  }
+
+  private async getRequisitionAllocationsByOrderItemIds(orderItemIds: string[]) {
+    type AllocationView = {
+      id: string;
+      materialPurchaseRequisitionItemId: string;
+      quantityAllocated: number;
+      unitOfMeasurementSelected: MaterialUnit;
+      requisition: { id: string; code: string; productionSubDepartment: string };
+    };
+
+    const result = new Map<string, AllocationView[]>();
+    for (const id of orderItemIds) result.set(id, []);
+    if (orderItemIds.length === 0) return result;
+
+    const rows = await this.db
+      .select({
+        id: materialPurchaseOrderItemRequisitionItems.id,
+        materialPurchaseOrderItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId,
+        materialPurchaseRequisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+        quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
+        unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
+        requisitionId: materialPurchaseRequisitions.id,
+        requisitionCode: materialPurchaseRequisitions.code,
+        productionSubDepartment: materialPurchaseRequisitions.productionSubDepartment,
+      })
+      .from(materialPurchaseOrderItemRequisitionItems)
+      .innerJoin(
+        materialPurchaseRequisitionItems,
+        eq(
+          materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+          materialPurchaseRequisitionItems.id,
+        ),
+      )
+      .innerJoin(
+        materialPurchaseRequisitions,
+        eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, materialPurchaseRequisitions.id),
+      )
+      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, orderItemIds));
+
+    for (const row of rows) {
+      const list = result.get(row.materialPurchaseOrderItemId) ?? [];
+      list.push({
+        id: row.id,
+        materialPurchaseRequisitionItemId: row.materialPurchaseRequisitionItemId,
+        quantityAllocated: Number(row.quantityAllocated),
+        unitOfMeasurementSelected: row.unitOfMeasurementSelected as MaterialUnit,
+        requisition: {
+          id: row.requisitionId,
+          code: row.requisitionCode,
+          productionSubDepartment: row.productionSubDepartment,
+        },
+      });
+      result.set(row.materialPurchaseOrderItemId, list);
+    }
+
+    return result;
   }
 }
