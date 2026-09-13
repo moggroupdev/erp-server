@@ -13,7 +13,7 @@ export const inventoryTransactions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: IVT-00000001
-    legacyNumber: text('legacy_number'), // Old system transaction number for seed/migration
+    legacyNumber: text('legacy_number'), // @APP_CHECKED - required on create; null allowed for legacy/migrated rows
     transactionType: inventoryTransactionTypeEnum('transaction_type').notNull(),
     notes: text('notes'),
     // Sources - one source event per transaction; the source must match transaction_type (DB-checked below)

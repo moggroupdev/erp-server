@@ -1,0 +1,2 @@
+ALTER TYPE "public"."permission" ADD VALUE 'add_inventory_transaction' BEFORE 'read_material_purchase_orders';--> statement-breakpoint
+ALTER TYPE "public"."permission" ADD VALUE 'add_material_purchase_receipt' BEFORE 'read_supplier_invoices';

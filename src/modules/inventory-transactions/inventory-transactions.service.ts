@@ -1,11 +1,19 @@
-import { eq } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { eq, sql } from 'drizzle-orm';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { contractItems, inventoryTransactions } from 'src/database/schema';
-import { QueryParams } from 'src/utils/types';
+import {
+  contractItems,
+  inventoryTransactionItems,
+  inventoryTransactions,
+  materialPurchaseReceipts,
+} from 'src/database/schema';
+import { INVENTORY_TRANSACTION_TYPES } from 'src/utils/constants';
+import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
+import { CreateInventoryTransactionFromMaterialPurchaseReceiptDto } from './dto/create-inventory-transaction-from-material-purchase-receipt.dto';
 
 /**
  * Source relations for get(). Nested `with` depth is capped at 2 levels because
@@ -35,6 +43,8 @@ const TRANSACTION_SOURCE_RELATIONS = {
   outsourcingOrder: { columns: { id: true, code: true } },
   maintenanceOrder: { columns: { id: true, code: true } },
 } as const;
+
+type UnitConversion = { unit: MaterialUnit; conversionFactorToBase: number };
 
 @Injectable()
 export class InventoryTransactionsService {
@@ -89,6 +99,99 @@ export class InventoryTransactionsService {
     const contractItem = await this.getContractForUnit(planItem.productUnit.contractItemId);
 
     return { ...transaction, productionPlanItem: { ...planItem, productUnit: { ...planItem.productUnit, contractItem } } };
+  }
+
+  public async createFromMaterialPurchaseReceipt(
+    receiptId: string,
+    dto: CreateInventoryTransactionFromMaterialPurchaseReceiptDto,
+    user: User,
+  ) {
+    const receipt = await this.db.query.materialPurchaseReceipts.findFirst({
+      where: eq(materialPurchaseReceipts.id, receiptId),
+      with: {
+        inventoryTransactions: { columns: { id: true } },
+        items: {
+          with: {
+            materialPurchaseOrderItem: {
+              columns: {
+                id: true,
+                materialCode: true,
+                unitOfMeasurementSelected: true,
+                unitPrice: true,
+              },
+              with: {
+                material: {
+                  columns: { code: true, unitOfMeasurement: true },
+                  extras: materialUnitConversionsExtra,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!receipt)
+      throw new NotFoundException(
+        translate(`Material purchase receipt with ID ${receiptId} does not exist.`, `لا يوجد إذن استلام مواد بالمعرف ${receiptId}.`),
+      );
+
+    if (receipt.inventoryTransactions.length > 0) {
+      throw new BadRequestException(
+        translate(
+          'An inventory transaction already exists for this receipt.',
+          'يوجد إذن مخزون بالفعل لهذا السند.',
+        ),
+      );
+    }
+
+    const acceptedItems = receipt.items.filter((item) => Number(item.quantityReceived) > 0);
+
+    if (acceptedItems.length === 0) {
+      throw new BadRequestException(
+        translate(
+          'Cannot create an inventory receipt when all accepted quantities are zero.',
+          'لا يمكن إنشاء إذن إضافة عندما تكون كل الكميات المقبولة صفراً.',
+        ),
+      );
+    }
+
+    return await this.db.transaction(async (tx) => {
+      const [transaction] = await tx
+        .insert(inventoryTransactions)
+        .values({
+          code: sql`DEFAULT`,
+          legacyNumber: dto.legacyNumber,
+          transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
+          materialPurchaseReceiptId: receipt.id,
+          notes: receipt.notes,
+          createdBy: user.id,
+        })
+        .returning({ id: inventoryTransactions.id, code: inventoryTransactions.code });
+
+      await tx.insert(inventoryTransactionItems).values(
+        acceptedItems.map((item) => {
+          const orderItem = item.materialPurchaseOrderItem;
+          const conversions = (orderItem.material.unitConversions ?? []) as UnitConversion[];
+
+          return {
+            transactionId: transaction.id,
+            materialCode: orderItem.materialCode,
+            unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+            quantity: Number(item.quantityReceived),
+            unitPrice: convertUnitPrice(
+              Number(orderItem.unitPrice),
+              orderItem.unitOfMeasurementSelected,
+              item.unitOfMeasurementSelected,
+              orderItem.material.unitOfMeasurement,
+              conversions,
+            ),
+          };
+        }),
+      );
+
+      return transaction;
+    });
   }
 
   // ========================= PRIVATE METHODS =========================

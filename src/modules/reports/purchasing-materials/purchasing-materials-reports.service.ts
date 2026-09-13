@@ -157,8 +157,15 @@ export class PurchasingMaterialsReportsService {
     const changePercentage =
       prices.length >= 2 && prices[0] !== 0 ? ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100 : 0;
 
+    const [materialWithConversions] = await this.attachUnitConversions([{ ...material, materialCode: material.code }]);
+
     return {
-      material,
+      material: {
+        code: materialWithConversions.code,
+        title: materialWithConversions.title,
+        unitOfMeasurement: materialWithConversions.unitOfMeasurement,
+        unitConversions: materialWithConversions.unitConversions,
+      },
       entries,
       summary: { minPrice, maxPrice, avgPrice, changePercentage },
     };

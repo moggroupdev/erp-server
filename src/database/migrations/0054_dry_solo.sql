@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'add_supplier_invoice' BEFORE 'update_supplier_invoice';

@@ -51,11 +51,13 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
+**Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land.
+
 `**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
-**PO `completed_at`** — set when fully fulfilled; clear if receipts reversed.
+**PO `completed_at`** — set when fully fulfilled (`received + rejected = ordered` in base units across all receipts); clear if receipts reversed. Create-receipt currently sets `completed_at` when fully covered; reverse is out of scope.
 
 **`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
 
@@ -76,6 +78,12 @@ All sources live on the header — one source event per transaction; items only 
 - A production issue is scoped to one `production_plan_item_id` (one unit + stage) per transaction
 - Each item's `material_code` must belong to the header source (e.g. a line of the linked purchase receipt, a `maintenance_order_materials` row of the linked maintenance order, or the plan item's product BOM)
 - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity` / `unit_price` are in this unit. Syncing into `materials.quantity` (always base-unit) requires converting each line to the material's base unit
+- Material purchase receipt → inventory receipt (`transaction_type = 'receipt'`, `material_purchase_receipt_id` set):
+  - Via `POST /inventory-transactions/from-material-purchase-receipt/:receiptId` with permission `add_inventory_transaction`
+  - Body requires `legacyNumber` (رقم الإذن); column stays nullable in DB for migrated rows
+  - App enforces at most one IVT per receipt for new posts (legacy rows may already have several)
+  - Items are projected from receipt lines with `quantity_received > 0`; `unit_price` is copied from the MPO line and converted into the receipt line's unit (not client-writable)
+  - Does **not** update `materials.quantity` / `materials.unit_price` yet (see deferred note under Caching)
 
 ### Warehouse (legacy issue permits)
 
@@ -84,6 +92,12 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Purchasing
 
+- Material purchase receipts (`material_purchase_receipts` / items):
+  - Create via `POST /material-purchase-receipts` with permission `add_material_purchase_receipt`
+  - Reject cancelled MPOs; require at least one line with `quantity_received + quantity_rejected > 0`
+  - Cap: sum of `quantity_received + quantity_rejected` per PO line across all receipts ≤ `quantity_ordered` — convert both sides to the material's base unit when units differ
+  - After insert, recompute MPO `completed_at` when every line is fully covered in base units
+  - Inventory receipt (اذن إضافة) is separate: create from the receipt detail via `POST /inventory-transactions/from-material-purchase-receipt/:receiptId` (`add_inventory_transaction`) when no IVT exists yet; requires `legacyNumber`; 400 if every accepted qty is 0 or an IVT already exists
 - Material receipt: sum of `quantity_received + quantity_rejected` per PO line ≤ `quantity_ordered` — convert both sides to the material's base unit when the receipt line's `unit_of_measurement_selected` differs from the order line's
 - Product PO: one line per `(ppo_id, contract_item_id)` (DB unique)
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
@@ -110,8 +124,9 @@ All sources live on the header — one source event per transaction; items only 
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):
   - Create via authenticated multipart upload (`POST /supplier-invoices`): PDF required; `supplier_id` copied from the linked material purchase order (`@RFP_APP_CHECKED`); do not accept `supplier_id` from the client; reject cancelled orders; enforce unique `(supplier_id, invoice_number)` with a clear conflict message
   - `pdf_filename` optional on existing rows; set on create and/or via authenticated upload (`PATCH /supplier-invoices/:id/pdf`)
-  - Accept PDF only (`application/pdf`), max 10 MB; store under `uploads/supplier-invoices/` as `{invoiceNumber}_{shortId}.pdf`; upload and replace use the same path (save → update `pdf_filename` → delete previous file if any)
-  - Replacing a PDF deletes the previous file on disk before saving the new one
+  - Attach or replace PDF on an existing invoice via `PATCH /supplier-invoices/:id/pdf`: app parses the ETA PDF and the user confirms; then overwrite `invoice_number`, `issued_at`, amount fields, and `pdf_filename` from the confirmed values; enforce unique `(supplier_id, invoice_number)` excluding the current row when the number changes
+  - Accept PDF only (`application/pdf`), max 10 MB; store under `uploads/supplier-invoices/` as `{invoiceNumber}_{shortId}.pdf`; upload and replace use the same path (save → update row → delete previous file if any)
+  - Replacing a PDF deletes the previous file on disk after the new file is saved successfully
   - Download is authenticated (`GET /supplier-invoices/:id/pdf`); do not rely on public static serving for invoice PDFs
 
 ### Outsourcing

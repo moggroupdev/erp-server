@@ -21,6 +21,7 @@ import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator'
 import { PERMISSIONS } from 'src/utils/constants';
 import { PdfUploadInterceptor } from 'src/utils/interceptors/pdf-upload.interceptor';
 import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
+import { UpdateSupplierInvoiceFromPdfDto } from './dto/update-supplier-invoice-from-pdf.dto';
 import { SupplierInvoicesService } from './supplier-invoices.service';
 
 @Controller('supplier-invoices')
@@ -94,15 +95,23 @@ export class SupplierInvoicesController {
       type: 'object',
       properties: {
         pdf: { type: 'string', format: 'binary' },
+        invoiceNumber: { type: 'string' },
+        issuedAt: { type: 'string', format: 'date' },
+        totalPurchases: { type: 'number' },
+        totalDiscount: { type: 'number' },
+        vatAmount: { type: 'number' },
+        withholdingTaxAmount: { type: 'number' },
+        totalAmount: { type: 'number' },
       },
-      required: ['pdf'],
+      required: ['pdf', 'invoiceNumber'],
     },
   })
   @UseInterceptors(PdfUploadInterceptor('pdf'))
   uploadPdf(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSupplierInvoiceFromPdfDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.supplierInvoicesService.uploadPdf(id, file);
+    return this.supplierInvoicesService.uploadPdf(id, dto, file);
   }
 }

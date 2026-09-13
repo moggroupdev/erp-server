@@ -16,6 +16,7 @@ import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { UploaderService } from 'src/utils/services/uploader.service';
 import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
+import { UpdateSupplierInvoiceFromPdfDto } from './dto/update-supplier-invoice-from-pdf.dto';
 
 const ORDER_COLUMNS = { id: true, code: true } as const;
 const SUPPLIER_COLUMNS = { id: true, name: true } as const;
@@ -152,24 +153,65 @@ export class SupplierInvoicesService {
     return invoice;
   }
 
-  public async uploadPdf(id: string, file: MulterFile | undefined) {
+  public async uploadPdf(id: string, dto: UpdateSupplierInvoiceFromPdfDto, file: MulterFile | undefined) {
     if (!file) throw new BadRequestException(translate('A PDF file is required.', 'ملف PDF مطلوب.'));
 
     const invoice = await this.get(id);
+    const invoiceNumber = dto.invoiceNumber.trim();
+
+    if (invoiceNumber !== invoice.invoiceNumber) {
+      const existing = await this.db.query.supplierInvoices.findFirst({
+        where: and(
+          eq(supplierInvoices.supplierId, invoice.supplierId),
+          eq(supplierInvoices.invoiceNumber, invoiceNumber),
+        ),
+        columns: { id: true },
+      });
+
+      if (existing && existing.id !== id)
+        throw new ConflictException(
+          translate(
+            `Invoice number \`${invoiceNumber}\` already exists for this supplier.`,
+            `رقم الفاتورة \`${invoiceNumber}\` موجود بالفعل لهذا المورد.`,
+          ),
+        );
+    }
+
     const previousFilename = invoice.pdfFilename;
     const pdfFilename = this.uploaderService.saveFile(
       file,
       INVOICE_PDF_SUBDIRECTORY,
-      buildInvoicePdfFilename(invoice.invoiceNumber),
+      buildInvoicePdfFilename(invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
 
-    await this.db.update(supplierInvoices).set({ pdfFilename }).where(eq(supplierInvoices.id, id));
+    try {
+      const [updated] = await this.db
+        .update(supplierInvoices)
+        .set({
+          invoiceNumber,
+          issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : null,
+          totalPurchases: dto.totalPurchases ?? null,
+          totalDiscount: dto.totalDiscount ?? null,
+          vatAmount: dto.vatAmount ?? null,
+          withholdingTaxAmount: dto.withholdingTaxAmount ?? null,
+          totalAmount: dto.totalAmount ?? null,
+          pdfFilename,
+        })
+        .where(eq(supplierInvoices.id, id))
+        .returning();
 
-    if (previousFilename && previousFilename !== pdfFilename)
-      this.uploaderService.deleteFile(previousFilename, INVOICE_PDF_SUBDIRECTORY);
+      if (previousFilename && previousFilename !== pdfFilename)
+        this.uploaderService.deleteFile(previousFilename, INVOICE_PDF_SUBDIRECTORY);
 
-    return { ...invoice, pdfFilename };
+      return {
+        ...invoice,
+        ...updated,
+      };
+    } catch (error) {
+      this.uploaderService.deleteFile(pdfFilename, INVOICE_PDF_SUBDIRECTORY);
+      throw error;
+    }
   }
 
   public async getPdf(id: string): Promise<StreamableFile> {
