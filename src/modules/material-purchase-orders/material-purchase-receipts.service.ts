@@ -182,6 +182,15 @@ export class MaterialPurchaseReceiptsService {
           ),
         );
       }
+
+      if (Number(item.quantityRejected) > 0 && !item.inspectionNotes?.trim()) {
+        throw new BadRequestException(
+          translate(
+            `Inspection notes are required for material ${orderItem.materialCode} when a rejected quantity is recorded.`,
+            `يجب إدخال ملاحظات الفحص للمادة ${orderItem.materialCode} عند تسجيل كمية مرفوضة.`,
+          ),
+        );
+      }
     }
 
     const resolvedReceivedAt = receivedAt ? new Date(receivedAt) : new Date();

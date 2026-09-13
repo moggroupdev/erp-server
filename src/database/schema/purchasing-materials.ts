@@ -223,6 +223,7 @@ export const materialPurchaseReceiptItems = pgTable(
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityReceived: numeric('quantity_received').notNull(),
     quantityRejected: numeric('quantity_rejected').notNull().default(0),
+    // total received = quantityReceived + quantityRejected
     inspectionNotes: text('inspection_notes'),
   },
   (table) => [
