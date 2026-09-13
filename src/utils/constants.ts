@@ -50,6 +50,8 @@ export const PERMISSION_VALUES = [
   'read_products',
   'update_product',
   'print_products_list',
+  'read_product_pricing_factor',
+  'set_product_pricing_factor',
   'add_product_bom',
   'read_product_boms',
   'update_product_bom',

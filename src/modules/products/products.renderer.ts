@@ -124,7 +124,6 @@ export class ProductsRenderer {
           <span class="meta-label">الكود</span><span class="meta-value code">${escapeHtml(product.code)}</span>
           ${subCategoryRow}
           ${productionRow}
-          <span class="meta-label">معامل التسعير</span><span class="meta-value">${escapeHtml(String(product.pricingFactor))}</span>
         </div>
         ${description}
         <div class="dimensions-block">

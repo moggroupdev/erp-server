@@ -3,7 +3,7 @@ import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { productCategorySubs, productDimensions, productProductionRoutes, products } from 'src/database/schema';
-import { QueryParams, User } from 'src/utils/types';
+import { QueryParams, User, UserWithRoleWithPermissions } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -11,6 +11,8 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
 import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
+import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
+import { omitPricingFactorIfUnauthorized } from './product-pricing-factor.helper';
 
 @Injectable()
 export class ProductsService {
@@ -25,11 +27,11 @@ export class ProductsService {
       .insert(products)
       .values({ ...createProductDto, code, createdBy: user.id })
       .returning();
-    return product;
+    return omitPricingFactorIfUnauthorized(product, user as UserWithRoleWithPermissions);
   }
 
-  public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute(products, queryParams, {
+  public async list(queryParams: QueryParams, user: User) {
+    const result = await this.queryBuilderService.execute(products, queryParams, {
       filtering: true,
       searchableFields: ['code', 'title', 'description'],
       fieldLimiting: true,
@@ -46,23 +48,41 @@ export class ProductsService {
         },
       },
     });
+
+    return {
+      ...result,
+      data: result.data.map((product) =>
+        omitPricingFactorIfUnauthorized(product as { pricingFactor?: unknown }, user as UserWithRoleWithPermissions),
+      ),
+    };
   }
 
   // We allow the `get` method to return a deleted product too
-  public async get(code: string) {
+  public async get(code: string, user: User) {
     const product = await this.db.query.products.findFirst({
       where: eq(products.code, code),
       with: { createdBy: { columns: { id: true, name: true } } },
     });
     if (!product)
       throw new NotFoundException(translate(`Product with code ${code} does not exist.`, `لا يوجد منتج بالكود ${code}.`));
-    return product;
+    return omitPricingFactorIfUnauthorized(product, user as UserWithRoleWithPermissions);
   }
 
-  public async update(code: string, updateProductDto: UpdateProductDto) {
+  public async update(code: string, updateProductDto: UpdateProductDto, user: User) {
     const [updatedProduct] = await this.db
       .update(products)
       .set(updateProductDto)
+      .where(and(eq(products.code, code), isNull(products.deletedAt)))
+      .returning();
+    if (!updatedProduct)
+      throw new NotFoundException(translate(`Product with code ${code} does not exist.`, `لا يوجد منتج بالكود ${code}.`));
+    return omitPricingFactorIfUnauthorized(updatedProduct, user as UserWithRoleWithPermissions);
+  }
+
+  public async setPricingFactor(code: string, dto: SetProductPricingFactorDto) {
+    const [updatedProduct] = await this.db
+      .update(products)
+      .set({ pricingFactor: dto.pricingFactor })
       .where(and(eq(products.code, code), isNull(products.deletedAt)))
       .returning();
     if (!updatedProduct)

@@ -15,6 +15,8 @@ import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-con
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
+import { omitPricingFactorIfUnauthorized } from 'src/modules/products/product-pricing-factor.helper';
+import type { UserWithRoleWithPermissions } from 'src/utils/types';
 
 @Injectable()
 export class BomsService {
@@ -72,7 +74,7 @@ export class BomsService {
     });
   }
 
-  public async get(dimensionId: string) {
+  public async get(dimensionId: string, user: User) {
     const dimension = await this.db.query.productDimensions.findFirst({
       where: eq(productDimensions.id, dimensionId),
       columns: {
@@ -152,6 +154,7 @@ export class BomsService {
     // Overwrite the results to enclude the manufactured naterial BOMs
     return {
       ...dimension,
+      product: omitPricingFactorIfUnauthorized(dimension.product, user as UserWithRoleWithPermissions),
       standardBoms: dimension.standardBoms.map((item) => ({
         ...item,
         material: {

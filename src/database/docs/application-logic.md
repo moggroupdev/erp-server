@@ -181,7 +181,8 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Catalog pricing
 
-- Suggested price = `SUM(convert_to_base(bom.quantity_required, bom.unit_of_measurement_selected) × materials.unit_price) × products.pricing_factor` for selected dimension
+- `products.pricing_factor` — nullable; omit from create/update DTOs; set only via dedicated endpoint with `set_product_pricing_factor`; omit from product/BOM API responses unless the caller is admin or has `read_product_pricing_factor` / `set_product_pricing_factor`
+- Suggested price (when `pricing_factor` is set) = `SUM(convert_to_base(bom.quantity_required, bom.unit_of_measurement_selected) × materials.unit_price) × products.pricing_factor` for selected dimension
 
 ### Materials
 
