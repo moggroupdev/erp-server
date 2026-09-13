@@ -393,6 +393,13 @@
       "when": 1789045180856,
       "tag": "0055_lean_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1789290875922,
+      "tag": "0056_faithful_shotgun",
+      "breakpoints": true
     }
   ]
 }

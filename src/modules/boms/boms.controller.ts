@@ -30,8 +30,8 @@ export class BomsController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_PRODUCT_BOMS)
   @ApiBearerAuth()
-  get(@Param('dimensionId', ParseUUIDPipe) dimensionId: string) {
-    return this.bomsService.get(dimensionId);
+  get(@Param('dimensionId', ParseUUIDPipe) dimensionId: string, @RequestUser() user: User) {
+    return this.bomsService.get(dimensionId, user);
   }
 
   @Post(':dimensionId/append')

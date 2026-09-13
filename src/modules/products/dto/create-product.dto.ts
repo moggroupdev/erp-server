@@ -31,9 +31,4 @@ export class CreateProductDto {
   @IsOptional()
   @ApiPropertyOptional()
   estimatedProductionTime: number | null;
-
-  @IsNumber()
-  @Min(0)
-  @ApiProperty()
-  pricingFactor: number;
 }

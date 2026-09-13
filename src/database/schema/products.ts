@@ -8,6 +8,7 @@ import {
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
   positiveQuantityCheck,
+  positiveNullableQuantityCheck,
   productSourceTypeEnum,
   productionSubDepartmentEnum,
   materialUnitEnum,
@@ -31,7 +32,7 @@ export const products = pgTable(
       .references(() => productCategorySubs.id),
     sourceType: productSourceTypeEnum('source_type').notNull(),
     estimatedProductionTime: integer('estimated_production_time'), // In Days
-    pricingFactor: numeric('pricing_factor').notNull(), // Multiplier on standard BOM total cost to derive catalog unit price
+    pricingFactor: numeric('pricing_factor'), // Multiplier on standard BOM total cost to derive catalog unit price
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
@@ -45,7 +46,7 @@ export const products = pgTable(
       'products_estimated_production_time_positive',
       sql`${table.estimatedProductionTime} IS NULL OR ${table.estimatedProductionTime} > 0`,
     ),
-    positiveQuantityCheck('products_pricing_factor_positive', table.pricingFactor),
+    positiveNullableQuantityCheck('products_pricing_factor_positive', table.pricingFactor),
   ],
 );
 

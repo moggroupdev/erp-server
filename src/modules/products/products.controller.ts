@@ -4,12 +4,11 @@ import {
   Post,
   Body,
   Put,
-  Delete,
+  Patch,
   Param,
   ParseUUIDPipe,
   UseGuards,
   Query,
-  HttpCode,
   Header,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -25,6 +24,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
 import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
+import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
 import { ProductsRenderer } from './products.renderer';
 
 @Controller('products')
@@ -47,8 +47,8 @@ export class ProductsController {
   @AllowedPermission(PERMISSIONS.READ_PRODUCTS)
   @ApiBearerAuth()
   @ApiListQueries()
-  list(@Query() query: QueryParams) {
-    return this.productsService.list(query);
+  list(@Query() query: QueryParams, @RequestUser() user: User) {
+    return this.productsService.list(query, user);
   }
 
   // Not protected endpoint
@@ -62,16 +62,24 @@ export class ProductsController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_PRODUCTS)
   @ApiBearerAuth()
-  get(@Param('code') code: string) {
-    return this.productsService.get(code);
+  get(@Param('code') code: string, @RequestUser() user: User) {
+    return this.productsService.get(code, user);
   }
 
   @Put(':code')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT)
   @ApiBearerAuth()
-  update(@Param('code') code: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(code, updateProductDto);
+  update(@Param('code') code: string, @Body() updateProductDto: UpdateProductDto, @RequestUser() user: User) {
+    return this.productsService.update(code, updateProductDto, user);
+  }
+
+  @Patch(':code/pricing-factor')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.SET_PRODUCT_PRICING_FACTOR)
+  @ApiBearerAuth()
+  setPricingFactor(@Param('code') code: string, @Body() dto: SetProductPricingFactorDto) {
+    return this.productsService.setPricingFactor(code, dto);
   }
 
   // ========================= Dimensions =========================
