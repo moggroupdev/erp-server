@@ -46,6 +46,7 @@ export class MaterialPurchaseOrdersService {
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertSupplierExists(supplierId);
     await this.materialUnitValidationService.assertValidSelectedUnits(items);
+    this.assertEveryItemHasAllocations(items);
     this.assertNoDuplicateAllocationsPerItem(items);
 
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
@@ -143,9 +144,22 @@ export class MaterialPurchaseOrdersService {
     }
   }
 
+  private assertEveryItemHasAllocations(items: CreateMaterialPurchaseOrderItemDto[]) {
+    for (const item of items) {
+      if (!item.requisitionAllocations?.length) {
+        throw new BadRequestException(
+          translate(
+            `Material ${item.materialCode} must be linked to at least one open purchase requisition line.`,
+            `يجب ربط المادة ${item.materialCode} ببند طلب شراء مفتوح واحد على الأقل.`,
+          ),
+        );
+      }
+    }
+  }
+
   private assertNoDuplicateAllocationsPerItem(items: CreateMaterialPurchaseOrderItemDto[]) {
     for (const item of items) {
-      const allocations = item.requisitionAllocations ?? [];
+      const allocations = item.requisitionAllocations;
       const ids = allocations.map((row) => row.materialPurchaseRequisitionItemId);
       if (new Set(ids).size !== ids.length) {
         throw new BadRequestException(
@@ -188,7 +202,7 @@ export class MaterialPurchaseOrdersService {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const inserted = insertedItems[i];
-      for (const allocation of item.requisitionAllocations ?? []) {
+      for (const allocation of item.requisitionAllocations) {
         allocationRows.push({
           materialPurchaseOrderItemId: inserted.id,
           materialPurchaseRequisitionItemId: allocation.materialPurchaseRequisitionItemId,
@@ -200,7 +214,14 @@ export class MaterialPurchaseOrdersService {
       }
     }
 
-    if (allocationRows.length === 0) return;
+    if (allocationRows.length === 0) {
+      throw new BadRequestException(
+        translate(
+          'Every purchase order line must be linked to open purchase requisition lines.',
+          'يجب ربط كل بند في أمر التوريد ببنود طلبات شراء مفتوحة.',
+        ),
+      );
+    }
 
     const requisitionItemIds = [...new Set(allocationRows.map((row) => row.materialPurchaseRequisitionItemId))];
 
@@ -349,11 +370,11 @@ export class MaterialPurchaseOrdersService {
         conversions,
       );
       const orderedBase = toBaseQuantity(orderItem.quantityOrdered, orderFactor);
-      if (allocatedBase > orderedBase + 1e-9) {
+      if (Math.abs(allocatedBase - orderedBase) > 1e-9) {
         throw new BadRequestException(
           translate(
-            `Allocated quantity for material ${orderItem.materialCode} exceeds quantity ordered.`,
-            `الكمية الموزعة للمادة ${orderItem.materialCode} تتجاوز الكمية المطلوبة في أمر التوريد.`,
+            `Allocated quantity for material ${orderItem.materialCode} must equal quantity ordered.`,
+            `يجب أن تساوي الكمية الموزعة للمادة ${orderItem.materialCode} الكمية المطلوبة في أمر التوريد.`,
           ),
         );
       }

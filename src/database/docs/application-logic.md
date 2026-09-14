@@ -118,12 +118,12 @@ All sources live on the header — one source event per transaction; items only 
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Written only at MPO create (`POST /material-purchase-orders` nested `requisitionAllocations`); no post-create allocation edit API
+  - Every MPO line must include at least one allocation (create from open MPReq items only)
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - Requisition item `material_code` must match the MPO line `material_code`
   - `quantity_allocated` is stored in the requisition line's `unit_of_measurement_selected` (junction has no unit column)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (requisition line unit)
-  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered` — convert both sides to the material's base unit when units differ
-  - MPO lines may have zero allocations (MPO created without a requisition)
+  - `SUM(quantity_allocated)` per MPO line must equal `quantity_ordered` — convert both sides to the material's base unit when units differ
   - Concurrent creates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the create transaction before insert
   - When MPO cancel is added later, allocation SUMs must ignore cancelled orders or remaining qty will stay consumed
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):

@@ -1,6 +1,16 @@
 import { Type } from 'class-transformer';
 import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsArray, IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit } from 'src/utils/types';
@@ -35,9 +45,9 @@ export class CreateMaterialPurchaseOrderItemDto {
   notes: string | null;
 
   @IsArray()
-  @IsOptional()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => CreateMaterialPurchaseOrderItemRequisitionAllocationDto)
-  @ApiPropertyOptional({ type: [CreateMaterialPurchaseOrderItemRequisitionAllocationDto] })
-  requisitionAllocations?: CreateMaterialPurchaseOrderItemRequisitionAllocationDto[];
+  @ApiProperty({ type: [CreateMaterialPurchaseOrderItemRequisitionAllocationDto] })
+  requisitionAllocations: CreateMaterialPurchaseOrderItemRequisitionAllocationDto[];
 }

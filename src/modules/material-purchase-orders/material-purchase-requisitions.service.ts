@@ -7,13 +7,17 @@ import {
   materialPurchaseOrders,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
+  materials,
   productionSubDepartmentManagers,
   suppliers,
 } from 'src/database/schema';
 import { APPROVAL_DECISIONS } from 'src/utils/constants';
-import { QueryParams, User, type ApprovalDecision, type ProductionSubDepartment } from 'src/utils/types';
+import { QueryParams, User, type ApprovalDecision, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
-import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import {
+  materialUnitConversionsExtra,
+  type MaterialUnitConversionSummary,
+} from 'src/utils/extras/material-unit-conversions-extra';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseRequisitionDto } from './dto/create-material-purchase-requisition.dto';
@@ -153,6 +157,21 @@ export class MaterialPurchaseRequisitionsService {
         requisitionCode: materialPurchaseRequisitions.code,
         productionSubDepartment: materialPurchaseRequisitions.productionSubDepartment,
         materialCode: materialPurchaseRequisitionItems.materialCode,
+        materialTitle: materials.title,
+        materialType: materials.materialType,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        unitConversions: sql<MaterialUnitConversionSummary[]>`(
+          select coalesce(
+            json_agg(json_build_object(
+              'id', muc.id,
+              'unit', muc.unit,
+              'conversionFactorToBase', muc.conversion_factor_to_base
+            )),
+            '[]'::json
+          )
+          from material_unit_conversions muc
+          where muc.material_code = ${materials.code}
+        )`,
         unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
         quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
         quantityAllocated: sql<string>`coalesce((
@@ -166,6 +185,7 @@ export class MaterialPurchaseRequisitionsService {
         materialPurchaseRequisitions,
         eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, materialPurchaseRequisitions.id),
       )
+      .innerJoin(materials, eq(materialPurchaseRequisitionItems.materialCode, materials.code))
       .where(
         and(
           eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
@@ -187,7 +207,11 @@ export class MaterialPurchaseRequisitionsService {
           requisitionCode: row.requisitionCode,
           productionSubDepartment: row.productionSubDepartment,
           materialCode: row.materialCode,
-          unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+          materialTitle: row.materialTitle,
+          materialType: row.materialType,
+          unitOfMeasurement: row.unitOfMeasurement as MaterialUnit,
+          unitConversions: row.unitConversions ?? [],
+          unitOfMeasurementSelected: row.unitOfMeasurementSelected as MaterialUnit,
           quantityRequested,
           quantityAllocated,
           quantityRemaining,
