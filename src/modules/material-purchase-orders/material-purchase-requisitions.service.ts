@@ -2,17 +2,22 @@ import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
+  materialPurchaseOrderItemRequisitionItems,
   materialPurchaseOrderItems,
   materialPurchaseOrders,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
+  materials,
   productionSubDepartmentManagers,
   suppliers,
 } from 'src/database/schema';
 import { APPROVAL_DECISIONS } from 'src/utils/constants';
-import { QueryParams, User, type ApprovalDecision, type ProductionSubDepartment } from 'src/utils/types';
+import { QueryParams, User, type ApprovalDecision, type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
-import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import {
+  materialUnitConversionsExtra,
+  type MaterialUnitConversionSummary,
+} from 'src/utils/extras/material-unit-conversions-extra';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseRequisitionDto } from './dto/create-material-purchase-requisition.dto';
@@ -113,12 +118,16 @@ export class MaterialPurchaseRequisitionsService {
     const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(
       requisition.items.map((item) => item.materialCode),
     );
+    const fulfillmentByItemId = await this.getFulfillmentByRequisitionItemIds(requisition.items.map((item) => item.id));
 
     return {
       ...requisition,
       items: requisition.items.map((item) => {
         const lastPurchase = lastPurchaseByMaterialCode.get(item.materialCode);
         const { unitPrice, quantity, minimumStock, ...material } = item.material;
+        const fulfillment = fulfillmentByItemId.get(item.id);
+        const quantityAllocated = fulfillment?.quantityAllocated ?? 0;
+        const quantityRequested = Number(item.quantityRequested);
 
         return {
           ...item,
@@ -129,9 +138,86 @@ export class MaterialPurchaseRequisitionsService {
           lastPurchasePrice: lastPurchase?.lastPurchasePrice ?? null,
           lastPurchaseDate: lastPurchase?.lastPurchaseDate ?? null,
           lastPurchaseVendor: lastPurchase?.lastPurchaseVendor ?? null,
+          quantityAllocated,
+          quantityRemaining: Math.max(0, quantityRequested - quantityAllocated),
+          orders: fulfillment?.orders ?? [],
         };
       }),
     };
+  }
+
+  /** Fully approved requisition lines with remaining qty > 0, optionally filtered by material. */
+  public async listOpenItems(materialCode?: string) {
+    const trimmedCode = materialCode?.trim() || undefined;
+
+    const rows = await this.db
+      .select({
+        requisitionItemId: materialPurchaseRequisitionItems.id,
+        requisitionId: materialPurchaseRequisitions.id,
+        requisitionCode: materialPurchaseRequisitions.code,
+        productionSubDepartment: materialPurchaseRequisitions.productionSubDepartment,
+        materialCode: materialPurchaseRequisitionItems.materialCode,
+        materialTitle: materials.title,
+        materialType: materials.materialType,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        unitConversions: sql<MaterialUnitConversionSummary[]>`(
+          select coalesce(
+            json_agg(json_build_object(
+              'id', muc.id,
+              'unit', muc.unit,
+              'conversionFactorToBase', muc.conversion_factor_to_base
+            )),
+            '[]'::json
+          )
+          from material_unit_conversions muc
+          where muc.material_code = ${materials.code}
+        )`,
+        unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
+        quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
+        quantityAllocated: sql<string>`coalesce((
+          select sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated})
+          from ${materialPurchaseOrderItemRequisitionItems}
+          where ${materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId} = ${materialPurchaseRequisitionItems.id}
+        ), 0)`,
+      })
+      .from(materialPurchaseRequisitionItems)
+      .innerJoin(
+        materialPurchaseRequisitions,
+        eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, materialPurchaseRequisitions.id),
+      )
+      .innerJoin(materials, eq(materialPurchaseRequisitionItems.materialCode, materials.code))
+      .where(
+        and(
+          eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
+          eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
+          eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
+          trimmedCode ? eq(materialPurchaseRequisitionItems.materialCode, trimmedCode) : undefined,
+        ),
+      )
+      .orderBy(desc(materialPurchaseRequisitions.createdAt), materialPurchaseRequisitionItems.materialCode);
+
+    return rows
+      .map((row) => {
+        const quantityRequested = Number(row.quantityRequested);
+        const quantityAllocated = Number(row.quantityAllocated);
+        const quantityRemaining = Math.max(0, quantityRequested - quantityAllocated);
+        return {
+          requisitionItemId: row.requisitionItemId,
+          requisitionId: row.requisitionId,
+          requisitionCode: row.requisitionCode,
+          productionSubDepartment: row.productionSubDepartment,
+          materialCode: row.materialCode,
+          materialTitle: row.materialTitle,
+          materialType: row.materialType,
+          unitOfMeasurement: row.unitOfMeasurement as MaterialUnit,
+          unitConversions: row.unitConversions ?? [],
+          unitOfMeasurementSelected: row.unitOfMeasurementSelected as MaterialUnit,
+          quantityRequested,
+          quantityAllocated,
+          quantityRemaining,
+        };
+      })
+      .filter((row) => row.quantityRemaining > 1e-9);
   }
 
   public async updateHeader(id: string, updateDto: UpdateMaterialPurchaseRequisitionDto) {
@@ -441,6 +527,46 @@ export class MaterialPurchaseRequisitionsService {
         },
       ]),
     );
+  }
+
+  private async getFulfillmentByRequisitionItemIds(itemIds: string[]) {
+    type OrderLink = { id: string; code: string; quantityAllocated: number };
+    const result = new Map<string, { quantityAllocated: number; orders: OrderLink[] }>();
+
+    for (const id of itemIds) {
+      result.set(id, { quantityAllocated: 0, orders: [] });
+    }
+
+    if (itemIds.length === 0) return result;
+
+    const rows = await this.db
+      .select({
+        requisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+        quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
+        orderId: materialPurchaseOrders.id,
+        orderCode: materialPurchaseOrders.code,
+      })
+      .from(materialPurchaseOrderItemRequisitionItems)
+      .innerJoin(
+        materialPurchaseOrderItems,
+        eq(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, materialPurchaseOrderItems.id),
+      )
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, itemIds));
+
+    for (const row of rows) {
+      const current = result.get(row.requisitionItemId) ?? { quantityAllocated: 0, orders: [] };
+      const quantityAllocated = Number(row.quantityAllocated);
+      current.quantityAllocated += quantityAllocated;
+      current.orders.push({
+        id: row.orderId,
+        code: row.orderCode,
+        quantityAllocated,
+      });
+      result.set(row.requisitionItemId, current);
+    }
+
+    return result;
   }
 
   private throwNotFound(id: string): never {

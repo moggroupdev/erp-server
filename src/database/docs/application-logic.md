@@ -117,10 +117,15 @@ All sources live on the header — one source event per transaction; items only 
   - Gate decide is not idempotent — second decision on the same party returns 400
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
+  - Written only at MPO create (`POST /material-purchase-orders` nested `requisitionAllocations`); no post-create allocation edit API
+  - Every MPO line must include at least one allocation (create from open MPReq items only)
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
-  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (same unit as the requisition line's `unit_of_measurement_selected`)
-  - `SUM(quantity_allocated)` per MPO line ≤ `quantity_ordered` (same unit as the MPO line's `unit_of_measurement_selected`, or convert both sides to base when units differ)
-  - MPO lines may have zero allocations (MPO created without a requisition)
+  - Requisition item `material_code` must match the MPO line `material_code`
+  - `quantity_allocated` is stored in the requisition line's `unit_of_measurement_selected` (junction has no unit column)
+  - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (requisition line unit)
+  - `SUM(quantity_allocated)` per MPO line must equal `quantity_ordered` — convert both sides to the material's base unit when units differ
+  - Concurrent creates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the create transaction before insert
+  - When MPO cancel is added later, allocation SUMs must ignore cancelled orders or remaining qty will stay consumed
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):
   - Create via authenticated multipart upload (`POST /supplier-invoices`): PDF required; `supplier_id` copied from the linked material purchase order (`@RFP_APP_CHECKED`); do not accept `supplier_id` from the client; reject cancelled orders; enforce unique `(supplier_id, invoice_number)` with a clear conflict message
   - `pdf_filename` optional on existing rows; set on create and/or via authenticated upload (`PATCH /supplier-invoices/:id/pdf`)
