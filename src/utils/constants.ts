@@ -319,3 +319,11 @@ export const GENDER_VALUES = ['male', 'female'] as const;
 export const GENDERS = Object.fromEntries(GENDER_VALUES.map((gender) => [gender.toUpperCase(), gender])) as {
   [K in Uppercase<(typeof GENDER_VALUES)[number]>]: Lowercase<K>;
 };
+
+// ==================== AUDIT_ACTIONS ====================
+
+export const AUDIT_ACTION_VALUES = ['insert', 'update', 'delete'] as const;
+
+export const AUDIT_ACTIONS = Object.fromEntries(AUDIT_ACTION_VALUES.map((action) => [action.toUpperCase(), action])) as {
+  [K in Uppercase<(typeof AUDIT_ACTION_VALUES)[number]>]: Lowercase<K>;
+};

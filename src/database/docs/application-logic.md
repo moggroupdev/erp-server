@@ -17,6 +17,20 @@ Duplication Inventory → `[db-duplications.md](./db-duplications.md)`.
 - **No hard deletion** — use `deleted_at`, `blacklisted_at`, `cancelled_at`, or status; history stays queryable.
 - **Codes immutable** — auto-generated `code` columns (triggers) omitted from create/update DTOs.
 - **Snapshots immutable** — `@HISTORICAL_SNAPSHOT` columns set on insert only; omit from update DTOs.
+- **Audit log immutable** — `audit_logs` is append-only: never update or delete rows (not soft-deleted either). Soft-delete / cancel / blacklist / approval on other tables are recorded as `action = 'update'` with before/after snapshots.
+
+---
+
+## Audit trail
+
+Writers (triggers and/or Nest) are not implemented yet. When they exist:
+
+- Do **not** audit `audit_logs` (no recursion) or `login_history` (already an auth event log).
+- Redact `users.password` in `old_row` / `new_row` — store `"[redacted]"`, never the hash.
+- Soft lifecycle fields (`deleted_at`, `cancelled_at`, `blacklisted_at`, approval gates) are updates, not deletes.
+- `record_id` is the PK as text; for `permissions` use `{roleId}/{permission}`.
+- `parent_*` / `root_*` mapping (child → immediate parent → owning document) is writer-side; columns already exist.
+- `operation_id` groups every row written in one business transaction; `actor_*` snapshots copy from `users` at change time when `actor_user_id` is set.
 
 ---
 

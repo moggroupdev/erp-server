@@ -19,6 +19,7 @@ import {
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
   APPROVAL_DECISION_VALUES,
   GENDER_VALUES,
+  AUDIT_ACTION_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
@@ -61,3 +62,5 @@ export const serviceContractIntervalEnum = pgEnum('service_contract_interval', S
 export const legacyIssuePermitWorkOrderTypeEnum = pgEnum('legacy_issue_permit_work_order_type', LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES);
 
 export const genderEnum = pgEnum('gender', GENDER_VALUES);
+
+export const auditActionEnum = pgEnum('audit_action', AUDIT_ACTION_VALUES);

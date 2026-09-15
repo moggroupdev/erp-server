@@ -28,4 +28,5 @@ export * from './customer-receptions';
 export * from './service-agreements';
 export * from './maintenance-orders';
 export * from './login-history';
+export * from './audit-logs';
 export * from './product-units';
