@@ -4,14 +4,16 @@ import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   materialPurchaseOrderItems,
   materialPurchaseOrders,
+  materialUnitConversions,
   materials,
   productDimensions,
   productStandardBoms,
 } from 'src/database/schema';
 import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
-import { type ProductionSubDepartment, type User } from 'src/utils/types';
+import { type MaterialUnit, type ProductionSubDepartment, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
+import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
@@ -354,29 +356,68 @@ export class BomsService {
     return new Map(manufacturedMaterials.map((material) => [material.code, material.manufacturedMaterialBoms]));
   }
 
-  // Last purchased price = unit price of the newest non-cancelled purchase order containing the material.
+  // Last purchased price = newest non-cancelled PO line unit price, normalized to the material's base unit.
   private async getLastPurchasePriceByMaterialCode(materialCodes: string[]) {
-    const rows =
-      materialCodes.length > 0
-        ? await this.db
-            .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
-              materialCode: materialPurchaseOrderItems.materialCode,
-              unitPrice: materialPurchaseOrderItems.unitPrice,
-            })
-            .from(materialPurchaseOrderItems)
-            .innerJoin(
-              materialPurchaseOrders,
-              eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id),
-            )
-            .where(
-              and(
-                inArray(materialPurchaseOrderItems.materialCode, materialCodes),
-                isNull(materialPurchaseOrders.cancelledAt),
-              ),
-            )
-            .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt))
-        : [];
+    if (materialCodes.length === 0) return new Map<string, number>();
 
-    return new Map(rows.map((row) => [row.materialCode, row.unitPrice]));
+    const rows = await this.db
+      .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
+        materialCode: materialPurchaseOrderItems.materialCode,
+        unitPrice: materialPurchaseOrderItems.unitPrice,
+        unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .where(
+        and(inArray(materialPurchaseOrderItems.materialCode, materialCodes), isNull(materialPurchaseOrders.cancelledAt)),
+      )
+      .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt));
+
+    if (rows.length === 0) return new Map<string, number>();
+
+    const purchasedCodes = [...new Set(rows.map((row) => row.materialCode))];
+
+    const [materialRows, conversionRows] = await Promise.all([
+      this.db
+        .select({ code: materials.code, unitOfMeasurement: materials.unitOfMeasurement })
+        .from(materials)
+        .where(inArray(materials.code, purchasedCodes)),
+      this.db
+        .select({
+          materialCode: materialUnitConversions.materialCode,
+          unit: materialUnitConversions.unit,
+          conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+        })
+        .from(materialUnitConversions)
+        .where(inArray(materialUnitConversions.materialCode, purchasedCodes)),
+    ]);
+
+    const baseUnitByCode = new Map(materialRows.map((row) => [row.code, row.unitOfMeasurement as MaterialUnit]));
+    const conversionsByCode = new Map<string, { unit: MaterialUnit; conversionFactorToBase: number }[]>();
+    for (const row of conversionRows) {
+      const list = conversionsByCode.get(row.materialCode) ?? [];
+      list.push({ unit: row.unit as MaterialUnit, conversionFactorToBase: Number(row.conversionFactorToBase) });
+      conversionsByCode.set(row.materialCode, list);
+    }
+
+    return new Map(
+      rows.map((row) => {
+        const baseUnit = baseUnitByCode.get(row.materialCode);
+        const purchaseUnit = row.unitOfMeasurementSelected as MaterialUnit;
+        const unitPrice = Number(row.unitPrice);
+
+        if (!baseUnit) return [row.materialCode, unitPrice] as const;
+
+        const priceInBase = convertUnitPrice(
+          unitPrice,
+          purchaseUnit,
+          baseUnit,
+          baseUnit,
+          conversionsByCode.get(row.materialCode) ?? [],
+        );
+
+        return [row.materialCode, priceInBase] as const;
+      }),
+    );
   }
 }

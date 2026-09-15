@@ -7,6 +7,7 @@ import {
   materialPurchaseOrders,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
+  materialUnitConversions,
   materials,
   productionSubDepartmentManagers,
   suppliers,
@@ -18,6 +19,7 @@ import {
   materialUnitConversionsExtra,
   type MaterialUnitConversionSummary,
 } from 'src/utils/extras/material-unit-conversions-extra';
+import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseRequisitionDto } from './dto/create-material-purchase-requisition.dto';
@@ -118,15 +120,16 @@ export class MaterialPurchaseRequisitionsService {
     const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(
       requisition.items.map((item) => item.materialCode),
     );
-    const fulfillmentByItemId = await this.getFulfillmentByRequisitionItemIds(requisition.items.map((item) => item.id));
+    const allocatedByItemId = await this.getAllocatedQuantityByRequisitionItemIds(
+      requisition.items.map((item) => item.id),
+    );
 
     return {
       ...requisition,
       items: requisition.items.map((item) => {
         const lastPurchase = lastPurchaseByMaterialCode.get(item.materialCode);
         const { unitPrice, quantity, minimumStock, ...material } = item.material;
-        const fulfillment = fulfillmentByItemId.get(item.id);
-        const quantityAllocated = fulfillment?.quantityAllocated ?? 0;
+        const quantityAllocated = allocatedByItemId.get(item.id) ?? 0;
         const quantityRequested = Number(item.quantityRequested);
 
         return {
@@ -138,9 +141,7 @@ export class MaterialPurchaseRequisitionsService {
           lastPurchasePrice: lastPurchase?.lastPurchasePrice ?? null,
           lastPurchaseDate: lastPurchase?.lastPurchaseDate ?? null,
           lastPurchaseVendor: lastPurchase?.lastPurchaseVendor ?? null,
-          quantityAllocated,
           quantityRemaining: Math.max(0, quantityRequested - quantityAllocated),
-          orders: fulfillment?.orders ?? [],
         };
       }),
     };
@@ -506,6 +507,7 @@ export class MaterialPurchaseRequisitionsService {
       .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
         materialCode: materialPurchaseOrderItems.materialCode,
         unitPrice: materialPurchaseOrderItems.unitPrice,
+        unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
         purchaseDate: materialPurchaseOrders.createdAt,
         vendorName: suppliers.name,
       })
@@ -517,53 +519,70 @@ export class MaterialPurchaseRequisitionsService {
       )
       .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt));
 
+    if (rows.length === 0) return new Map<string, LastPurchaseSnapshot>();
+
+    const purchasedCodes = [...new Set(rows.map((row) => row.materialCode))];
+
+    const [materialRows, conversionRows] = await Promise.all([
+      this.db
+        .select({ code: materials.code, unitOfMeasurement: materials.unitOfMeasurement })
+        .from(materials)
+        .where(inArray(materials.code, purchasedCodes)),
+      this.db
+        .select({
+          materialCode: materialUnitConversions.materialCode,
+          unit: materialUnitConversions.unit,
+          conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+        })
+        .from(materialUnitConversions)
+        .where(inArray(materialUnitConversions.materialCode, purchasedCodes)),
+    ]);
+
+    const baseUnitByCode = new Map(materialRows.map((row) => [row.code, row.unitOfMeasurement as MaterialUnit]));
+    const conversionsByCode = new Map<string, { unit: MaterialUnit; conversionFactorToBase: number }[]>();
+    for (const row of conversionRows) {
+      const list = conversionsByCode.get(row.materialCode) ?? [];
+      list.push({ unit: row.unit as MaterialUnit, conversionFactorToBase: Number(row.conversionFactorToBase) });
+      conversionsByCode.set(row.materialCode, list);
+    }
+
     return new Map(
-      rows.map((row) => [
-        row.materialCode,
-        {
-          lastPurchasePrice: Number(row.unitPrice),
-          lastPurchaseDate: row.purchaseDate,
-          lastPurchaseVendor: row.vendorName,
-        },
-      ]),
+      rows.map((row) => {
+        const baseUnit = baseUnitByCode.get(row.materialCode);
+        const purchaseUnit = row.unitOfMeasurementSelected as MaterialUnit;
+        const unitPrice = Number(row.unitPrice);
+        const lastPurchasePrice = baseUnit
+          ? convertUnitPrice(unitPrice, purchaseUnit, baseUnit, baseUnit, conversionsByCode.get(row.materialCode) ?? [])
+          : unitPrice;
+
+        return [
+          row.materialCode,
+          {
+            lastPurchasePrice,
+            lastPurchaseDate: row.purchaseDate,
+            lastPurchaseVendor: row.vendorName,
+          },
+        ];
+      }),
     );
   }
 
-  private async getFulfillmentByRequisitionItemIds(itemIds: string[]) {
-    type OrderLink = { id: string; code: string; quantityAllocated: number };
-    const result = new Map<string, { quantityAllocated: number; orders: OrderLink[] }>();
-
-    for (const id of itemIds) {
-      result.set(id, { quantityAllocated: 0, orders: [] });
-    }
-
+  private async getAllocatedQuantityByRequisitionItemIds(itemIds: string[]) {
+    const result = new Map<string, number>();
+    for (const id of itemIds) result.set(id, 0);
     if (itemIds.length === 0) return result;
 
     const rows = await this.db
       .select({
         requisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
-        quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
-        orderId: materialPurchaseOrders.id,
-        orderCode: materialPurchaseOrders.code,
+        quantityAllocated: sql<string>`coalesce(sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated}), 0)`,
       })
       .from(materialPurchaseOrderItemRequisitionItems)
-      .innerJoin(
-        materialPurchaseOrderItems,
-        eq(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, materialPurchaseOrderItems.id),
-      )
-      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
-      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, itemIds));
+      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, itemIds))
+      .groupBy(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId);
 
     for (const row of rows) {
-      const current = result.get(row.requisitionItemId) ?? { quantityAllocated: 0, orders: [] };
-      const quantityAllocated = Number(row.quantityAllocated);
-      current.quantityAllocated += quantityAllocated;
-      current.orders.push({
-        id: row.orderId,
-        code: row.orderCode,
-        quantityAllocated,
-      });
-      result.set(row.requisitionItemId, current);
+      result.set(row.requisitionItemId, Number(row.quantityAllocated));
     }
 
     return result;

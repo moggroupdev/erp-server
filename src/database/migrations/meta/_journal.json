@@ -400,6 +400,13 @@
       "when": 1789290875922,
       "tag": "0056_faithful_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1789454043804,
+      "tag": "0057_fluffy_toro",
+      "breakpoints": true
     }
   ]
 }

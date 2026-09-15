@@ -219,7 +219,21 @@ function normalizeSectionText(headerText: string): string {
     .trim();
 }
 
-function mapSectionToDepartment(headerText: string): ProductionSubDepartment | null {
+function resolveSheetMetalDepartment(headerText: string, productName: string): ProductionSubDepartment {
+  // Explicit cold/hot in the section header always wins.
+  if (headerText.includes('بارد')) return 'sheet_metal_cold';
+  if (headerText.includes('سخن') || headerText.includes('ساخن')) return 'sheet_metal_hot';
+
+  // Otherwise infer from the product name (title + filename).
+  if (productName.includes('ثلاجة')) return 'sheet_metal_cold';
+  if (productName.includes('بوتاجاز') || productName.includes('طاهي') || productName.includes('طاهى')) {
+    return 'sheet_metal_hot';
+  }
+
+  return 'sheet_metal_neutral';
+}
+
+function mapSectionToDepartment(headerText: string, productName = ''): ProductionSubDepartment | null {
   const text = normalizeSectionText(headerText);
 
   // Special case: metal sheets store -> cutting
@@ -234,11 +248,11 @@ function mapSectionToDepartment(headerText: string): ProductionSubDepartment | n
   if (text.includes('حدادة')) return 'blacksmithing';
   if (text.includes('قطع')) return 'cutting';
   if (text.includes('ثني')) return 'bending';
+  if (text.includes('بنش')) return 'punch';
+  if (text.includes('دهان')) return 'paints';
 
   if (text.includes('سمكرة')) {
-    if (text.includes('بارد')) return 'sheet_metal_cold';
-    if (text.includes('سخن') || text.includes('ساخن')) return 'sheet_metal_hot';
-    return 'sheet_metal_neutral';
+    return resolveSheetMetalDepartment(text, productName);
   }
 
   return null;
@@ -257,9 +271,10 @@ function isSectionHeader(row: unknown[]): boolean {
   if (text.includes('اجمالى') || text.includes('اجمالي') || text.includes('إجمالى') || text.includes('إجمالي')) {
     return false;
   }
-  // Company / product header rows without "مخزن"
+  // Company / product header rows without "مخزن" / "قسم"
   if (
     !text.includes('مخزن') &&
+    !text.includes('قسم') &&
     !text.includes('الواح') &&
     !text.includes('سمكرة') &&
     !text.includes('كهرباء') &&
@@ -268,7 +283,12 @@ function isSectionHeader(row: unknown[]): boolean {
   ) {
     return false;
   }
-  return text.includes('مخزن') || text.includes('الواح معدنية') || text.includes('الالواح المعدنية');
+  return (
+    text.includes('مخزن') ||
+    text.includes('قسم') ||
+    text.includes('الواح معدنية') ||
+    text.includes('الالواح المعدنية')
+  );
 }
 
 function parseQuantity(value: unknown): number | null {
@@ -619,6 +639,7 @@ async function main() {
       const dimension = dimensionsById.get(productDimensionId)!;
       stats.productDimensionId = productDimensionId;
       stats.productLabel = `${dimension.productCode} - ${dimension.productTitle}`;
+      const productName = `${dimension.productTitle} ${file}`;
 
       const wb = XLSX.readFile(path.join(DATA_DIR, file));
       let currentDept: ProductionSubDepartment | null = null;
@@ -634,9 +655,10 @@ async function main() {
 
           if (isSectionHeader(row)) {
             const headerText = String(row[0]).trim();
-            const mapped = mapSectionToDepartment(headerText);
+            const mapped = mapSectionToDepartment(headerText, productName);
             currentDept = mapped;
-            if (mapped == null && normalizeSectionText(headerText).includes('مخزن')) {
+            const normalizedHeader = normalizeSectionText(headerText);
+            if (mapped == null && (normalizedHeader.includes('مخزن') || normalizedHeader.includes('قسم'))) {
               if (!stats.unmappedSections.includes(headerText)) {
                 stats.unmappedSections.push(headerText);
               }
