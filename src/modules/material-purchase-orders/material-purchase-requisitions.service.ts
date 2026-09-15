@@ -120,15 +120,16 @@ export class MaterialPurchaseRequisitionsService {
     const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(
       requisition.items.map((item) => item.materialCode),
     );
-    const fulfillmentByItemId = await this.getFulfillmentByRequisitionItemIds(requisition.items.map((item) => item.id));
+    const allocatedByItemId = await this.getAllocatedQuantityByRequisitionItemIds(
+      requisition.items.map((item) => item.id),
+    );
 
     return {
       ...requisition,
       items: requisition.items.map((item) => {
         const lastPurchase = lastPurchaseByMaterialCode.get(item.materialCode);
         const { unitPrice, quantity, minimumStock, ...material } = item.material;
-        const fulfillment = fulfillmentByItemId.get(item.id);
-        const quantityAllocated = fulfillment?.quantityAllocated ?? 0;
+        const quantityAllocated = allocatedByItemId.get(item.id) ?? 0;
         const quantityRequested = Number(item.quantityRequested);
 
         return {
@@ -140,9 +141,7 @@ export class MaterialPurchaseRequisitionsService {
           lastPurchasePrice: lastPurchase?.lastPurchasePrice ?? null,
           lastPurchaseDate: lastPurchase?.lastPurchaseDate ?? null,
           lastPurchaseVendor: lastPurchase?.lastPurchaseVendor ?? null,
-          quantityAllocated,
           quantityRemaining: Math.max(0, quantityRequested - quantityAllocated),
-          orders: fulfillment?.orders ?? [],
         };
       }),
     };
@@ -568,41 +567,22 @@ export class MaterialPurchaseRequisitionsService {
     );
   }
 
-  private async getFulfillmentByRequisitionItemIds(itemIds: string[]) {
-    type OrderLink = { id: string; code: string; quantityAllocated: number };
-    const result = new Map<string, { quantityAllocated: number; orders: OrderLink[] }>();
-
-    for (const id of itemIds) {
-      result.set(id, { quantityAllocated: 0, orders: [] });
-    }
-
+  private async getAllocatedQuantityByRequisitionItemIds(itemIds: string[]) {
+    const result = new Map<string, number>();
+    for (const id of itemIds) result.set(id, 0);
     if (itemIds.length === 0) return result;
 
     const rows = await this.db
       .select({
         requisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
-        quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
-        orderId: materialPurchaseOrders.id,
-        orderCode: materialPurchaseOrders.code,
+        quantityAllocated: sql<string>`coalesce(sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated}), 0)`,
       })
       .from(materialPurchaseOrderItemRequisitionItems)
-      .innerJoin(
-        materialPurchaseOrderItems,
-        eq(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, materialPurchaseOrderItems.id),
-      )
-      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
-      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, itemIds));
+      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, itemIds))
+      .groupBy(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId);
 
     for (const row of rows) {
-      const current = result.get(row.requisitionItemId) ?? { quantityAllocated: 0, orders: [] };
-      const quantityAllocated = Number(row.quantityAllocated);
-      current.quantityAllocated += quantityAllocated;
-      current.orders.push({
-        id: row.orderId,
-        code: row.orderCode,
-        quantityAllocated,
-      });
-      result.set(row.requisitionItemId, current);
+      result.set(row.requisitionItemId, Number(row.quantityAllocated));
     }
 
     return result;
