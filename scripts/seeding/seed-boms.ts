@@ -248,6 +248,8 @@ function mapSectionToDepartment(headerText: string, productName = ''): Productio
   if (text.includes('حدادة')) return 'blacksmithing';
   if (text.includes('قطع')) return 'cutting';
   if (text.includes('ثني')) return 'bending';
+  if (text.includes('بنش')) return 'punch';
+  if (text.includes('دهان')) return 'paints';
 
   if (text.includes('سمكرة')) {
     return resolveSheetMetalDepartment(text, productName);

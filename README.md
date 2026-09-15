@@ -32,7 +32,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Manufacturing
 
 - Production plans scheduling work over a date range
-- Per-product production routing: each manufactured product defines an ordered sequence of production departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, and others) with completion-percentage weights that sum to 100%
+- Per-product production routing: each manufactured product defines an ordered sequence of production departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, kitchens, punch, paints, and others) with completion-percentage weights that sum to 100%
 - Production department managers and deputy managers assigned per work-center (enum-identified; labels are a frontend concern)
 - Work broken down per product unit and production department step, with sequential completion gating
 - Progress notes and completion tracking per production department step
