@@ -421,6 +421,13 @@
       "when": 1789473356777,
       "tag": "0059_brief_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1789559379689,
+      "tag": "0060_nappy_shotgun",
+      "breakpoints": true
     }
   ]
 }

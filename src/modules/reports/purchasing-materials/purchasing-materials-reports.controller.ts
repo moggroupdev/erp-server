@@ -11,7 +11,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('spending-summary')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_SPENDING_SUMMARY_REPORT)
   @ApiBearerAuth()
   getSpendingSummary(@Query('from') from?: string, @Query('to') to?: string, @Query('groupBy') groupBy?: string) {
     return this.service.getSpendingSummary({ from, to, groupBy });
@@ -19,7 +19,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('price-history')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_PRICE_HISTORY_REPORT)
   @ApiBearerAuth()
   getPriceHistory(@Query('materialCode') materialCode: string, @Query('from') from?: string, @Query('to') to?: string) {
     return this.service.getPriceHistory({ materialCode, from, to });
@@ -27,7 +27,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('category-stats')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_CATEGORY_STATS_REPORT)
   @ApiBearerAuth()
   getCategoryStats(
     @Query('mainCategoryId') mainCategoryId: string,
@@ -39,7 +39,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('subcategory-stats')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_SUBCATEGORY_STATS_REPORT)
   @ApiBearerAuth()
   getSubCategoryStats(
     @Query('subCategoryId') subCategoryId: string,
@@ -51,7 +51,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('supplier-stats')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_SUPPLIER_STATS_REPORT)
   @ApiBearerAuth()
   getSupplierStats(
     @Query('supplierId') supplierId: string,
@@ -64,7 +64,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('total-amount-mismatches')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_TOTAL_AMOUNT_MISMATCHES_REPORT)
   @ApiBearerAuth()
   getTotalAmountMismatches(@Query('from') from?: string, @Query('to') to?: string) {
     return this.service.getTotalAmountMismatches({ from, to });
@@ -72,7 +72,7 @@ export class PurchasingMaterialsReportsController {
 
   @Get('requisition-follow-up')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REQUISITION_FOLLOW_UP_REPORT)
   @ApiBearerAuth()
   getRequisitionFollowUp(
     @Query('productionSubDepartment') productionSubDepartment: string,
