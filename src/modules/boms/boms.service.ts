@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   materialPurchaseOrderItems,
@@ -9,16 +9,16 @@ import {
   productDimensions,
   productStandardBoms,
 } from 'src/database/schema';
-import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
-import { type MaterialUnit, type ProductionSubDepartment, type User } from 'src/utils/types';
+import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { type MaterialUnit, type ProductionSubDepartment, type User, type UserWithRoleWithPermissions } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
+import { ReplaceDepartmentBomDto } from './dto/replace-department-bom.dto';
 import { omitPricingFactorIfUnauthorized } from 'src/modules/products/product-pricing-factor.helper';
-import type { UserWithRoleWithPermissions } from 'src/utils/types';
 
 @Injectable()
 export class BomsService {
@@ -220,6 +220,64 @@ export class BomsService {
       .returning();
 
     return item;
+  }
+
+  public async replaceDepartment(
+    dimensionId: string,
+    productionSubDepartment: ProductionSubDepartment,
+    replaceDto: ReplaceDepartmentBomDto,
+    user: User,
+  ) {
+    if (!PRODUCTION_SUB_DEPARTMENT_VALUES.includes(productionSubDepartment)) {
+      throw new BadRequestException(
+        translate(
+          `Invalid production department: ${productionSubDepartment}.`,
+          `قسم الانتاج غير صالح: ${productionSubDepartment}.`,
+        ),
+      );
+    }
+
+    await this.assertIsManufacturedProduct(dimensionId);
+
+    const { items } = replaceDto;
+
+    const seen = new Set<string>();
+    for (const code of items.map((item) => item.materialCode)) {
+      if (seen.has(code))
+        throw new ConflictException(
+          translate(`Duplicate material code ${code} in BOM items.`, `كود المادة ${code} مكرر في بنود قائمة المواد.`),
+        );
+      seen.add(code);
+    }
+
+    const existing = await this.db.query.productStandardBoms.findFirst({
+      where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(
+        translate(
+          `No BOM exists for dimension ${dimensionId} in this production department.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
+        ),
+      );
+    }
+
+    const values = items.map((item) => ({
+      ...item,
+      productionSubDepartment,
+      createdBy: user.id,
+      productDimensionId: dimensionId,
+    }));
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .delete(productStandardBoms)
+        .where(this.dimensionDepartmentWhere(dimensionId, productionSubDepartment));
+
+      return await tx.insert(productStandardBoms).values(values).returning();
+    });
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
