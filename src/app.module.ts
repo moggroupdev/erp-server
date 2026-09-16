@@ -1,10 +1,14 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { LocaleMiddleware } from './utils/middlewares/locale.middleware';
 import { LoggerMiddleware } from './utils/middlewares/logger.middleware';
+import { AuditContextMiddleware } from './utils/middlewares/audit-context.middleware';
+import { AuditContextInterceptor } from './utils/interceptors/audit-context.interceptor';
 import { DatabaseModule } from './database/database.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
@@ -28,6 +32,7 @@ import { ReportsModule } from './modules/reports/reports.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    AuditLogsModule,
     AuthModule,
     ProfileModule,
     DepartmentsModule,
@@ -48,10 +53,16 @@ import { ReportsModule } from './modules/reports/reports.module';
     ReportsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditContextInterceptor,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LocaleMiddleware, LoggerMiddleware).forRoutes('*');
+    consumer.apply(LocaleMiddleware, AuditContextMiddleware, LoggerMiddleware).forRoutes('*');
   }
 }

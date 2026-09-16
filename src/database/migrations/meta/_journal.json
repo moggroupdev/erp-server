@@ -414,6 +414,13 @@
       "when": 1789470788541,
       "tag": "0058_wooden_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1789473356777,
+      "tag": "0059_brief_turbo",
+      "breakpoints": true
     }
   ]
 }

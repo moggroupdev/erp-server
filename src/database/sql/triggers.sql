@@ -6,6 +6,10 @@
 --   Safe to run multiple times (CREATE OR REPLACE + DROP IF EXISTS).
 --
 -- Workflow: db:generate → db:migrate → db:triggers
+--
+-- Also includes audit_emit infrastructure (append-only audit_logs writer).
+-- After adding tables, re-run so the attach loop installs audit_emit_row.
+-- Update audit_resolve_linkage when a new child needs parent/root mapping.
 
 -- ---------------------------------------------------------------------------
 -- AUTO-GENERATED CODE SEQUENCES AND TRIGGERS
@@ -438,3 +442,587 @@ CREATE CONSTRAINT TRIGGER product_production_routes_sum_100
 AFTER INSERT OR UPDATE OR DELETE ON product_production_routes
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW EXECUTE PROCEDURE check_product_production_routes_sum_100();
+
+-- ---------------------------------------------------------------------------
+-- AUDIT TRAIL: append-only audit_logs writer (infrastructure, not business logic)
+-- Nest sets erp.* GUCs on the same connection before mutations; this trigger
+-- reads them and inserts snapshots. Re-run db:triggers after new tables so
+-- the attach loop picks them up. Parent/root map: update audit_resolve_linkage.
+-- Skip: SET erp.audit_skip = 'true' (seed scripts). Never audits audit_logs
+-- or login_history.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION audit_guc(p_key text)
+RETURNS text AS $$
+  SELECT NULLIF(current_setting(p_key, true), '');
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION audit_record_id(p_table text, p_row jsonb)
+RETURNS text AS $$
+DECLARE
+  col text;
+  parts text[] := ARRAY[]::text[];
+BEGIN
+  FOR col IN
+    SELECT a.attname::text
+    FROM pg_index i
+    JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) ON true
+    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum AND NOT a.attisdropped
+    WHERE i.indrelid = ('public.' || quote_ident(p_table))::regclass
+      AND i.indisprimary
+    ORDER BY k.ord
+  LOOP
+    parts := parts || COALESCE(p_row->>col, '');
+  END LOOP;
+  RETURN array_to_string(parts, '/');
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION audit_changed_columns(p_old jsonb, p_new jsonb)
+RETURNS text[] AS $$
+  SELECT COALESCE(array_agg(key ORDER BY key), ARRAY[]::text[])
+  FROM (
+    SELECT COALESCE(o.key, n.key) AS key
+    FROM jsonb_each(p_old) AS o
+    FULL OUTER JOIN jsonb_each(p_new) AS n ON o.key = n.key
+    WHERE o.value IS DISTINCT FROM n.value
+  ) diff;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION audit_redact_row(p_table text, p_row jsonb)
+RETURNS jsonb AS $$
+BEGIN
+  IF p_row IS NULL THEN
+    RETURN NULL;
+  END IF;
+  IF p_table = 'users' AND p_row ? 'password' THEN
+    RETURN jsonb_set(p_row, '{password}', '"[redacted]"'::jsonb);
+  END IF;
+  RETURN p_row;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Child → immediate parent → owning document. Missing entries → null pairs.
+-- Lookups when root id is not on the child (e.g. MPO allocation lines).
+CREATE OR REPLACE FUNCTION audit_resolve_linkage(
+  p_table text,
+  p_row jsonb,
+  OUT parent_table_name text,
+  OUT parent_record_id text,
+  OUT root_table_name text,
+  OUT root_record_id text
+)
+AS $$
+DECLARE
+  v text;
+BEGIN
+  parent_table_name := NULL;
+  parent_record_id := NULL;
+  root_table_name := NULL;
+  root_record_id := NULL;
+
+  IF p_row IS NULL THEN
+    RETURN;
+  END IF;
+
+  CASE p_table
+    -- Auth / org / reference children
+    WHEN 'permissions' THEN
+      parent_table_name := 'roles';
+      parent_record_id := p_row->>'role_id';
+    WHEN 'cities' THEN
+      parent_table_name := 'governorates';
+      parent_record_id := p_row->>'governorate_id';
+    WHEN 'material_category_subs' THEN
+      parent_table_name := 'material_category_mains';
+      parent_record_id := p_row->>'main_category_id';
+    WHEN 'product_category_subs' THEN
+      parent_table_name := 'product_category_mains';
+      parent_record_id := p_row->>'main_category_id';
+
+    -- Master data children
+    WHEN 'customer_addresses' THEN
+      parent_table_name := 'customers';
+      parent_record_id := p_row->>'customer_id';
+      root_table_name := 'customers';
+      root_record_id := parent_record_id;
+    WHEN 'supplier_addresses' THEN
+      parent_table_name := 'suppliers';
+      parent_record_id := p_row->>'supplier_id';
+      root_table_name := 'suppliers';
+      root_record_id := parent_record_id;
+    WHEN 'product_dimensions' THEN
+      parent_table_name := 'products';
+      parent_record_id := p_row->>'product_code';
+      root_table_name := 'products';
+      root_record_id := parent_record_id;
+    WHEN 'product_production_routes' THEN
+      parent_table_name := 'products';
+      parent_record_id := p_row->>'product_code';
+      root_table_name := 'products';
+      root_record_id := parent_record_id;
+    WHEN 'product_standard_boms' THEN
+      parent_table_name := 'product_dimensions';
+      parent_record_id := p_row->>'product_dimension_id';
+      root_table_name := 'products';
+      SELECT product_code INTO v FROM product_dimensions WHERE id = (p_row->>'product_dimension_id')::uuid;
+      root_record_id := v;
+    WHEN 'material_unit_conversions' THEN
+      parent_table_name := 'materials';
+      parent_record_id := p_row->>'material_code';
+      root_table_name := 'materials';
+      root_record_id := parent_record_id;
+    WHEN 'manufactured_material_boms' THEN
+      parent_table_name := 'materials';
+      parent_record_id := p_row->>'manufactured_material_code';
+      root_table_name := 'materials';
+      root_record_id := parent_record_id;
+
+    -- Sales funnel
+    WHEN 'inquiry_items' THEN
+      parent_table_name := 'inquiries';
+      parent_record_id := p_row->>'inquiry_id';
+      root_table_name := 'inquiries';
+      root_record_id := parent_record_id;
+    WHEN 'previews' THEN
+      parent_table_name := 'inquiries';
+      parent_record_id := p_row->>'inquiry_id';
+      root_table_name := 'previews';
+      root_record_id := p_row->>'id';
+    WHEN 'preview_items' THEN
+      parent_table_name := 'previews';
+      parent_record_id := p_row->>'preview_id';
+      root_table_name := 'previews';
+      root_record_id := parent_record_id;
+    WHEN 'offers' THEN
+      parent_table_name := 'inquiries';
+      parent_record_id := p_row->>'inquiry_id';
+      root_table_name := 'offers';
+      root_record_id := p_row->>'id';
+    WHEN 'offer_items' THEN
+      parent_table_name := 'offers';
+      parent_record_id := p_row->>'offer_id';
+      root_table_name := 'offers';
+      root_record_id := parent_record_id;
+    WHEN 'offer_negotiations' THEN
+      parent_table_name := 'offers';
+      parent_record_id := p_row->>'offer_id';
+      root_table_name := 'offers';
+      root_record_id := parent_record_id;
+    WHEN 'contract_items' THEN
+      parent_table_name := 'contracts';
+      parent_record_id := p_row->>'contract_id';
+      root_table_name := 'contracts';
+      root_record_id := parent_record_id;
+    WHEN 'product_units' THEN
+      parent_table_name := 'contract_items';
+      parent_record_id := p_row->>'contract_item_id';
+      root_table_name := 'contracts';
+      SELECT contract_id::text INTO v FROM contract_items WHERE id = (p_row->>'contract_item_id')::uuid;
+      root_record_id := v;
+
+    -- Fulfillment
+    WHEN 'deliveries' THEN
+      parent_table_name := 'contracts';
+      parent_record_id := p_row->>'contract_id';
+      root_table_name := 'contracts';
+      root_record_id := parent_record_id;
+    WHEN 'delivery_items' THEN
+      parent_table_name := 'deliveries';
+      parent_record_id := p_row->>'delivery_id';
+      root_table_name := 'contracts';
+      SELECT contract_id::text INTO v FROM deliveries WHERE id = (p_row->>'delivery_id')::uuid;
+      root_record_id := v;
+    WHEN 'installations' THEN
+      parent_table_name := 'contracts';
+      parent_record_id := p_row->>'contract_id';
+      root_table_name := 'contracts';
+      root_record_id := parent_record_id;
+    WHEN 'installation_items' THEN
+      parent_table_name := 'installations';
+      parent_record_id := p_row->>'installation_id';
+      root_table_name := 'contracts';
+      SELECT contract_id::text INTO v FROM installations WHERE id = (p_row->>'installation_id')::uuid;
+      root_record_id := v;
+    WHEN 'customer_reception_items' THEN
+      parent_table_name := 'customer_receptions';
+      parent_record_id := p_row->>'customer_reception_id';
+      root_table_name := 'customer_receptions';
+      root_record_id := parent_record_id;
+
+    -- Material purchasing
+    WHEN 'material_purchase_requisition_items' THEN
+      parent_table_name := 'material_purchase_requisitions';
+      parent_record_id := p_row->>'material_purchase_requisition_id';
+      root_table_name := 'material_purchase_requisitions';
+      root_record_id := parent_record_id;
+    WHEN 'material_purchase_order_items' THEN
+      parent_table_name := 'material_purchase_orders';
+      parent_record_id := p_row->>'material_purchase_order_id';
+      root_table_name := 'material_purchase_orders';
+      root_record_id := parent_record_id;
+    WHEN 'material_purchase_order_item_requisition_items' THEN
+      parent_table_name := 'material_purchase_order_items';
+      parent_record_id := p_row->>'material_purchase_order_item_id';
+      root_table_name := 'material_purchase_orders';
+      SELECT material_purchase_order_id::text INTO v
+      FROM material_purchase_order_items
+      WHERE id = (p_row->>'material_purchase_order_item_id')::uuid;
+      root_record_id := v;
+    WHEN 'material_purchase_order_item_contract_items' THEN
+      parent_table_name := 'material_purchase_order_items';
+      parent_record_id := p_row->>'material_purchase_order_item_id';
+      root_table_name := 'material_purchase_orders';
+      SELECT material_purchase_order_id::text INTO v
+      FROM material_purchase_order_items
+      WHERE id = (p_row->>'material_purchase_order_item_id')::uuid;
+      root_record_id := v;
+    WHEN 'material_purchase_receipts' THEN
+      parent_table_name := 'material_purchase_orders';
+      parent_record_id := p_row->>'material_purchase_order_id';
+      root_table_name := 'material_purchase_orders';
+      root_record_id := parent_record_id;
+    WHEN 'material_purchase_receipt_items' THEN
+      parent_table_name := 'material_purchase_receipts';
+      parent_record_id := p_row->>'material_purchase_receipt_id';
+      root_table_name := 'material_purchase_orders';
+      SELECT material_purchase_order_id::text INTO v
+      FROM material_purchase_receipts
+      WHERE id = (p_row->>'material_purchase_receipt_id')::uuid;
+      root_record_id := v;
+
+    -- Product purchasing
+    WHEN 'product_purchase_order_items' THEN
+      parent_table_name := 'product_purchase_orders';
+      parent_record_id := p_row->>'product_purchase_order_id';
+      root_table_name := 'product_purchase_orders';
+      root_record_id := parent_record_id;
+    WHEN 'product_purchase_receipts' THEN
+      parent_table_name := 'product_purchase_orders';
+      parent_record_id := p_row->>'product_purchase_order_id';
+      root_table_name := 'product_purchase_orders';
+      root_record_id := parent_record_id;
+    WHEN 'product_purchase_receipt_items' THEN
+      parent_table_name := 'product_purchase_receipts';
+      parent_record_id := p_row->>'product_purchase_receipt_id';
+      root_table_name := 'product_purchase_orders';
+      SELECT product_purchase_order_id::text INTO v
+      FROM product_purchase_receipts
+      WHERE id = (p_row->>'product_purchase_receipt_id')::uuid;
+      root_record_id := v;
+
+    -- Outsourcing
+    WHEN 'outsourcing_order_items' THEN
+      parent_table_name := 'outsourcing_orders';
+      parent_record_id := p_row->>'outsourcing_order_id';
+      root_table_name := 'outsourcing_orders';
+      root_record_id := parent_record_id;
+    WHEN 'outsourcing_receipts' THEN
+      parent_table_name := 'outsourcing_orders';
+      parent_record_id := p_row->>'outsourcing_order_id';
+      root_table_name := 'outsourcing_orders';
+      root_record_id := parent_record_id;
+    WHEN 'outsourcing_receipt_items' THEN
+      parent_table_name := 'outsourcing_receipts';
+      parent_record_id := p_row->>'outsourcing_receipt_id';
+      root_table_name := 'outsourcing_orders';
+      SELECT outsourcing_order_id::text INTO v
+      FROM outsourcing_receipts
+      WHERE id = (p_row->>'outsourcing_receipt_id')::uuid;
+      root_record_id := v;
+
+    -- Supplier invoices (polymorphic parent/root = linked order)
+    WHEN 'supplier_invoices' THEN
+      IF p_row->>'material_purchase_order_id' IS NOT NULL THEN
+        parent_table_name := 'material_purchase_orders';
+        parent_record_id := p_row->>'material_purchase_order_id';
+        root_table_name := 'material_purchase_orders';
+        root_record_id := parent_record_id;
+      ELSIF p_row->>'product_purchase_order_id' IS NOT NULL THEN
+        parent_table_name := 'product_purchase_orders';
+        parent_record_id := p_row->>'product_purchase_order_id';
+        root_table_name := 'product_purchase_orders';
+        root_record_id := parent_record_id;
+      ELSIF p_row->>'outsourcing_order_id' IS NOT NULL THEN
+        parent_table_name := 'outsourcing_orders';
+        parent_record_id := p_row->>'outsourcing_order_id';
+        root_table_name := 'outsourcing_orders';
+        root_record_id := parent_record_id;
+      END IF;
+
+    -- Maintenance
+    WHEN 'maintenance_order_items' THEN
+      parent_table_name := 'maintenance_orders';
+      parent_record_id := p_row->>'maintenance_order_id';
+      root_table_name := 'maintenance_orders';
+      root_record_id := parent_record_id;
+    WHEN 'maintenance_order_materials' THEN
+      parent_table_name := 'maintenance_orders';
+      parent_record_id := p_row->>'maintenance_order_id';
+      root_table_name := 'maintenance_orders';
+      root_record_id := parent_record_id;
+
+    -- Production
+    WHEN 'production_plan_items' THEN
+      parent_table_name := 'production_plans';
+      parent_record_id := p_row->>'plan_id';
+      root_table_name := 'production_plans';
+      root_record_id := parent_record_id;
+    WHEN 'production_plan_item_notes' THEN
+      parent_table_name := 'production_plan_items';
+      parent_record_id := p_row->>'plan_item_id';
+      root_table_name := 'production_plans';
+      SELECT plan_id::text INTO v FROM production_plan_items WHERE id = (p_row->>'plan_item_id')::uuid;
+      root_record_id := v;
+
+    -- Inventory (polymorphic source)
+    WHEN 'inventory_transactions' THEN
+      IF p_row->>'material_purchase_receipt_id' IS NOT NULL THEN
+        parent_table_name := 'material_purchase_receipts';
+        parent_record_id := p_row->>'material_purchase_receipt_id';
+        root_table_name := 'material_purchase_orders';
+        SELECT material_purchase_order_id::text INTO v
+        FROM material_purchase_receipts
+        WHERE id = (p_row->>'material_purchase_receipt_id')::uuid;
+        root_record_id := v;
+      ELSIF p_row->>'outsourcing_receipt_id' IS NOT NULL THEN
+        parent_table_name := 'outsourcing_receipts';
+        parent_record_id := p_row->>'outsourcing_receipt_id';
+        root_table_name := 'outsourcing_orders';
+        SELECT outsourcing_order_id::text INTO v
+        FROM outsourcing_receipts
+        WHERE id = (p_row->>'outsourcing_receipt_id')::uuid;
+        root_record_id := v;
+      ELSIF p_row->>'outsourcing_order_id' IS NOT NULL THEN
+        parent_table_name := 'outsourcing_orders';
+        parent_record_id := p_row->>'outsourcing_order_id';
+        root_table_name := 'outsourcing_orders';
+        root_record_id := parent_record_id;
+      ELSIF p_row->>'maintenance_order_id' IS NOT NULL THEN
+        parent_table_name := 'maintenance_orders';
+        parent_record_id := p_row->>'maintenance_order_id';
+        root_table_name := 'maintenance_orders';
+        root_record_id := parent_record_id;
+      ELSIF p_row->>'production_plan_item_id' IS NOT NULL THEN
+        parent_table_name := 'production_plan_items';
+        parent_record_id := p_row->>'production_plan_item_id';
+        root_table_name := 'production_plans';
+        SELECT plan_id::text INTO v
+        FROM production_plan_items
+        WHERE id = (p_row->>'production_plan_item_id')::uuid;
+        root_record_id := v;
+      ELSE
+        root_table_name := 'inventory_transactions';
+        root_record_id := p_row->>'id';
+      END IF;
+    WHEN 'inventory_transaction_items' THEN
+      parent_table_name := 'inventory_transactions';
+      parent_record_id := p_row->>'transaction_id';
+      SELECT l.root_table_name, l.root_record_id
+      INTO root_table_name, root_record_id
+      FROM audit_resolve_linkage(
+        'inventory_transactions',
+        (SELECT to_jsonb(t) FROM inventory_transactions t WHERE t.id = (p_row->>'transaction_id')::uuid)
+      ) AS l;
+
+    -- Legacy
+    WHEN 'legacy_issue_permit_items' THEN
+      parent_table_name := 'legacy_issue_permits';
+      parent_record_id := p_row->>'issue_permit_id';
+      root_table_name := 'legacy_issue_permits';
+      root_record_id := parent_record_id;
+
+    ELSE
+      -- Top-level docs / unmapped reference: self-root for known documents only
+      IF p_table IN (
+        'users', 'customers', 'suppliers', 'products', 'materials',
+        'inquiries', 'contracts', 'trips', 'customer_receptions',
+        'material_purchase_requisitions', 'material_purchase_orders',
+        'product_purchase_orders', 'outsourcing_orders',
+        'supplier_quotation_emails', 'service_agreements', 'maintenance_orders',
+        'production_plans', 'legacy_issue_permits'
+      ) THEN
+        root_table_name := p_table;
+        root_record_id := COALESCE(p_row->>'id', p_row->>'code');
+      END IF;
+  END CASE;
+
+  -- Enforce pair CHECKs: both null or both set
+  IF parent_table_name IS NULL OR parent_record_id IS NULL THEN
+    parent_table_name := NULL;
+    parent_record_id := NULL;
+  END IF;
+  IF root_table_name IS NULL OR root_record_id IS NULL THEN
+    root_table_name := NULL;
+    root_record_id := NULL;
+  END IF;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+CREATE OR REPLACE FUNCTION audit_emit()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_old jsonb;
+  v_new jsonb;
+  v_action text;
+  v_record_id text;
+  v_changed text[];
+  v_actor_user_id uuid;
+  v_actor_name text;
+  v_actor_is_admin boolean;
+  v_actor_role_id uuid;
+  v_actor_department_id uuid;
+  v_operation_id uuid;
+  v_ip text;
+  v_ua text;
+  v_parent_table text;
+  v_parent_id text;
+  v_root_table text;
+  v_root_id text;
+  v_row jsonb;
+BEGIN
+  IF audit_guc('erp.audit_skip') = 'true' THEN
+    IF TG_OP = 'DELETE' THEN
+      RETURN OLD;
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    v_action := 'insert';
+    v_old := NULL;
+    v_new := audit_redact_row(TG_TABLE_NAME, to_jsonb(NEW));
+    v_changed := NULL;
+    v_row := v_new;
+  ELSIF TG_OP = 'DELETE' THEN
+    v_action := 'delete';
+    v_old := audit_redact_row(TG_TABLE_NAME, to_jsonb(OLD));
+    v_new := NULL;
+    v_changed := NULL;
+    v_row := v_old;
+  ELSE
+    v_action := 'update';
+    v_old := audit_redact_row(TG_TABLE_NAME, to_jsonb(OLD));
+    v_new := audit_redact_row(TG_TABLE_NAME, to_jsonb(NEW));
+    v_changed := audit_changed_columns(to_jsonb(OLD), to_jsonb(NEW));
+    IF v_changed IS NULL OR cardinality(v_changed) = 0 THEN
+      RETURN NEW;
+    END IF;
+    v_row := v_new;
+  END IF;
+
+  v_record_id := audit_record_id(TG_TABLE_NAME, v_row);
+
+  BEGIN
+    v_actor_user_id := audit_guc('erp.actor_user_id')::uuid;
+  EXCEPTION WHEN others THEN
+    v_actor_user_id := NULL;
+  END;
+
+  v_actor_name := audit_guc('erp.actor_name');
+  BEGIN
+    v_actor_is_admin := audit_guc('erp.actor_is_admin')::boolean;
+  EXCEPTION WHEN others THEN
+    v_actor_is_admin := NULL;
+  END;
+  BEGIN
+    v_actor_role_id := audit_guc('erp.actor_role_id')::uuid;
+  EXCEPTION WHEN others THEN
+    v_actor_role_id := NULL;
+  END;
+  BEGIN
+    v_actor_department_id := audit_guc('erp.actor_department_id')::uuid;
+  EXCEPTION WHEN others THEN
+    v_actor_department_id := NULL;
+  END;
+
+  -- Scripts may set actor_user_id without snapshot GUCs
+  IF v_actor_user_id IS NOT NULL AND v_actor_name IS NULL THEN
+    SELECT name, is_admin, role_id, department_id
+    INTO v_actor_name, v_actor_is_admin, v_actor_role_id, v_actor_department_id
+    FROM users
+    WHERE id = v_actor_user_id;
+  END IF;
+
+  BEGIN
+    v_operation_id := audit_guc('erp.operation_id')::uuid;
+  EXCEPTION WHEN others THEN
+    v_operation_id := NULL;
+  END;
+  v_ip := audit_guc('erp.ip_address');
+  v_ua := audit_guc('erp.user_agent');
+
+  SELECT
+    l.parent_table_name, l.parent_record_id, l.root_table_name, l.root_record_id
+  INTO v_parent_table, v_parent_id, v_root_table, v_root_id
+  FROM audit_resolve_linkage(TG_TABLE_NAME, v_row) AS l;
+
+  INSERT INTO audit_logs (
+    table_name,
+    record_id,
+    action,
+    old_row,
+    new_row,
+    changed_columns,
+    actor_user_id,
+    actor_name,
+    actor_is_admin,
+    actor_role_id,
+    actor_department_id,
+    operation_id,
+    ip_address,
+    user_agent,
+    parent_table_name,
+    parent_record_id,
+    root_table_name,
+    root_record_id
+  ) VALUES (
+    TG_TABLE_NAME,
+    v_record_id,
+    v_action::audit_action,
+    v_old,
+    v_new,
+    v_changed,
+    v_actor_user_id,
+    v_actor_name,
+    v_actor_is_admin,
+    v_actor_role_id,
+    v_actor_department_id,
+    v_operation_id,
+    v_ip,
+    v_ua,
+    v_parent_table,
+    v_parent_id,
+    v_root_table,
+    v_root_id
+  );
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT c.relname AS table_name
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND c.relname NOT IN ('audit_logs', 'login_history')
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS audit_emit_row ON %I', r.table_name);
+    EXECUTE format(
+      'CREATE TRIGGER audit_emit_row
+       AFTER INSERT OR UPDATE OR DELETE ON %I
+       FOR EACH ROW EXECUTE PROCEDURE audit_emit()',
+      r.table_name
+    );
+  END LOOP;
+END;
+$$;

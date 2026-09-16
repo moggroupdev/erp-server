@@ -23,14 +23,13 @@ Duplication Inventory → `[db-duplications.md](./db-duplications.md)`.
 
 ## Audit trail
 
-Writers (triggers and/or Nest) are not implemented yet. When they exist:
+Hybrid writer: Nest sets request/actor context (`erp.*` GUCs); Postgres `audit_emit` trigger inserts `audit_logs`. Domain services do **not** call an audit API.
 
-- Do **not** audit `audit_logs` (no recursion) or `login_history` (already an auth event log).
-- Redact `users.password` in `old_row` / `new_row` — store `"[redacted]"`, never the hash.
-- Soft lifecycle fields (`deleted_at`, `cancelled_at`, `blacklisted_at`, approval gates) are updates, not deletes.
-- `record_id` is the PK as text; for `permissions` use `{roleId}/{permission}`.
-- `parent_*` / `root_*` mapping (child → immediate parent → owning document) is writer-side; columns already exist.
-- `operation_id` groups every row written in one business transaction; `actor_*` snapshots copy from `users` at change time when `actor_user_id` is set.
+Full design, GUC bridge, file map, query patterns, and ops → **[audit-trail.md](./audit-trail.md)**.
+
+Policies: `audit_logs` append-only; do not audit `audit_logs` or `login_history`; redact `users.password` in snapshots; soft lifecycle fields are updates, not deletes.
+
+Maintenance rule: new or changed services/controllers normally need **no** audit-specific code as long as writes still use the wrapped Drizzle pool. New tables require re-running `db:triggers`; only update `triggers.sql` when a table must be excluded from auditing or when a new child table needs `parent_*` / `root_*` linkage in `audit_resolve_linkage`.
 
 ---
 

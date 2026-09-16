@@ -72,6 +72,7 @@ export const PERMISSION_VALUES = [
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',
   'update_legacy_issue_permit',
+  'read_audit_logs',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
