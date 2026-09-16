@@ -11,7 +11,7 @@ export class MaterialsReportsController {
 
   @Get('inventory-summary')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_INVENTORY_SUMMARY_REPORT)
   @ApiBearerAuth()
   getInventorySummary() {
     return this.materialsReportsService.getInventorySummary();
@@ -19,7 +19,7 @@ export class MaterialsReportsController {
 
   @Get('category-stats')
   @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.READ_MATERIAL_REPORTS)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_CATEGORY_STATS_REPORT)
   @ApiBearerAuth()
   getCategoryStats(@Query('mainCategoryId', ParseUUIDPipe) mainCategoryId: string) {
     return this.materialsReportsService.getCategoryStats(mainCategoryId);

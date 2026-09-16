@@ -64,8 +64,16 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `inventory_transaction_items.unit_price`                       | User-provided actual price at transaction time                                                              |
 | `maintenance_order_materials.unit_price`                       | Selling price at time of use                                                                                |
 | `material_purchase_requisitions.production_sub_department_manager_id` | `production_sub_department_managers.manager_id` for the requisition's `production_sub_department` |
+| `audit_logs.actor_name`                                        | `users.name` for `actor_user_id` at change time                                                 |
+| `audit_logs.actor_is_admin`                                    | `users.is_admin` for `actor_user_id` at change time                                             |
+| `audit_logs.actor_role_id`                                     | `users.role_id` for `actor_user_id` at change time                                              |
+| `audit_logs.actor_department_id`                               | `users.department_id` for `actor_user_id` at change time                                        |
+| `audit_logs.parent_table_name` / `parent_record_id`            | Immediate FK parent identity at change time                                                     |
+| `audit_logs.root_table_name` / `root_record_id`                | Owning business-document identity at change time (null on reference data)                       |
 
 **Rules:** set once on INSERT; omit from update DTOs. Re-copy only when the driving FK changes (e.g. production department on an editable requisition). Not the same as live master data (`materials.unit_price`, current `production_sub_department_managers`).
+
+`audit_logs` rows are never updated — actor and parent/root snapshots are frozen on insert only.
 
 ---
 

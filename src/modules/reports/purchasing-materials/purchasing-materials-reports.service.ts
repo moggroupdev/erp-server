@@ -1,19 +1,26 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   inventoryTransactions,
   materialCategoryMains,
   materialCategorySubs,
+  materialPurchaseOrderItemRequisitionItems,
   materialPurchaseOrderItems,
   materialPurchaseOrders,
+  materialPurchaseReceiptItems,
   materialPurchaseReceipts,
+  materialPurchaseRequisitionItems,
+  materialPurchaseRequisitions,
   materials,
   materialUnitConversions,
   suppliers,
 } from 'src/database/schema';
+import { APPROVAL_DECISIONS, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
+import { convertUnitPrice, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import { translate } from 'src/utils/i18n/translate';
+import type { MaterialUnit, ProductionSubDepartment } from 'src/utils/types';
 
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
 type GroupBy = (typeof VALID_GROUP_BY)[number];
@@ -394,7 +401,291 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getRequisitionFollowUp(params: {
+    productionSubDepartment: string;
+    from?: string;
+    to?: string;
+  }) {
+    const productionSubDepartment = params.productionSubDepartment?.trim();
+    if (
+      !productionSubDepartment ||
+      !(PRODUCTION_SUB_DEPARTMENT_VALUES as readonly string[]).includes(productionSubDepartment)
+    ) {
+      throw new BadRequestException(
+        translate(
+          'A valid production sub-department is required.',
+          'قسم الإنتاج الفرعي صالح مطلوب.',
+        ),
+      );
+    }
+
+    const dept = productionSubDepartment as ProductionSubDepartment;
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const conditions: SQL[] = [
+      eq(materialPurchaseRequisitions.productionSubDepartment, dept),
+      eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
+      eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
+      eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
+    ];
+    if (dateRange.from) conditions.push(gte(materialPurchaseRequisitions.createdAt, dateRange.from));
+    if (dateRange.to) conditions.push(lte(materialPurchaseRequisitions.createdAt, dateRange.to));
+
+    const rows = await this.db
+      .select({
+        requisitionItemId: materialPurchaseRequisitionItems.id,
+        requisitionId: materialPurchaseRequisitions.id,
+        requisitionCode: materialPurchaseRequisitions.code,
+        requisitionNotes: materialPurchaseRequisitions.notes,
+        itemNotes: materialPurchaseRequisitionItems.notes,
+        materialCode: materialPurchaseRequisitionItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
+        quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
+        createdAt: materialPurchaseRequisitions.createdAt,
+      })
+      .from(materialPurchaseRequisitionItems)
+      .innerJoin(
+        materialPurchaseRequisitions,
+        eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, materialPurchaseRequisitions.id),
+      )
+      .innerJoin(materials, eq(materialPurchaseRequisitionItems.materialCode, materials.code))
+      .where(and(...conditions))
+      .orderBy(desc(materialPurchaseRequisitions.createdAt), asc(materialPurchaseRequisitionItems.materialCode));
+
+    if (rows.length === 0) {
+      return {
+        productionSubDepartment: dept,
+        items: [],
+        totals: { requestedValue: 0, orderedValue: 0, receivedValue: 0 },
+        missingPriceCount: 0,
+      };
+    }
+
+    const requisitionItemIds = rows.map((row) => row.requisitionItemId);
+    const materialCodes = [...new Set(rows.map((row) => row.materialCode))];
+
+    const [conversionRows, lastPurchaseByCode, allocationRows] = await Promise.all([
+      this.db
+        .select({
+          materialCode: materialUnitConversions.materialCode,
+          unit: materialUnitConversions.unit,
+          conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+        })
+        .from(materialUnitConversions)
+        .where(inArray(materialUnitConversions.materialCode, materialCodes)),
+      this.getLastPurchasePriceByMaterialCode(materialCodes),
+      this.db
+        .select({
+          requisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+          orderItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId,
+          quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
+          orderItemUnit: materialPurchaseOrderItems.unitOfMeasurementSelected,
+          orderItemMaterialCode: materialPurchaseOrderItems.materialCode,
+        })
+        .from(materialPurchaseOrderItemRequisitionItems)
+        .innerJoin(
+          materialPurchaseOrderItems,
+          eq(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, materialPurchaseOrderItems.id),
+        )
+        .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+        .where(
+          and(
+            inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, requisitionItemIds),
+            isNull(materialPurchaseOrders.cancelledAt),
+          ),
+        ),
+    ]);
+
+    const conversionsByCode = new Map<string, { unit: MaterialUnit; conversionFactorToBase: number }[]>();
+    for (const row of conversionRows) {
+      const list = conversionsByCode.get(row.materialCode) ?? [];
+      list.push({ unit: row.unit as MaterialUnit, conversionFactorToBase: Number(row.conversionFactorToBase) });
+      conversionsByCode.set(row.materialCode, list);
+    }
+
+    const orderedQtyByRequisitionItemId = new Map<string, number>();
+    const allocationsByOrderItemId = new Map<
+      string,
+      { requisitionItemId: string; quantityAllocated: number; materialCode: string; orderItemUnit: MaterialUnit }[]
+    >();
+
+    for (const row of allocationRows) {
+      const qty = Number(row.quantityAllocated);
+      orderedQtyByRequisitionItemId.set(
+        row.requisitionItemId,
+        (orderedQtyByRequisitionItemId.get(row.requisitionItemId) ?? 0) + qty,
+      );
+
+      const list = allocationsByOrderItemId.get(row.orderItemId) ?? [];
+      list.push({
+        requisitionItemId: row.requisitionItemId,
+        quantityAllocated: qty,
+        materialCode: row.orderItemMaterialCode,
+        orderItemUnit: row.orderItemUnit as MaterialUnit,
+      });
+      allocationsByOrderItemId.set(row.orderItemId, list);
+    }
+
+    const orderItemIds = [...allocationsByOrderItemId.keys()];
+    const acceptedBaseByOrderItemId = new Map<string, number>();
+
+    if (orderItemIds.length > 0) {
+      const receiptRows = await this.db
+        .select({
+          orderItemId: materialPurchaseReceiptItems.materialPurchaseOrderItemId,
+          unitOfMeasurementSelected: materialPurchaseReceiptItems.unitOfMeasurementSelected,
+          quantityReceived: materialPurchaseReceiptItems.quantityReceived,
+          materialCode: materialPurchaseOrderItems.materialCode,
+        })
+        .from(materialPurchaseReceiptItems)
+        .innerJoin(
+          materialPurchaseOrderItems,
+          eq(materialPurchaseReceiptItems.materialPurchaseOrderItemId, materialPurchaseOrderItems.id),
+        )
+        .where(inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, orderItemIds));
+
+      const baseUnitByCode = new Map(rows.map((row) => [row.materialCode, row.unitOfMeasurement as MaterialUnit]));
+
+      for (const receipt of receiptRows) {
+        const baseUnit = baseUnitByCode.get(receipt.materialCode);
+        if (!baseUnit) continue;
+        const conversions = conversionsByCode.get(receipt.materialCode) ?? [];
+        const factor = resolveConversionFactor(
+          receipt.unitOfMeasurementSelected as MaterialUnit,
+          baseUnit,
+          conversions,
+        );
+        const acceptedBase = toBaseQuantity(Number(receipt.quantityReceived), factor);
+        acceptedBaseByOrderItemId.set(
+          receipt.orderItemId,
+          (acceptedBaseByOrderItemId.get(receipt.orderItemId) ?? 0) + acceptedBase,
+        );
+      }
+    }
+
+    const receivedBaseByRequisitionItemId = new Map<string, number>();
+    const baseUnitByCode = new Map(rows.map((row) => [row.materialCode, row.unitOfMeasurement as MaterialUnit]));
+    const rowByRequisitionItemId = new Map(rows.map((row) => [row.requisitionItemId, row]));
+
+    for (const [orderItemId, allocations] of allocationsByOrderItemId) {
+      const acceptedBase = acceptedBaseByOrderItemId.get(orderItemId) ?? 0;
+      if (acceptedBase <= 0) continue;
+
+      let totalAllocatedBase = 0;
+      const allocatedBases: { requisitionItemId: string; allocatedBase: number }[] = [];
+
+      for (const allocation of allocations) {
+        const baseUnit = baseUnitByCode.get(allocation.materialCode);
+        if (!baseUnit) continue;
+        const reqRow = rowByRequisitionItemId.get(allocation.requisitionItemId);
+        if (!reqRow) continue;
+        const conversions = conversionsByCode.get(allocation.materialCode) ?? [];
+        const reqFactor = resolveConversionFactor(
+          reqRow.unitOfMeasurementSelected as MaterialUnit,
+          baseUnit,
+          conversions,
+        );
+        const allocatedBase = toBaseQuantity(allocation.quantityAllocated, reqFactor);
+        totalAllocatedBase += allocatedBase;
+        allocatedBases.push({ requisitionItemId: allocation.requisitionItemId, allocatedBase });
+      }
+
+      if (totalAllocatedBase <= 0) continue;
+
+      for (const { requisitionItemId, allocatedBase } of allocatedBases) {
+        const share = allocatedBase / totalAllocatedBase;
+        receivedBaseByRequisitionItemId.set(
+          requisitionItemId,
+          (receivedBaseByRequisitionItemId.get(requisitionItemId) ?? 0) + share * acceptedBase,
+        );
+      }
+    }
+
+    let requestedValue = 0;
+    let orderedValue = 0;
+    let receivedValue = 0;
+
+    const items = rows.map((row) => {
+      const baseUnit = row.unitOfMeasurement as MaterialUnit;
+      const lineUnit = row.unitOfMeasurementSelected as MaterialUnit;
+      const conversions = conversionsByCode.get(row.materialCode) ?? [];
+      const lineFactor = resolveConversionFactor(lineUnit, baseUnit, conversions);
+      const quantityRequested = Number(row.quantityRequested);
+      const quantityOrdered = orderedQtyByRequisitionItemId.get(row.requisitionItemId) ?? 0;
+      const receivedBase = receivedBaseByRequisitionItemId.get(row.requisitionItemId) ?? 0;
+      const quantityReceivedRaw = lineFactor === 0 ? receivedBase : receivedBase / lineFactor;
+      const quantityReceived = Math.min(quantityRequested, Math.max(0, quantityReceivedRaw));
+
+      const lastPurchase = lastPurchaseByCode.get(row.materialCode);
+      const lastPurchasePrice =
+        lastPurchase != null
+          ? convertUnitPrice(lastPurchase.unitPrice, lastPurchase.purchaseUnit, lineUnit, baseUnit, conversions)
+          : null;
+
+      const requestedLineValue = lastPurchasePrice != null ? quantityRequested * lastPurchasePrice : null;
+      const orderedLineValue = lastPurchasePrice != null ? quantityOrdered * lastPurchasePrice : null;
+      const receivedLineValue = lastPurchasePrice != null ? quantityReceived * lastPurchasePrice : null;
+
+      if (requestedLineValue != null) requestedValue += requestedLineValue;
+      if (orderedLineValue != null) orderedValue += orderedLineValue;
+      if (receivedLineValue != null) receivedValue += receivedLineValue;
+
+      return {
+        requisitionItemId: row.requisitionItemId,
+        requisitionId: row.requisitionId,
+        requisitionCode: row.requisitionCode,
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurementSelected: lineUnit,
+        quantityRequested,
+        quantityOrdered,
+        quantityReceived,
+        lastPurchasePrice,
+        requestedValue: requestedLineValue,
+        orderedValue: orderedLineValue,
+        receivedValue: receivedLineValue,
+        notes: row.itemNotes?.trim() || row.requisitionNotes || null,
+      };
+    });
+
+    return {
+      productionSubDepartment: dept,
+      items,
+      totals: { requestedValue, orderedValue, receivedValue },
+      missingPriceCount: items.filter((item) => item.lastPurchasePrice == null).length,
+    };
+  }
+
   // ============================== PRIVATE METHODS ==============================
+
+  private async getLastPurchasePriceByMaterialCode(materialCodes: string[]) {
+    const uniqueCodes = [...new Set(materialCodes)];
+    if (uniqueCodes.length === 0) {
+      return new Map<string, { unitPrice: number; purchaseUnit: MaterialUnit }>();
+    }
+
+    const purchaseRows = await this.db
+      .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
+        materialCode: materialPurchaseOrderItems.materialCode,
+        unitPrice: materialPurchaseOrderItems.unitPrice,
+        unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .where(and(inArray(materialPurchaseOrderItems.materialCode, uniqueCodes), isNull(materialPurchaseOrders.cancelledAt)))
+      .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt));
+
+    return new Map(
+      purchaseRows.map((row) => [
+        row.materialCode,
+        {
+          unitPrice: Number(row.unitPrice),
+          purchaseUnit: row.unitOfMeasurementSelected as MaterialUnit,
+        },
+      ]),
+    );
+  }
 
   private parseGroupBy(value?: string): GroupBy {
     if (value && (VALID_GROUP_BY as readonly string[]).includes(value)) return value as GroupBy;

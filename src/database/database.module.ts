@@ -3,6 +3,7 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { DRIZZLE } from './database.constants';
+import { installAuditGucPoolHook } from './audit-guc-pool';
 import * as schema from './schema';
 
 @Module({
@@ -14,6 +15,7 @@ import * as schema from './schema';
         const logger = new Logger('DatabaseModule');
         const databaseUrl = config.get<string>('DATABASE_URL');
         const pool = new Pool({ connectionString: databaseUrl });
+        installAuditGucPoolHook(pool);
         try {
           await pool.query('SELECT 1'); // Test the connection
           logger.log('Database connected successfully');

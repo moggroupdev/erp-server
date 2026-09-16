@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray, isNull, SQL } from 'drizzle-orm';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   materialPurchaseOrderItems,
@@ -9,16 +9,16 @@ import {
   productDimensions,
   productStandardBoms,
 } from 'src/database/schema';
-import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
-import { type MaterialUnit, type ProductionSubDepartment, type User } from 'src/utils/types';
+import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { type MaterialUnit, type ProductionSubDepartment, type User, type UserWithRoleWithPermissions } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
+import { ReplaceDepartmentBomDto } from './dto/replace-department-bom.dto';
 import { omitPricingFactorIfUnauthorized } from 'src/modules/products/product-pricing-factor.helper';
-import type { UserWithRoleWithPermissions } from 'src/utils/types';
 
 @Injectable()
 export class BomsService {
@@ -222,17 +222,100 @@ export class BomsService {
     return item;
   }
 
+  public async replaceDepartment(
+    dimensionId: string,
+    productionSubDepartment: ProductionSubDepartment,
+    replaceDto: ReplaceDepartmentBomDto,
+    user: User,
+  ) {
+    if (!PRODUCTION_SUB_DEPARTMENT_VALUES.includes(productionSubDepartment)) {
+      throw new BadRequestException(
+        translate(
+          `Invalid production department: ${productionSubDepartment}.`,
+          `قسم الانتاج غير صالح: ${productionSubDepartment}.`,
+        ),
+      );
+    }
+
+    await this.assertIsManufacturedProduct(dimensionId);
+
+    const { items } = replaceDto;
+
+    const seen = new Set<string>();
+    for (const code of items.map((item) => item.materialCode)) {
+      if (seen.has(code))
+        throw new ConflictException(
+          translate(`Duplicate material code ${code} in BOM items.`, `كود المادة ${code} مكرر في بنود قائمة المواد.`),
+        );
+      seen.add(code);
+    }
+
+    const existing = await this.db.query.productStandardBoms.findFirst({
+      where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
+      columns: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(
+        translate(
+          `No BOM exists for dimension ${dimensionId} in this production department.`,
+          `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
+        ),
+      );
+    }
+
+    const values = items.map((item) => ({
+      ...item,
+      productionSubDepartment,
+      createdBy: user.id,
+      productDimensionId: dimensionId,
+    }));
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .delete(productStandardBoms)
+        .where(this.dimensionDepartmentWhere(dimensionId, productionSubDepartment));
+
+      return await tx.insert(productStandardBoms).values(values).returning();
+    });
+  }
+
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
+    const existing = await this.db.query.productStandardBoms.findFirst({
+      where: eq(productStandardBoms.id, itemId),
+      columns: { id: true, productDimensionId: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(
+        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+      );
+    }
+
+    // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
+    if (
+      await this.db.query.productStandardBoms.findFirst({
+        where: and(
+          this.dimensionDepartmentWhere(existing.productDimensionId, updateBomItemDto.productionSubDepartment),
+          eq(productStandardBoms.materialCode, updateBomItemDto.materialCode),
+          ne(productStandardBoms.id, itemId),
+        ),
+        columns: { id: true },
+      })
+    ) {
+      throw new ConflictException(
+        translate(
+          `Material ${updateBomItemDto.materialCode} is already in the BOM for this dimension and production department.`,
+          `المادة ${updateBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس وقسم الانتاج.`,
+        ),
+      );
+    }
+
     const [updatedItem] = await this.db
       .update(productStandardBoms)
       .set(updateBomItemDto)
       .where(eq(productStandardBoms.id, itemId))
       .returning();
-
-    if (!updatedItem)
-      throw new NotFoundException(
-        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-      );
 
     return updatedItem;
   }

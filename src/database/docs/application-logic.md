@@ -17,6 +17,19 @@ Duplication Inventory → `[db-duplications.md](./db-duplications.md)`.
 - **No hard deletion** — use `deleted_at`, `blacklisted_at`, `cancelled_at`, or status; history stays queryable.
 - **Codes immutable** — auto-generated `code` columns (triggers) omitted from create/update DTOs.
 - **Snapshots immutable** — `@HISTORICAL_SNAPSHOT` columns set on insert only; omit from update DTOs.
+- **Audit log immutable** — `audit_logs` is append-only: never update or delete rows (not soft-deleted either). Soft-delete / cancel / blacklist / approval on other tables are recorded as `action = 'update'` with before/after snapshots.
+
+---
+
+## Audit trail
+
+Hybrid writer: Nest sets request/actor context (`erp.*` GUCs); Postgres `audit_emit` trigger inserts `audit_logs`. Domain services do **not** call an audit API.
+
+Full design, GUC bridge, file map, query patterns, and ops → **[audit-trail.md](./audit-trail.md)**.
+
+Policies: `audit_logs` append-only; do not audit `audit_logs` or `login_history`; redact `users.password` in snapshots; soft lifecycle fields are updates, not deletes.
+
+Maintenance rule: new or changed services/controllers normally need **no** audit-specific code as long as writes still use the wrapped Drizzle pool. New tables require re-running `db:triggers`; only update `triggers.sql` when a table must be excluded from auditing or when a new child table needs `parent_*` / `root_*` linkage in `audit_resolve_linkage`.
 
 ---
 

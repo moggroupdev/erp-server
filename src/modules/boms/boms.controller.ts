@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { type User } from 'src/utils/types';
+import { type ProductionSubDepartment, type User } from 'src/utils/types';
 import { PermissionGuard } from 'src/modules/auth/guards/permission.guard';
 import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permission.decorator';
 import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator';
@@ -9,6 +9,7 @@ import { BomsService } from './boms.service';
 import { CreateBomDto } from './dto/create-bom.dto';
 import { CreateBomItemDto } from './dto/create-bom-item.dto';
 import { UpdateBomItemDto } from './dto/update-bom-item.dto';
+import { ReplaceDepartmentBomDto } from './dto/replace-department-bom.dto';
 
 @Controller('boms')
 export class BomsController {
@@ -44,6 +45,24 @@ export class BomsController {
     @RequestUser() user: User,
   ) {
     return this.bomsService.appendItem(dimensionId, createBomItemDto, user);
+  }
+
+  @Put(':dimensionId/department/:productionSubDepartment')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT_BOM)
+  @ApiBearerAuth()
+  replaceDepartment(
+    @Param('dimensionId', ParseUUIDPipe) dimensionId: string,
+    @Param('productionSubDepartment') productionSubDepartment: string,
+    @Body() replaceDto: ReplaceDepartmentBomDto,
+    @RequestUser() user: User,
+  ) {
+    return this.bomsService.replaceDepartment(
+      dimensionId,
+      productionSubDepartment as ProductionSubDepartment,
+      replaceDto,
+      user,
+    );
   }
 
   @Patch(':itemId')

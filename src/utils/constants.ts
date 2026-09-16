@@ -44,8 +44,15 @@ export const PERMISSION_VALUES = [
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
-  'read_material_reports',
-  'read_material_purchasing_reports',
+  'read_material_inventory_summary_report',
+  'read_material_category_stats_report',
+  'read_material_purchasing_spending_summary_report',
+  'read_material_purchasing_price_history_report',
+  'read_material_purchasing_category_stats_report',
+  'read_material_purchasing_subcategory_stats_report',
+  'read_material_purchasing_supplier_stats_report',
+  'read_material_purchasing_total_amount_mismatches_report',
+  'read_material_purchasing_requisition_follow_up_report',
   'add_product',
   'read_products',
   'update_product',
@@ -72,6 +79,7 @@ export const PERMISSION_VALUES = [
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',
   'update_legacy_issue_permit',
+  'read_audit_logs',
 ] as const;
 
 export const PERMISSIONS = Object.fromEntries(
@@ -318,4 +326,12 @@ export const GENDER_VALUES = ['male', 'female'] as const;
 
 export const GENDERS = Object.fromEntries(GENDER_VALUES.map((gender) => [gender.toUpperCase(), gender])) as {
   [K in Uppercase<(typeof GENDER_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== AUDIT_ACTIONS ====================
+
+export const AUDIT_ACTION_VALUES = ['insert', 'update', 'delete'] as const;
+
+export const AUDIT_ACTIONS = Object.fromEntries(AUDIT_ACTION_VALUES.map((action) => [action.toUpperCase(), action])) as {
+  [K in Uppercase<(typeof AUDIT_ACTION_VALUES)[number]>]: Lowercase<K>;
 };

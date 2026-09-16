@@ -54,9 +54,14 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 | `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes. |
 | `src/database/docs/db-duplications.md`   | `@RFP_APP_CHECKED`, `@CACHING_APP_SYNCED`, and `@HISTORICAL_SNAPSHOT` column inventory.              |
 | `src/database/docs/application-logic.md` | Business logic that is not handled in DB — caching sync, RFP sync, validations, workflow guards.     |
-| `src/database/sql/triggers.sql`          | Low-level integrity only (like auto-generated `code` on INSERT). Not business logic.                 |
+| `src/database/docs/audit-trail.md`       | Audit trail design — hybrid Nest GUCs + Postgres trigger, file map, query API, ops.                 |
+| `src/database/sql/triggers.sql`          | Low-level integrity (auto-generated `code` on INSERT) **and** audit emit infrastructure (`audit_emit` + attach loop). Not business workflow logic. |
 
 **Triggers example:** `CTR-00000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.
+
+**Audit emit:** After adding a new audited table, re-run `db:triggers` so `audit_emit_row` is attached. Update `audit_resolve_linkage` in the same file when the table needs parent/root linkage. Seed scripts may `SET erp.audit_skip = 'true'` to skip logging.
+
+**Audit maintenance rule:** service/controller/DTO changes usually do not need audit-specific code. Existing and new writes are captured automatically through the wrapped Drizzle pool. Touch `triggers.sql` only when excluding a table from auditing or when a new child table needs parent/root linkage.
 
 ### Keeping docs in sync
 

@@ -1,10 +1,16 @@
-import { TrimToNull } from 'src/utils/decorators';
+import { Trim, TrimToNull } from 'src/utils/decorators';
 import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
 
 export class UpdateBomItemDto {
+  @Trim()
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty()
+  materialCode: string;
+
   @IsNumber()
   @IsPositive()
   @IsOptional()
