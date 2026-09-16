@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { manufacturedMaterialBoms, materials } from 'src/database/schema';
@@ -143,17 +143,73 @@ export class MmBomsService {
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateMmBomItemDto) {
+    const existing = await this.db.query.manufacturedMaterialBoms.findFirst({
+      where: eq(manufacturedMaterialBoms.id, itemId),
+      columns: { id: true, manufacturedMaterialCode: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(
+        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+      );
+    }
+
+    if (updateBomItemDto.materialCode === existing.manufacturedMaterialCode) {
+      throw new ConflictException(
+        translate(
+          `Material ${updateBomItemDto.materialCode} cannot reference itself in the BOM.`,
+          `لا يمكن للمادة ${updateBomItemDto.materialCode} أن تشير إلى نفسها في قائمة المواد.`,
+        ),
+      );
+    }
+
+    const componentMaterial = await this.db.query.materials.findFirst({
+      where: eq(materials.code, updateBomItemDto.materialCode),
+      columns: { code: true, materialType: true },
+    });
+
+    if (!componentMaterial) {
+      throw new NotFoundException(
+        translate(
+          `Material with code ${updateBomItemDto.materialCode} does not exist.`,
+          `لا توجد مادة بالكود ${updateBomItemDto.materialCode}.`,
+        ),
+      );
+    }
+
+    if (componentMaterial.materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL) {
+      throw new ConflictException(
+        translate(
+          `Manufactured material ${updateBomItemDto.materialCode} cannot be used as a BOM component.`,
+          `لا يمكن استخدام المادة المصنعة ${updateBomItemDto.materialCode} كمكون في قائمة المواد.`,
+        ),
+      );
+    }
+
+    // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
+    const sameItemExistsInBom = await this.db.query.manufacturedMaterialBoms.findFirst({
+      where: and(
+        eq(manufacturedMaterialBoms.manufacturedMaterialCode, existing.manufacturedMaterialCode),
+        eq(manufacturedMaterialBoms.materialCode, updateBomItemDto.materialCode),
+        ne(manufacturedMaterialBoms.id, itemId),
+      ),
+      columns: { id: true },
+    });
+
+    if (sameItemExistsInBom) {
+      throw new ConflictException(
+        translate(
+          `Material ${updateBomItemDto.materialCode} is already in the BOM for this manufactured material.`,
+          `المادة ${updateBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذه المادة المصنعة.`,
+        ),
+      );
+    }
+
     const [updatedItem] = await this.db
       .update(manufacturedMaterialBoms)
       .set(updateBomItemDto)
       .where(eq(manufacturedMaterialBoms.id, itemId))
       .returning();
-
-    if (!updatedItem) {
-      throw new NotFoundException(
-        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-      );
-    }
 
     return updatedItem;
   }

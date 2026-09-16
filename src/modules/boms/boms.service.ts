@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -223,16 +223,41 @@ export class BomsService {
   }
 
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
+    const existing = await this.db.query.productStandardBoms.findFirst({
+      where: eq(productStandardBoms.id, itemId),
+      columns: { id: true, productDimensionId: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(
+        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
+      );
+    }
+
+    // For the following check, we can depend on the database constraint, but we use it here for a more readable error message.
+    if (
+      await this.db.query.productStandardBoms.findFirst({
+        where: and(
+          this.dimensionDepartmentWhere(existing.productDimensionId, updateBomItemDto.productionSubDepartment),
+          eq(productStandardBoms.materialCode, updateBomItemDto.materialCode),
+          ne(productStandardBoms.id, itemId),
+        ),
+        columns: { id: true },
+      })
+    ) {
+      throw new ConflictException(
+        translate(
+          `Material ${updateBomItemDto.materialCode} is already in the BOM for this dimension and production department.`,
+          `المادة ${updateBomItemDto.materialCode} موجودة بالفعل في قائمة المواد لهذا المقاس وقسم الانتاج.`,
+        ),
+      );
+    }
+
     const [updatedItem] = await this.db
       .update(productStandardBoms)
       .set(updateBomItemDto)
       .where(eq(productStandardBoms.id, itemId))
       .returning();
-
-    if (!updatedItem)
-      throw new NotFoundException(
-        translate(`BOM item with ID ${itemId} does not exist.`, `لا يوجد بند قائمة مواد بالمعرف ${itemId}.`),
-      );
 
     return updatedItem;
   }
