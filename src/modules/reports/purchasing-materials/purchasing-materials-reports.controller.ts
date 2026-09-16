@@ -69,4 +69,16 @@ export class PurchasingMaterialsReportsController {
   getTotalAmountMismatches(@Query('from') from?: string, @Query('to') to?: string) {
     return this.service.getTotalAmountMismatches({ from, to });
   }
+
+  @Get('requisition-follow-up')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REPORTS)
+  @ApiBearerAuth()
+  getRequisitionFollowUp(
+    @Query('productionSubDepartment') productionSubDepartment: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.getRequisitionFollowUp({ productionSubDepartment, from, to });
+  }
 }
