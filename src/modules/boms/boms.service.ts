@@ -119,6 +119,8 @@ export class BomsService {
                 subCategoryId: true,
                 unitOfMeasurement: true,
                 unitPrice: true,
+                marketUnitPrice: true,
+                marketUnitPriceSetAt: true,
               },
               extras: materialUnitConversionsExtra,
             },
@@ -151,26 +153,34 @@ export class BomsService {
       ]),
     ];
 
-    const lastPurchasePriceByMaterialCode = await this.getLastPurchasePriceByMaterialCode(allMaterialCodes);
+    const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(allMaterialCodes);
 
     // Overwrite the results to enclude the manufactured naterial BOMs
     return {
       ...dimension,
       product: omitPricingFactorIfUnauthorized(dimension.product, user as UserWithRoleWithPermissions),
-      standardBoms: dimension.standardBoms.map((item) => ({
-        ...item,
-        material: {
-          ...item.material,
-          lastPurchasePrice: lastPurchasePriceByMaterialCode.get(item.material.code) ?? null,
-          manufacturedMaterialBoms: (componentsByMaterialCode.get(item.material.code) || []).map((component) => ({
-            ...component,
-            material: {
-              ...component.material,
-              lastPurchasePrice: lastPurchasePriceByMaterialCode.get(component.material.code) ?? null,
-            },
-          })),
-        },
-      })),
+      standardBoms: dimension.standardBoms.map((item) => {
+        const lastPurchase = lastPurchaseByMaterialCode.get(item.material.code);
+        return {
+          ...item,
+          material: {
+            ...item.material,
+            lastPurchasePrice: lastPurchase?.price ?? null,
+            lastPurchaseDate: lastPurchase?.date ?? null,
+            manufacturedMaterialBoms: (componentsByMaterialCode.get(item.material.code) || []).map((component) => {
+              const componentLastPurchase = lastPurchaseByMaterialCode.get(component.material.code);
+              return {
+                ...component,
+                material: {
+                  ...component.material,
+                  lastPurchasePrice: componentLastPurchase?.price ?? null,
+                  lastPurchaseDate: componentLastPurchase?.date ?? null,
+                },
+              };
+            }),
+          },
+        };
+      }),
     };
   }
 
@@ -427,6 +437,8 @@ export class BomsService {
                       subCategoryId: true,
                       unitOfMeasurement: true,
                       unitPrice: true,
+                      marketUnitPrice: true,
+                      marketUnitPriceSetAt: true,
                     },
                     extras: materialUnitConversionsExtra,
                   },
@@ -440,14 +452,15 @@ export class BomsService {
   }
 
   // Last purchased price = newest non-cancelled PO line unit price, normalized to the material's base unit.
-  private async getLastPurchasePriceByMaterialCode(materialCodes: string[]) {
-    if (materialCodes.length === 0) return new Map<string, number>();
+  private async getLastPurchaseByMaterialCode(materialCodes: string[]) {
+    if (materialCodes.length === 0) return new Map<string, { price: number; date: Date }>();
 
     const rows = await this.db
       .selectDistinctOn([materialPurchaseOrderItems.materialCode], {
         materialCode: materialPurchaseOrderItems.materialCode,
         unitPrice: materialPurchaseOrderItems.unitPrice,
         unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
+        createdAt: materialPurchaseOrders.createdAt,
       })
       .from(materialPurchaseOrderItems)
       .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
@@ -456,7 +469,7 @@ export class BomsService {
       )
       .orderBy(materialPurchaseOrderItems.materialCode, desc(materialPurchaseOrders.createdAt));
 
-    if (rows.length === 0) return new Map<string, number>();
+    if (rows.length === 0) return new Map<string, { price: number; date: Date }>();
 
     const purchasedCodes = [...new Set(rows.map((row) => row.materialCode))];
 
@@ -488,8 +501,9 @@ export class BomsService {
         const baseUnit = baseUnitByCode.get(row.materialCode);
         const purchaseUnit = row.unitOfMeasurementSelected as MaterialUnit;
         const unitPrice = Number(row.unitPrice);
+        const date = row.createdAt;
 
-        if (!baseUnit) return [row.materialCode, unitPrice] as const;
+        if (!baseUnit) return [row.materialCode, { price: unitPrice, date }] as const;
 
         const priceInBase = convertUnitPrice(
           unitPrice,
@@ -499,7 +513,7 @@ export class BomsService {
           conversionsByCode.get(row.materialCode) ?? [],
         );
 
-        return [row.materialCode, priceInBase] as const;
+        return [row.materialCode, { price: priceInBase, date }] as const;
       }),
     );
   }
