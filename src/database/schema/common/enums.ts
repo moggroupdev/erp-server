@@ -6,6 +6,7 @@ import {
   MAINTENANCE_TYPE_VALUES,
   MATERIAL_TYPE_VALUES,
   MATERIAL_UNIT_VALUES,
+  MM_SOURCING_TYPE_VALUES,
   NEGOTIATION_PARTY_VALUES,
   OFFER_STATUS_VALUES,
   PERMISSION_VALUES,
@@ -31,6 +32,8 @@ export const loginStatusEnum = pgEnum('login_status', LOGIN_STATUS_VALUES);
 export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNIT_VALUES);
 
 export const materialTypeEnum = pgEnum('material_type', MATERIAL_TYPE_VALUES);
+
+export const mmSourcingTypeEnum = pgEnum('mm_sourcing_type', MM_SOURCING_TYPE_VALUES);
 
 export const productSourceTypeEnum = pgEnum('product_source_type', PRODUCT_SOURCE_TYPE_VALUES);
 

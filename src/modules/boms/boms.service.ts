@@ -6,11 +6,19 @@ import {
   materialPurchaseOrders,
   materialUnitConversions,
   materials,
+  outsourcingOrderItems,
+  outsourcingOrders,
   productDimensions,
   productStandardBoms,
 } from 'src/database/schema';
-import { MATERIAL_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
-import { type MaterialUnit, type ProductionSubDepartment, type User, type UserWithRoleWithPermissions } from 'src/utils/types';
+import { MATERIAL_TYPES, MM_SOURCING_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import {
+  type MaterialUnit,
+  type MmSourcingType,
+  type ProductionSubDepartment,
+  type User,
+  type UserWithRoleWithPermissions,
+} from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
@@ -65,8 +73,11 @@ export class BomsService {
       seen.add(code);
     }
 
+    await this.assertMmSourcingTypeForItems(items);
+
     const values = items.map((item) => ({
       ...item,
+      mmSourcingType: item.mmSourcingType ?? null,
       createdBy: user.id,
       productDimensionId: dimensionId,
     }));
@@ -108,6 +119,7 @@ export class BomsService {
             quantityRequired: true,
             unitOfMeasurementSelected: true,
             productionSubDepartment: true,
+            mmSourcingType: true,
             notes: true,
           },
           with: {
@@ -134,6 +146,20 @@ export class BomsService {
         translate(`Product dimension with ID ${dimensionId} does not exist.`, `لا يوجد مقاس منتج بالمعرف ${dimensionId}.`),
       );
 
+    // Only expand MM recipes for lines that are internally or externally manufactured.
+    const recipeMaterialCodes = [
+      ...new Set(
+        dimension.standardBoms
+          .filter(
+            (item) =>
+              item.material.materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL &&
+              (item.mmSourcingType === MM_SOURCING_TYPES.INTERNALLY_MANUFACTURED ||
+                item.mmSourcingType === MM_SOURCING_TYPES.EXTERNALLY_MANUFACTURED),
+          )
+          .map((item) => item.material.code),
+      ),
+    ];
+
     const manufacturedMaterialCodes = [
       ...new Set(
         dimension.standardBoms
@@ -142,7 +168,7 @@ export class BomsService {
       ),
     ];
 
-    const componentsByMaterialCode = await this.getManufacturedMaterialComponents(manufacturedMaterialCodes);
+    const componentsByMaterialCode = await this.getManufacturedMaterialComponents(recipeMaterialCodes);
 
     const allMaterialCodes = [
       ...new Set([
@@ -153,31 +179,42 @@ export class BomsService {
       ]),
     ];
 
-    const lastPurchaseByMaterialCode = await this.getLastPurchaseByMaterialCode(allMaterialCodes);
+    const [lastPurchaseByMaterialCode, lastOutsourcingByMaterialCode] = await Promise.all([
+      this.getLastPurchaseByMaterialCode(allMaterialCodes),
+      this.getLastOutsourcingCostByMaterialCode(manufacturedMaterialCodes),
+    ]);
 
-    // Overwrite the results to enclude the manufactured naterial BOMs
     return {
       ...dimension,
       product: omitPricingFactorIfUnauthorized(dimension.product, user as UserWithRoleWithPermissions),
       standardBoms: dimension.standardBoms.map((item) => {
         const lastPurchase = lastPurchaseByMaterialCode.get(item.material.code);
+        const lastOutsourcing = lastOutsourcingByMaterialCode.get(item.material.code);
+        const includeRecipe =
+          item.mmSourcingType === MM_SOURCING_TYPES.INTERNALLY_MANUFACTURED ||
+          item.mmSourcingType === MM_SOURCING_TYPES.EXTERNALLY_MANUFACTURED;
+
         return {
           ...item,
           material: {
             ...item.material,
             lastPurchasePrice: lastPurchase?.price ?? null,
             lastPurchaseDate: lastPurchase?.date ?? null,
-            manufacturedMaterialBoms: (componentsByMaterialCode.get(item.material.code) || []).map((component) => {
-              const componentLastPurchase = lastPurchaseByMaterialCode.get(component.material.code);
-              return {
-                ...component,
-                material: {
-                  ...component.material,
-                  lastPurchasePrice: componentLastPurchase?.price ?? null,
-                  lastPurchaseDate: componentLastPurchase?.date ?? null,
-                },
-              };
-            }),
+            lastOutsourcingCost: lastOutsourcing?.cost ?? null,
+            lastOutsourcingDate: lastOutsourcing?.date ?? null,
+            manufacturedMaterialBoms: includeRecipe
+              ? (componentsByMaterialCode.get(item.material.code) || []).map((component) => {
+                  const componentLastPurchase = lastPurchaseByMaterialCode.get(component.material.code);
+                  return {
+                    ...component,
+                    material: {
+                      ...component.material,
+                      lastPurchasePrice: componentLastPurchase?.price ?? null,
+                      lastPurchaseDate: componentLastPurchase?.date ?? null,
+                    },
+                  };
+                })
+              : [],
           },
         };
       }),
@@ -220,10 +257,13 @@ export class BomsService {
         ),
       );
 
+    await this.assertMmSourcingTypeForItems([createBomItemDto]);
+
     const [item] = await this.db
       .insert(productStandardBoms)
       .values({
         ...createBomItemDto,
+        mmSourcingType: createBomItemDto.mmSourcingType ?? null,
         productDimensionId: dimensionId,
         createdBy: user.id,
       })
@@ -260,6 +300,8 @@ export class BomsService {
       seen.add(code);
     }
 
+    await this.assertMmSourcingTypeForItems(items);
+
     const existing = await this.db.query.productStandardBoms.findFirst({
       where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
       columns: { id: true },
@@ -276,6 +318,7 @@ export class BomsService {
 
     const values = items.map((item) => ({
       ...item,
+      mmSourcingType: item.mmSourcingType ?? null,
       productionSubDepartment,
       createdBy: user.id,
       productDimensionId: dimensionId,
@@ -321,9 +364,14 @@ export class BomsService {
       );
     }
 
+    await this.assertMmSourcingTypeForItems([updateBomItemDto]);
+
     const [updatedItem] = await this.db
       .update(productStandardBoms)
-      .set(updateBomItemDto)
+      .set({
+        ...updateBomItemDto,
+        mmSourcingType: updateBomItemDto.mmSourcingType ?? null,
+      })
       .where(eq(productStandardBoms.id, itemId))
       .returning();
 
@@ -409,6 +457,55 @@ export class BomsService {
           `المنتج ${dimension.product.code} ليس منتجاً مصنعاً.`,
         ),
       );
+    }
+  }
+
+  // @APP_CHECKED - mm_sourcing_type must be non-null iff the material is a manufactured_material.
+  private async assertMmSourcingTypeForItems(
+    items: { materialCode: string; mmSourcingType?: MmSourcingType | null }[],
+  ) {
+    if (items.length === 0) return;
+
+    const materialCodes = [...new Set(items.map((item) => item.materialCode))];
+    const materialRows = await this.db
+      .select({ code: materials.code, materialType: materials.materialType })
+      .from(materials)
+      .where(inArray(materials.code, materialCodes));
+
+    const materialTypeByCode = new Map(materialRows.map((row) => [row.code, row.materialType]));
+
+    for (const item of items) {
+      const materialType = materialTypeByCode.get(item.materialCode);
+
+      if (!materialType) {
+        throw new NotFoundException(
+          translate(
+            `Material with code ${item.materialCode} does not exist.`,
+            `لا توجد مادة بالكود ${item.materialCode}.`,
+          ),
+        );
+      }
+
+      const isManufactured = materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL;
+      const sourcingType = item.mmSourcingType ?? null;
+
+      if (isManufactured && sourcingType === null) {
+        throw new ConflictException(
+          translate(
+            `Manufactured material ${item.materialCode} requires a manufacturing source.`,
+            `المادة المصنعة ${item.materialCode} تتطلب مصدر التصنيع.`,
+          ),
+        );
+      }
+
+      if (!isManufactured && sourcingType !== null) {
+        throw new ConflictException(
+          translate(
+            `Manufacturing source can only be set for manufactured materials (got ${item.materialCode}).`,
+            `يمكن تعيين مصدر التصنيع للمواد المصنعة فقط (المادة ${item.materialCode}).`,
+          ),
+        );
+      }
     }
   }
 
@@ -514,6 +611,76 @@ export class BomsService {
         );
 
         return [row.materialCode, { price: priceInBase, date }] as const;
+      }),
+    );
+  }
+
+  // Last outsourcing manufacturing cost = newest non-cancelled OSO line unit cost, normalized to the MM's base unit.
+  private async getLastOutsourcingCostByMaterialCode(materialCodes: string[]) {
+    if (materialCodes.length === 0) return new Map<string, { cost: number; date: Date }>();
+
+    const rows = await this.db
+      .selectDistinctOn([outsourcingOrderItems.manufacturedMaterialCode], {
+        manufacturedMaterialCode: outsourcingOrderItems.manufacturedMaterialCode,
+        unitManufacturingCost: outsourcingOrderItems.unitManufacturingCost,
+        unitOfMeasurementSelected: outsourcingOrderItems.unitOfMeasurementSelected,
+        createdAt: outsourcingOrders.createdAt,
+      })
+      .from(outsourcingOrderItems)
+      .innerJoin(outsourcingOrders, eq(outsourcingOrderItems.outsourcingOrderId, outsourcingOrders.id))
+      .where(
+        and(
+          inArray(outsourcingOrderItems.manufacturedMaterialCode, materialCodes),
+          isNull(outsourcingOrders.cancelledAt),
+        ),
+      )
+      .orderBy(outsourcingOrderItems.manufacturedMaterialCode, desc(outsourcingOrders.createdAt));
+
+    if (rows.length === 0) return new Map<string, { cost: number; date: Date }>();
+
+    const outsourcedCodes = [...new Set(rows.map((row) => row.manufacturedMaterialCode))];
+
+    const [materialRows, conversionRows] = await Promise.all([
+      this.db
+        .select({ code: materials.code, unitOfMeasurement: materials.unitOfMeasurement })
+        .from(materials)
+        .where(inArray(materials.code, outsourcedCodes)),
+      this.db
+        .select({
+          materialCode: materialUnitConversions.materialCode,
+          unit: materialUnitConversions.unit,
+          conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+        })
+        .from(materialUnitConversions)
+        .where(inArray(materialUnitConversions.materialCode, outsourcedCodes)),
+    ]);
+
+    const baseUnitByCode = new Map(materialRows.map((row) => [row.code, row.unitOfMeasurement as MaterialUnit]));
+    const conversionsByCode = new Map<string, { unit: MaterialUnit; conversionFactorToBase: number }[]>();
+    for (const row of conversionRows) {
+      const list = conversionsByCode.get(row.materialCode) ?? [];
+      list.push({ unit: row.unit as MaterialUnit, conversionFactorToBase: Number(row.conversionFactorToBase) });
+      conversionsByCode.set(row.materialCode, list);
+    }
+
+    return new Map(
+      rows.map((row) => {
+        const baseUnit = baseUnitByCode.get(row.manufacturedMaterialCode);
+        const orderUnit = row.unitOfMeasurementSelected as MaterialUnit;
+        const unitCost = Number(row.unitManufacturingCost);
+        const date = row.createdAt;
+
+        if (!baseUnit) return [row.manufacturedMaterialCode, { cost: unitCost, date }] as const;
+
+        const costInBase = convertUnitPrice(
+          unitCost,
+          orderUnit,
+          baseUnit,
+          baseUnit,
+          conversionsByCode.get(row.manufacturedMaterialCode) ?? [],
+        );
+
+        return [row.manufacturedMaterialCode, { cost: costInBase, date }] as const;
       }),
     );
   }

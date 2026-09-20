@@ -3,6 +3,7 @@ import {
   LOGIN_STATUS_VALUES,
   MATERIAL_TYPE_VALUES,
   MATERIAL_UNIT_VALUES,
+  MM_SOURCING_TYPE_VALUES,
   OFFER_STATUS_VALUES,
   PRODUCT_SOURCE_TYPE_VALUES,
   SUPPLIER_CLASSIFICATION_VALUES,
@@ -49,6 +50,7 @@ export type LoginStatus = (typeof LOGIN_STATUS_VALUES)[number];
 export type MaterialUnit = (typeof MATERIAL_UNIT_VALUES)[number];
 
 export type MaterialType = (typeof MATERIAL_TYPE_VALUES)[number];
+export type MmSourcingType = (typeof MM_SOURCING_TYPE_VALUES)[number];
 export type ProductSourceType = (typeof PRODUCT_SOURCE_TYPE_VALUES)[number];
 export type SupplierClassification = (typeof SUPPLIER_CLASSIFICATION_VALUES)[number];
 export type CustomerClassification = (typeof CUSTOMER_CLASSIFICATION_VALUES)[number];

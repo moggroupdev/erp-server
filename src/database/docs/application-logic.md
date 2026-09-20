@@ -163,6 +163,16 @@ All sources live on the header — one source event per transaction; items only 
 ### Production
 
 - `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
+- `product_standard_boms.mm_sourcing_type` (`@APP_CHECKED`):
+  - Nullable enum: `purchased` | `internally_manufactured` | `externally_manufactured`
+  - Non-null **iff** the line's material has `materials.material_type = 'manufactured_material'`; must be null for raw materials / spare parts
+  - Validated on BOM create / append / update / replace-department
+  - Costing behavior (BOM get + app display):
+    - `purchased` — price the MM by its own unit price (costing method); ignore `manufactured_material_boms`; no manufacturing cost
+    - `internally_manufactured` — flatten `manufactured_material_boms` component costs only; no manufacturing cost
+    - `externally_manufactured` — flatten recipe **plus** manufacturing cost = last non-cancelled `outsourcing_order_items.unit_manufacturing_cost` for that MM (normalized to base unit), same pattern as last purchase price
+  - Legacy MM lines may still be null until the user re-selects; treat like purchased for costing (own price, no recipe, no mfg cost)
+  - Internal/external lines should have a recipe in `manufactured_material_boms`; empty recipe yields component cost 0 (not hard-blocked)
 - `production_plan_items.production_stage` — must exist in unit's product routing; complete only after prior `sequence_order` step
 - `product_production_routes.sequence_order` — must be in a step order
 - `product_production_routes.completion_percentage` — routes for a product must sum to 100%; validate on route create/update/delete

@@ -1,8 +1,8 @@
 import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MATERIAL_UNIT_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
-import { type MaterialUnit, type ProductionSubDepartment } from 'src/utils/types';
+import { MATERIAL_UNIT_VALUES, MM_SOURCING_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { type MaterialUnit, type MmSourcingType, type ProductionSubDepartment } from 'src/utils/types';
 
 export class CreateBomItemDto {
   @Trim()
@@ -25,6 +25,13 @@ export class CreateBomItemDto {
   @IsNotEmpty()
   @ApiProperty({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
   productionSubDepartment: ProductionSubDepartment;
+
+  // @APP_CHECKED - Non-null iff material is a manufactured_material; null otherwise
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsIn(MM_SOURCING_TYPE_VALUES)
+  @IsOptional()
+  @ApiPropertyOptional({ enum: MM_SOURCING_TYPE_VALUES, nullable: true })
+  mmSourcingType: MmSourcingType | null;
 
   @TrimToNull()
   @IsString()
