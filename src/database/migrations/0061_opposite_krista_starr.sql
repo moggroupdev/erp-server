@@ -1,0 +1,2 @@
+CREATE TYPE "public"."mm_sourcing_type" AS ENUM('purchased', 'internally_manufactured', 'externally_manufactured');--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD COLUMN "mm_sourcing_type" "mm_sourcing_type";

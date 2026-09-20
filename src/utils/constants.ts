@@ -136,6 +136,16 @@ export const MATERIAL_TYPES = Object.fromEntries(
   [K in Uppercase<(typeof MATERIAL_TYPE_VALUES)[number]>]: Lowercase<K>;
 };
 
+// ==================== MM_SOURCING_TYPES ====================
+
+export const MM_SOURCING_TYPE_VALUES = ['purchased', 'internally_manufactured', 'externally_manufactured'] as const;
+
+export const MM_SOURCING_TYPES = Object.fromEntries(
+  MM_SOURCING_TYPE_VALUES.map((sourcingType) => [sourcingType.toUpperCase(), sourcingType]),
+) as {
+  [K in Uppercase<(typeof MM_SOURCING_TYPE_VALUES)[number]>]: Lowercase<K>;
+};
+
 // ==================== PRODUCT_SOURCE_TYPES ====================
 
 export const PRODUCT_SOURCE_TYPE_VALUES = ['manufactured', 'imported'] as const;
