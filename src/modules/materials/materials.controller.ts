@@ -11,6 +11,8 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
+import { SetMaterialTypeDto } from './dto/set-material-type.dto';
+import { MaterialTypeChangePreviewQueryDto } from './dto/material-type-change-preview-query.dto';
 
 @Controller('materials')
 export class MaterialsController {
@@ -55,6 +57,22 @@ export class MaterialsController {
   @ApiBearerAuth()
   setMarketPrice(@Param('code') code: string, @Body() dto: SetMaterialMarketPriceDto, @RequestUser() user: User) {
     return this.materialsService.setMarketPrice(code, dto, user);
+  }
+
+  @Get(':code/material-type/impact')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.SET_MATERIAL_TYPE)
+  @ApiBearerAuth()
+  previewTypeChange(@Param('code') code: string, @Query() query: MaterialTypeChangePreviewQueryDto) {
+    return this.materialsService.previewTypeChange(code, query.targetType);
+  }
+
+  @Patch(':code/material-type')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.SET_MATERIAL_TYPE)
+  @ApiBearerAuth()
+  setType(@Param('code') code: string, @Body() dto: SetMaterialTypeDto) {
+    return this.materialsService.setType(code, dto);
   }
 
   @Post(':code/units')

@@ -99,8 +99,7 @@ export const productStandardBoms = pgTable(
     quantityRequired: numeric('quantity_required').notNull(), // @APP_CHECKED - Stored in unit_of_measurement_selected (or base unit when null)
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
-    // @APP_CHECKED - Non-null iff material is a manufactured_material; null otherwise
-    mmSourcingType: mmSourcingTypeEnum('mm_sourcing_type'),
+    mmSourcingType: mmSourcingTypeEnum('mm_sourcing_type'), // @APP_CHECKED - Non-null iff material is a manufactured_material; null otherwise
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')

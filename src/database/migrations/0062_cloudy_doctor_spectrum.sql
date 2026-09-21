@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'set_material_type' BEFORE 'print_materials_list';

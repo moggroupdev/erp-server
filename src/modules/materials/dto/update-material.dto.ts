@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/swagger';
+import { OmitType, PartialType } from '@nestjs/swagger';
 import { CreateMaterialDto } from './create-material.dto';
 
-export class UpdateMaterialDto extends PartialType(CreateMaterialDto) {}
+export class UpdateMaterialDto extends PartialType(OmitType(CreateMaterialDto, ['materialType'] as const)) {}
