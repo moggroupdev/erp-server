@@ -45,6 +45,7 @@ export const PERMISSION_VALUES = [
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
+  'delete_manufactured_material_bom',
   'read_material_inventory_summary_report',
   'read_material_category_stats_report',
   'read_material_purchasing_spending_summary_report',

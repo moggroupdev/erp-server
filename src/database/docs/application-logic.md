@@ -152,6 +152,7 @@ All sources live on the header — one source event per transaction; items only 
 - Manufactured-material BOMs are managed by Nest module / route `mm-boms` (`MmBoms*`); table remains `manufactured_material_boms` (`mm` = manufactured material)
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
+- Deleting an MM BOM item requires `delete_manufactured_material_bom` (`DELETE /mm-boms/:itemId`)
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `outsourcing_order_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the manufactured material's base unit or one of its conversions; `quantity_ordered` / `unit_manufacturing_cost` are in this unit
 - `outsourcing_receipt_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
