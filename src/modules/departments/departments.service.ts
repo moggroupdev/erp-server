@@ -6,7 +6,7 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { translate } from 'src/utils/i18n/translate';
 
-const POPULATION = { manager: { columns: { id: true, name: true } } };
+const POPULATION = { manager: { columns: { id: true, name: true, phone: true, email: true } } };
 
 @Injectable()
 export class DepartmentsService {
