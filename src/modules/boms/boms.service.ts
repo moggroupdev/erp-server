@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -9,6 +9,7 @@ import {
   outsourcingOrderItems,
   outsourcingOrders,
   productDimensions,
+  products,
   productStandardBoms,
 } from 'src/database/schema';
 import { MATERIAL_TYPES, MM_SOURCING_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
@@ -219,6 +220,48 @@ export class BomsService {
         };
       }),
     };
+  }
+
+  public async listByMaterial(materialCode: string) {
+    const rows = await this.db
+      .select({
+        id: productStandardBoms.id,
+        quantityRequired: productStandardBoms.quantityRequired,
+        unitOfMeasurementSelected: productStandardBoms.unitOfMeasurementSelected,
+        productionSubDepartment: productStandardBoms.productionSubDepartment,
+        notes: productStandardBoms.notes,
+        dimensionId: productDimensions.id,
+        length: productDimensions.length,
+        depth: productDimensions.depth,
+        diameter: productDimensions.diameter,
+        height: productDimensions.height,
+        productCode: products.code,
+        productTitle: products.title,
+      })
+      .from(productStandardBoms)
+      .innerJoin(productDimensions, eq(productStandardBoms.productDimensionId, productDimensions.id))
+      .innerJoin(products, eq(productDimensions.productCode, products.code))
+      .where(and(eq(productStandardBoms.materialCode, materialCode), isNull(products.deletedAt)))
+      .orderBy(asc(products.code), asc(productDimensions.height), asc(productDimensions.id));
+
+    return rows.map((row) => ({
+      id: row.id,
+      quantityRequired: row.quantityRequired,
+      unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+      productionSubDepartment: row.productionSubDepartment,
+      notes: row.notes,
+      dimension: {
+        id: row.dimensionId,
+        length: row.length,
+        depth: row.depth,
+        diameter: row.diameter,
+        height: row.height,
+      },
+      product: {
+        code: row.productCode,
+        title: row.productTitle,
+      },
+    }));
   }
 
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {

@@ -15,6 +15,14 @@ import { ReplaceDepartmentBomDto } from './dto/replace-department-bom.dto';
 export class BomsController {
   constructor(private readonly bomsService: BomsService) {}
 
+  @Get('by-material/:materialCode')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_PRODUCT_BOMS)
+  @ApiBearerAuth()
+  listByMaterial(@Param('materialCode') materialCode: string) {
+    return this.bomsService.listByMaterial(materialCode);
+  }
+
   @Post(':dimensionId')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.ADD_PRODUCT_BOM)
