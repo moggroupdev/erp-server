@@ -2,7 +2,15 @@ import { randomInt } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialCategorySubs, materials, materialUnitConversions, manufacturedMaterialBoms, productDimensions, productStandardBoms, products } from 'src/database/schema';
+import {
+  materialCategorySubs,
+  materials,
+  materialUnitConversions,
+  manufacturedMaterialBoms,
+  productDimensions,
+  productStandardBoms,
+  products,
+} from 'src/database/schema';
 import { MATERIAL_TYPES } from 'src/utils/constants';
 import { type MaterialType, type QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
@@ -106,10 +114,7 @@ export class MaterialsService {
         currentType,
         targetType,
         blocked: true,
-        blockReason: translate(
-          `Material is already of type "${targetType}".`,
-          `المادة من النوع "${targetType}" بالفعل.`,
-        ),
+        blockReason: translate(`Material is already of type "${targetType}".`, `المادة من النوع "${targetType}" بالفعل.`),
         affectedBomLines: [] as {
           id: string;
           productDimensionId: string;
@@ -156,7 +161,7 @@ export class MaterialsService {
           blocked: true,
           blockReason: translate(
             `This material has ${ownComponents.length} component(s) in its own BOM. Delete them first.`,
-            `تحتوي هذه المادة على ${ownComponents.length} مكون(ات) في قائمة موادها. احذفها أولاً.`,
+            `تحتوي هذه المادة على ${ownComponents.length} مكون في قائمة موادها. احذفها أولاً.`,
           ),
           affectedBomLines: [],
         };
@@ -189,7 +194,7 @@ export class MaterialsService {
       throw new ConflictException(
         translate(
           `This change affects ${preview.affectedBomLines.length} product BOM line(s). Confirm to proceed.`,
-          `يؤثر هذا التغيير على ${preview.affectedBomLines.length} بند(بنود) في قوائم مواد المنتجات. أكّد للمتابعة.`,
+          `يؤثر هذا التغيير على ${preview.affectedBomLines.length} بند في قوائم مواد المنتجات. أكّد للمتابعة.`,
         ),
       );
     }
@@ -212,10 +217,7 @@ export class MaterialsService {
       }
 
       if (leavingManufactured) {
-        await tx
-          .update(productStandardBoms)
-          .set({ mmSourcingType: null })
-          .where(eq(productStandardBoms.materialCode, code));
+        await tx.update(productStandardBoms).set({ mmSourcingType: null }).where(eq(productStandardBoms.materialCode, code));
       }
 
       return updatedMaterial;
