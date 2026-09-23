@@ -4,8 +4,9 @@ export const ALLOWED_PERMISSION_KEY = 'allowedPermission';
 export const TOKEN_TYPE_VALUES = ['access', 'refresh'] as const;
 export const REFRESH_TOKEN_COOKIE = 'refresh_token';
 
-/** Seeded Production root department — see data/departments.csv */
+/** Seeded root departments — see data/departments.csv */
 export const PRODUCTION_DEPARTMENT_ID = '3f2a91bc-4d8e-4a1f-b563-7c94e21a0b01';
+export const PURCHASING_DEPARTMENT_ID = '02c39af1-7de4-48b3-6a0c-3bf3913485f0';
 
 /** Seeded Egypt country — see data/locations/countries.csv */
 export const EGYPT_COUNTRY_ID = 'f1dd27d6-ac02-5671-97b2-0679193340c4';
@@ -39,11 +40,13 @@ export const PERMISSION_VALUES = [
   'read_materials',
   'update_material',
   'set_material_market_price',
+  'set_material_type',
   'print_materials_list',
   'use_unit_conversion_tool',
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
   'update_manufactured_material_bom',
+  'delete_manufactured_material_bom',
   'read_material_inventory_summary_report',
   'read_material_category_stats_report',
   'read_material_purchasing_spending_summary_report',

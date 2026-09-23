@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'delete_manufactured_material_bom' BEFORE 'read_material_inventory_summary_report';

@@ -2,8 +2,17 @@ import { randomInt } from 'crypto';
 import { and, eq, isNull } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { materialCategorySubs, materials, materialUnitConversions } from 'src/database/schema';
-import { QueryParams, User } from 'src/utils/types';
+import {
+  materialCategorySubs,
+  materials,
+  materialUnitConversions,
+  manufacturedMaterialBoms,
+  productDimensions,
+  productStandardBoms,
+  products,
+} from 'src/database/schema';
+import { MATERIAL_TYPES } from 'src/utils/constants';
+import { type MaterialType, type QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -11,6 +20,7 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
+import { SetMaterialTypeDto } from './dto/set-material-type.dto';
 
 @Injectable()
 export class MaterialsService {
@@ -87,6 +97,131 @@ export class MaterialsService {
     if (!updatedMaterial)
       throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
     return updatedMaterial;
+  }
+
+  public async previewTypeChange(code: string, targetType: MaterialType) {
+    const material = await this.db.query.materials.findFirst({
+      where: and(eq(materials.code, code), isNull(materials.deletedAt)),
+      columns: { code: true, materialType: true },
+    });
+    if (!material)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+    const currentType = material.materialType;
+
+    if (currentType === targetType) {
+      return {
+        currentType,
+        targetType,
+        blocked: true,
+        blockReason: translate(`Material is already of type "${targetType}".`, `المادة من النوع "${targetType}" بالفعل.`),
+        affectedBomLines: [] as {
+          id: string;
+          productDimensionId: string;
+          productCode: string;
+          productTitle: string;
+        }[],
+      };
+    }
+
+    const enteringManufactured = targetType === MATERIAL_TYPES.MANUFACTURED_MATERIAL;
+    const leavingManufactured = currentType === MATERIAL_TYPES.MANUFACTURED_MATERIAL;
+
+    if (enteringManufactured) {
+      const conflictingUsages = await this.db
+        .select({ manufacturedMaterialCode: manufacturedMaterialBoms.manufacturedMaterialCode })
+        .from(manufacturedMaterialBoms)
+        .where(eq(manufacturedMaterialBoms.materialCode, code));
+
+      if (conflictingUsages.length > 0) {
+        const codes = [...new Set(conflictingUsages.map((row) => row.manufacturedMaterialCode))];
+        return {
+          currentType,
+          targetType,
+          blocked: true,
+          blockReason: translate(
+            `Cannot convert to manufactured material: used as a component in the BOM of ${codes.join(', ')}. Remove it from those BOMs first.`,
+            `لا يمكن التحويل إلى مادة مصنعة: هذه المادة مستخدمة كمكون في قائمة مواد ${codes.join('، ')}. أزلها من هذه القوائم أولاً.`,
+          ),
+          affectedBomLines: [],
+        };
+      }
+    }
+
+    if (leavingManufactured) {
+      const ownComponents = await this.db
+        .select({ id: manufacturedMaterialBoms.id })
+        .from(manufacturedMaterialBoms)
+        .where(eq(manufacturedMaterialBoms.manufacturedMaterialCode, code));
+
+      if (ownComponents.length > 0) {
+        return {
+          currentType,
+          targetType,
+          blocked: true,
+          blockReason: translate(
+            `This material has ${ownComponents.length} component(s) in its own BOM. Delete them first.`,
+            `تحتوي هذه المادة على ${ownComponents.length} مكون في قائمة موادها. احذفها أولاً.`,
+          ),
+          affectedBomLines: [],
+        };
+      }
+    }
+
+    const affectedBomLines = await this.db
+      .select({
+        id: productStandardBoms.id,
+        productDimensionId: productStandardBoms.productDimensionId,
+        productCode: products.code,
+        productTitle: products.title,
+      })
+      .from(productStandardBoms)
+      .innerJoin(productDimensions, eq(productStandardBoms.productDimensionId, productDimensions.id))
+      .innerJoin(products, eq(productDimensions.productCode, products.code))
+      .where(eq(productStandardBoms.materialCode, code));
+
+    return { currentType, targetType, blocked: false, blockReason: null, affectedBomLines };
+  }
+
+  public async setType(code: string, dto: SetMaterialTypeDto) {
+    const preview = await this.previewTypeChange(code, dto.materialType);
+    if (preview.blocked) throw new ConflictException(preview.blockReason!);
+
+    const enteringManufactured = dto.materialType === MATERIAL_TYPES.MANUFACTURED_MATERIAL;
+    const leavingManufactured = preview.currentType === MATERIAL_TYPES.MANUFACTURED_MATERIAL;
+
+    if (leavingManufactured && preview.affectedBomLines.length > 0 && !dto.confirmed) {
+      throw new ConflictException(
+        translate(
+          `This change affects ${preview.affectedBomLines.length} product BOM line(s). Confirm to proceed.`,
+          `يؤثر هذا التغيير على ${preview.affectedBomLines.length} بند في قوائم مواد المنتجات. أكّد للمتابعة.`,
+        ),
+      );
+    }
+
+    return await this.db.transaction(async (tx) => {
+      const [updatedMaterial] = await tx
+        .update(materials)
+        .set({ materialType: dto.materialType })
+        .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
+        .returning();
+
+      if (!updatedMaterial)
+        throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+      if (enteringManufactured) {
+        await tx
+          .update(productStandardBoms)
+          .set({ mmSourcingType: dto.defaultMmSourcingType })
+          .where(eq(productStandardBoms.materialCode, code));
+      }
+
+      if (leavingManufactured) {
+        await tx.update(productStandardBoms).set({ mmSourcingType: null }).where(eq(productStandardBoms.materialCode, code));
+      }
+
+      return updatedMaterial;
+    });
   }
 
   // ============================== UNIT CONVERSIONS ==============================

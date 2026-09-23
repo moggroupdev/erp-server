@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { type User } from 'src/utils/types';
 import { PermissionGuard } from 'src/modules/auth/guards/permission.guard';
@@ -39,5 +39,13 @@ export class MmBomsController {
   @ApiBearerAuth()
   updateItem(@Param('itemId', ParseUUIDPipe) itemId: string, @Body() updateBomItemDto: UpdateMmBomItemDto) {
     return this.mmBomsService.updateItem(itemId, updateBomItemDto);
+  }
+
+  @Delete(':itemId')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.DELETE_MANUFACTURED_MATERIAL_BOM)
+  @ApiBearerAuth()
+  deleteItem(@Param('itemId', ParseUUIDPipe) itemId: string) {
+    return this.mmBomsService.deleteItem(itemId);
   }
 }

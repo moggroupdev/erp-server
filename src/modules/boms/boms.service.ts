@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, SQL } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -9,6 +9,7 @@ import {
   outsourcingOrderItems,
   outsourcingOrders,
   productDimensions,
+  products,
   productStandardBoms,
 } from 'src/database/schema';
 import { MATERIAL_TYPES, MM_SOURCING_TYPES, PRODUCT_SOURCE_TYPES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
@@ -221,6 +222,48 @@ export class BomsService {
     };
   }
 
+  public async listByMaterial(materialCode: string) {
+    const rows = await this.db
+      .select({
+        id: productStandardBoms.id,
+        quantityRequired: productStandardBoms.quantityRequired,
+        unitOfMeasurementSelected: productStandardBoms.unitOfMeasurementSelected,
+        productionSubDepartment: productStandardBoms.productionSubDepartment,
+        notes: productStandardBoms.notes,
+        dimensionId: productDimensions.id,
+        length: productDimensions.length,
+        depth: productDimensions.depth,
+        diameter: productDimensions.diameter,
+        height: productDimensions.height,
+        productCode: products.code,
+        productTitle: products.title,
+      })
+      .from(productStandardBoms)
+      .innerJoin(productDimensions, eq(productStandardBoms.productDimensionId, productDimensions.id))
+      .innerJoin(products, eq(productDimensions.productCode, products.code))
+      .where(and(eq(productStandardBoms.materialCode, materialCode), isNull(products.deletedAt)))
+      .orderBy(asc(products.code), asc(productDimensions.height), asc(productDimensions.id));
+
+    return rows.map((row) => ({
+      id: row.id,
+      quantityRequired: row.quantityRequired,
+      unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+      productionSubDepartment: row.productionSubDepartment,
+      notes: row.notes,
+      dimension: {
+        id: row.dimensionId,
+        length: row.length,
+        depth: row.depth,
+        diameter: row.diameter,
+        height: row.height,
+      },
+      product: {
+        code: row.productCode,
+        title: row.productTitle,
+      },
+    }));
+  }
+
   public async appendItem(dimensionId: string, createBomItemDto: CreateBomItemDto, user: User) {
     await this.assertIsManufacturedProduct(dimensionId);
 
@@ -302,34 +345,93 @@ export class BomsService {
 
     await this.assertMmSourcingTypeForItems(items);
 
-    const existing = await this.db.query.productStandardBoms.findFirst({
-      where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
-      columns: { id: true },
-    });
-
-    if (!existing) {
-      throw new NotFoundException(
-        translate(
-          `No BOM exists for dimension ${dimensionId} in this production department.`,
-          `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
-        ),
-      );
-    }
-
-    const values = items.map((item) => ({
-      ...item,
-      mmSourcingType: item.mmSourcingType ?? null,
-      productionSubDepartment,
-      createdBy: user.id,
-      productDimensionId: dimensionId,
-    }));
-
     return await this.db.transaction(async (tx) => {
-      await tx
-        .delete(productStandardBoms)
-        .where(this.dimensionDepartmentWhere(dimensionId, productionSubDepartment));
+      const existingRows = await tx.query.productStandardBoms.findMany({
+        where: this.dimensionDepartmentWhere(dimensionId, productionSubDepartment),
+      });
 
-      return await tx.insert(productStandardBoms).values(values).returning();
+      if (existingRows.length === 0) {
+        throw new NotFoundException(
+          translate(
+            `No BOM exists for dimension ${dimensionId} in this production department.`,
+            `لا توجد قائمة مواد للمقاس ${dimensionId} في قسم الانتاج هذا.`,
+          ),
+        );
+      }
+
+      const existingByCode = new Map(existingRows.map((row) => [row.materialCode, row]));
+      const incomingCodes = new Set(items.map((item) => item.materialCode));
+
+      const toDeleteIds = existingRows.filter((row) => !incomingCodes.has(row.materialCode)).map((row) => row.id);
+
+      const toInsert = items.filter((item) => !existingByCode.has(item.materialCode));
+
+      const toUpdate = items.flatMap((item) => {
+        const existing = existingByCode.get(item.materialCode);
+        if (!existing) return [];
+
+        const mmSourcingType = item.mmSourcingType ?? null;
+        const notes = item.notes ?? null;
+        const changed =
+          Number(existing.quantityRequired) !== item.quantityRequired ||
+          existing.unitOfMeasurementSelected !== item.unitOfMeasurementSelected ||
+          (existing.mmSourcingType ?? null) !== mmSourcingType ||
+          (existing.notes ?? null) !== notes;
+
+        if (!changed) return [];
+
+        return [
+          {
+            id: existing.id,
+            quantityRequired: item.quantityRequired,
+            unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+            mmSourcingType,
+            notes,
+          },
+        ];
+      });
+
+      if (toDeleteIds.length > 0) {
+        await tx.delete(productStandardBoms).where(inArray(productStandardBoms.id, toDeleteIds));
+      }
+
+      const updatedRows: (typeof existingRows)[number][] = [];
+      for (const item of toUpdate) {
+        const [updated] = await tx
+          .update(productStandardBoms)
+          .set({
+            quantityRequired: item.quantityRequired,
+            unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+            mmSourcingType: item.mmSourcingType,
+            notes: item.notes,
+          })
+          .where(eq(productStandardBoms.id, item.id))
+          .returning();
+        if (updated) updatedRows.push(updated);
+      }
+
+      const insertedRows =
+        toInsert.length > 0
+          ? await tx
+              .insert(productStandardBoms)
+              .values(
+                toInsert.map((item) => ({
+                  ...item,
+                  mmSourcingType: item.mmSourcingType ?? null,
+                  productionSubDepartment,
+                  createdBy: user.id,
+                  productDimensionId: dimensionId,
+                })),
+              )
+              .returning()
+          : [];
+
+      const updatedIds = new Set(updatedRows.map((row) => row.id));
+      const unchangedRows = existingRows.filter(
+        (row) => incomingCodes.has(row.materialCode) && !updatedIds.has(row.id),
+      );
+
+      return [...unchangedRows, ...updatedRows, ...insertedRows];
     });
   }
 

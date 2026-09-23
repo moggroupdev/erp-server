@@ -152,6 +152,7 @@ All sources live on the header — one source event per transaction; items only 
 - Manufactured-material BOMs are managed by Nest module / route `mm-boms` (`MmBoms*`); table remains `manufactured_material_boms` (`mm` = manufactured material)
 - `manufactured_material_boms.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `manufactured_material_boms.material_code` — must not be a manufactured material (raw materials / spare parts only); direct self-reference is also DB-checked
+- Deleting an MM BOM item requires `delete_manufactured_material_bom` (`DELETE /mm-boms/:itemId`)
 - `outsourcing_order_items.manufactured_material_code` — must have `materials.material_type = 'manufactured_material'`
 - `outsourcing_order_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the manufactured material's base unit or one of its conversions; `quantity_ordered` / `unit_manufacturing_cost` are in this unit
 - `outsourcing_receipt_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
@@ -217,6 +218,10 @@ All sources live on the header — one source event per transaction; items only 
 - `materials.code` — random unique 6-digit string (`100000`–`999999`) generated on create; omit from create/update DTOs; immutable
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
+- `materials.material_type` — immutable via `PUT /materials/:code`; changed only via `PATCH /materials/:code/material-type` (`set_material_type`). Preview via `GET /materials/:code/material-type/impact?targetType=…`. Guards:
+  - Entering `manufactured_material`: blocked if the material is a component in any `manufactured_material_boms`; caller must supply `defaultMmSourcingType`; on success sets `product_standard_boms.mm_sourcing_type` for all lines with this `material_code`
+  - Leaving `manufactured_material`: blocked if the material has its own MM BOM components (user must delete them first); if used in product standard BOMs, requires `confirmed: true` and clears those lines' `mm_sourcing_type` to null
+  - Between `raw_materials` / `spare_parts`: plain type update
 - `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`
 - Quantity-entry line items (BOMs, requisitions, legacy issue permits, material purchase order/receipt items, inventory transaction items, maintenance order materials, outsourcing order/receipt items) store `quantity` in `unit_of_measurement_selected` as entered by the user; conversion to base unit happens only at calculation/display time (costing, aggregation, inventory sync, order-vs-receipt quantity caps)
 
