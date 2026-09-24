@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as schema from '../../src/database/schema';
 import * as xlsx from 'xlsx';
+import { SEED_IMPORT_NOTE } from '../_utils/seed-constants';
 
 dotenv.config();
 
@@ -16,6 +17,9 @@ Seeds legacy e-invoice tax totals from:
   data/invoices/totals.xlsx
 
 Matches workbook rows to supplier_invoices by invoice_number.
+Only invoices linked to seeded material purchase orders are considered
+(notes = SEED_IMPORT_NOTE). User-created invoices are ignored.
+
 invoice_number is unique per supplier, not globally:
   - Unique invoice number in both the workbook and the DB → match by invoice number
   - Duplicated invoice number → disambiguate by the supplier linked to the invoice,
@@ -494,10 +498,13 @@ async function main() {
       })
       .from(schema.supplierInvoices)
       .innerJoin(schema.suppliers, eq(schema.supplierInvoices.supplierId, schema.suppliers.id))
-      .leftJoin(
+      .innerJoin(
         schema.materialPurchaseOrders,
         eq(schema.supplierInvoices.materialPurchaseOrderId, schema.materialPurchaseOrders.id),
-      );
+      )
+      .where(eq(schema.materialPurchaseOrders.notes, SEED_IMPORT_NOTE));
+
+    console.log(`Loaded ${invoiceRows.length} seeded supplier invoice(s) (MPO notes = seed import note)`);
 
     const invoices: DbInvoice[] = [];
     for (const row of invoiceRows) {

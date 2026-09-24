@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { parseArgs } from 'node:util';
@@ -17,6 +17,7 @@ import {
   MATERIAL_UNIT_VALUES,
 } from '../../src/utils/constants';
 import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
+import { SEED_IMPORT_NOTE } from '../_utils/seed-constants';
 
 dotenv.config();
 
@@ -37,7 +38,10 @@ Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
                    and material_purchase_receipts.receivedAt / createdAt
   تاريخ الإضافة → inventory_transactions.createdAt
 
-Serial codes (MPO / MPR / IVT) are assigned by DB sequences on insert order.
+Serial codes (MPO / MPR / IVT) prefer free gaps left by prior deletes (lowest
+unused numbers first, in chronological insert order). When no free codes remain,
+the DB sequences assign the next values as usual.
+
 This seed inserts those entities in chronological date order so earlier dates
 get lower serials (MPO-00000001 before later invoices, etc.).
 
@@ -63,7 +67,6 @@ Examples:
 const DATA_DIR = path.join(__dirname, '../../data/transactions');
 const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
 
 /** Base createdAt for newly seeded suppliers: 31/12/2025 at UTC noon. */
 const SUPPLIER_CREATED_AT_BASE_MS = Date.UTC(2025, 11, 31, 12, 0, 0, 0);
@@ -190,6 +193,9 @@ type Summary = {
   skippedRowsUnresolvedUnit: number;
   noCodeRowsMatchedByName: number;
   noCodeMaterialsCreated: number;
+  mpoCodesReused: number;
+  mprCodesReused: number;
+  ivtCodesReused: number;
 };
 
 type UserIdentifier = { email?: string; id?: string };
@@ -487,6 +493,34 @@ function compareByTime(a: Date, b: Date): number {
   return a.getTime() - b.getTime();
 }
 
+/**
+ * Unused serials from 1..max(existing) for a coded table, ascending.
+ * Fill gaps left by deletes so re-seeded rows keep low numbers; caller falls
+ * back to sql`DEFAULT` (sequence) when the queue is empty.
+ */
+function buildFreeCodeQueue(existingCodes: string[], prefix: string): string[] {
+  const used = new Set<number>();
+  let max = 0;
+
+  for (const code of existingCodes) {
+    if (!code.startsWith(prefix)) continue;
+    const n = Number(code.slice(prefix.length));
+    if (!Number.isInteger(n) || n < 1) continue;
+    used.add(n);
+    if (n > max) max = n;
+  }
+
+  const free: string[] = [];
+  for (let i = 1; i <= max; i++) {
+    if (!used.has(i)) free.push(`${prefix}${String(i).padStart(8, '0')}`);
+  }
+  return free;
+}
+
+function takeNextCode(queue: string[]): string | SQL {
+  return queue.shift() ?? sql`DEFAULT`;
+}
+
 /** createdAt for the Nth supplier created in this run (0-based). */
 function supplierCreatedAt(index: number): Date {
   return new Date(SUPPLIER_CREATED_AT_BASE_MS + index * SUPPLIER_CREATED_AT_STEP_MS);
@@ -697,6 +731,9 @@ async function main() {
     skippedRowsUnresolvedUnit: 0,
     noCodeRowsMatchedByName: 0,
     noCodeMaterialsCreated: 0,
+    mpoCodesReused: 0,
+    mprCodesReused: 0,
+    ivtCodesReused: 0,
   };
 
   const skippedMaterials: SkippedMaterial[] = [];
@@ -784,6 +821,29 @@ async function main() {
 
     const existingPermitNumbers = new Set(
       existingTransactions.map((transaction) => transaction.legacyNumber).filter((value): value is string => Boolean(value)),
+    );
+
+    const [existingOrderCodes, existingReceiptCodes, existingInventoryCodes] = await Promise.all([
+      db.select({ code: schema.materialPurchaseOrders.code }).from(schema.materialPurchaseOrders),
+      db.select({ code: schema.materialPurchaseReceipts.code }).from(schema.materialPurchaseReceipts),
+      db.select({ code: schema.inventoryTransactions.code }).from(schema.inventoryTransactions),
+    ]);
+
+    const mpoCodeQueue = buildFreeCodeQueue(
+      existingOrderCodes.map((row) => row.code),
+      'MPO-',
+    );
+    const mprCodeQueue = buildFreeCodeQueue(
+      existingReceiptCodes.map((row) => row.code),
+      'MPR-',
+    );
+    const ivtCodeQueue = buildFreeCodeQueue(
+      existingInventoryCodes.map((row) => row.code),
+      'IVT-',
+    );
+
+    console.log(
+      `Free serial gaps available: MPO=${mpoCodeQueue.length}, MPR=${mprCodeQueue.length}, IVT=${ivtCodeQueue.length}`,
     );
 
     const orderGroups = new Map<string, WorkbookRow[]>();
@@ -1089,10 +1149,13 @@ async function main() {
 
       // Phase 2: insert MPOs (and invoices / line items) in date order.
       for (const plan of plannedOrders) {
+        const orderCode = takeNextCode(mpoCodeQueue);
+        if (typeof orderCode === 'string') summary.mpoCodesReused++;
+
         const [createdOrder] = await tx
           .insert(schema.materialPurchaseOrders)
           .values({
-            code: sql`DEFAULT`,
+            code: orderCode,
             supplierId: plan.supplierId,
             totalAmount: plan.totalAmount,
             completedAt: plan.invoiceDate,
@@ -1169,10 +1232,13 @@ async function main() {
 
       // Phase 3: insert MPRs in date order.
       for (const receipt of plannedReceipts) {
+        const receiptCode = takeNextCode(mprCodeQueue);
+        if (typeof receiptCode === 'string') summary.mprCodesReused++;
+
         const [createdReceipt] = await tx
           .insert(schema.materialPurchaseReceipts)
           .values({
-            code: sql`DEFAULT`,
+            code: receiptCode,
             materialPurchaseOrderId: receipt.materialPurchaseOrderId,
             receivedAt: receipt.invoiceDate,
             receivedBy: user.id,
@@ -1221,10 +1287,13 @@ async function main() {
 
       // Phase 4: insert IVTs in date order.
       for (const transaction of plannedTransactions) {
+        const transactionCode = takeNextCode(ivtCodeQueue);
+        if (typeof transactionCode === 'string') summary.ivtCodesReused++;
+
         const [createdTransaction] = await tx
           .insert(schema.inventoryTransactions)
           .values({
-            code: sql`DEFAULT`,
+            code: transactionCode,
             legacyNumber: transaction.permitNumber,
             transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
             materialPurchaseReceiptId: transaction.materialPurchaseReceiptId,
@@ -1266,6 +1335,9 @@ async function main() {
     console.log(`Inventory items created:        ${summary.inventoryTransactionItemsCreated}`);
     console.log(`Suppliers created:              ${summary.suppliersCreated}`);
     console.log(`Materials created:              ${summary.materialsCreated}`);
+    console.log(`MPO codes reused from gaps:     ${summary.mpoCodesReused}`);
+    console.log(`MPR codes reused from gaps:     ${summary.mprCodesReused}`);
+    console.log(`IVT codes reused from gaps:     ${summary.ivtCodesReused}`);
     console.log(`No-code rows matched by name:   ${summary.noCodeRowsMatchedByName}`);
     console.log(`No-code materials created:      ${summary.noCodeMaterialsCreated}`);
     console.log(`Existing permit groups skipped: ${summary.skippedExistingPermitGroups}`);
