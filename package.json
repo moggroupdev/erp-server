@@ -29,6 +29,7 @@
     "create:first-admin": "ts-node -r tsconfig-paths/register scripts/others/create-first-admin.ts",
     "delete:purchasing-inventory": "ts-node -r tsconfig-paths/register scripts/others/delete-purchasing-inventory.ts",
     "delete:seeded-purchasing-before-cutoff": "ts-node -r tsconfig-paths/register scripts/others/delete-seeded-purchasing-before-cutoff.ts",
+    "delete:anonymous-audit-logs": "ts-node -r tsconfig-paths/register scripts/others/delete-anonymous-audit-logs.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\""
   },
