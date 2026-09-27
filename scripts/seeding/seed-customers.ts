@@ -54,6 +54,15 @@ const BATCH_SIZE = 100;
 const NAME_COLUMN = 'العميل - مشمول التعاقد';
 const CLASSIFICATION_COLUMN = 'التصنيف';
 
+/** Base createdAt: 1/1/2026 midnight Cairo (UTC+3). */
+const CUSTOMER_CREATED_AT_BASE_MS = Date.parse('2026-01-01T10:00:00+03:00');
+/** Gap so insert/code order matches createdAt order. now() is the same for the whole transaction. */
+const CUSTOMER_CREATED_AT_STEP_MS = 10;
+
+function customerCreatedAt(index: number): Date {
+  return new Date(CUSTOMER_CREATED_AT_BASE_MS + index * CUSTOMER_CREATED_AT_STEP_MS);
+}
+
 function parseCliArgs(): { email?: string; id?: string } {
   try {
     const { values } = parseArgs({
@@ -180,6 +189,7 @@ async function main() {
       name: string;
       classification: CustomerClassification | null;
       notes: string;
+      createdAt: Date;
       createdBy: string;
     }[] = [];
     let skippedExisting = 0;
@@ -195,6 +205,7 @@ async function main() {
         name: customer.name,
         classification: customer.classification,
         notes: SEED_IMPORT_NOTE,
+        createdAt: customerCreatedAt(customersToInsert.length),
         createdBy: user.id,
       });
     }
