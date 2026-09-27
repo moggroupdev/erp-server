@@ -17,6 +17,7 @@
     "extract:products": "ts-node -r tsconfig-paths/register scripts/cleaning/extract-products.ts",
     "compare:units": "ts-node -r tsconfig-paths/register scripts/others/compare-units.ts",
     "export:materials": "ts-node -r tsconfig-paths/register scripts/others/export-materials.ts",
+    "check:duplicate-material-titles": "ts-node -r tsconfig-paths/register scripts/others/check-duplicate-material-titles.ts",
     "seed:locations": "ts-node -r tsconfig-paths/register scripts/seeding/seed-locations.ts",
     "seed:categories": "ts-node -r tsconfig-paths/register scripts/seeding/seed-categories.ts",
     "seed:departments": "ts-node -r tsconfig-paths/register scripts/seeding/seed-departments.ts",
