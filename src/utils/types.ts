@@ -16,6 +16,10 @@ import {
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
   GENDER_VALUES,
+  MPO_DELIVERY_LOCATION_VALUES,
+  MPO_DELIVERY_TIMING_VALUES,
+  MPO_PAYMENT_EVENT_VALUES,
+  MPO_PAYMENT_VALUE_KIND_VALUES,
 } from './constants';
 import { departments, users, roles, suppliers, customers } from 'src/database/schema';
 
@@ -68,6 +72,11 @@ export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[
 export type LegacyIssuePermitWorkOrderType = (typeof LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)[number];
 
 export type Gender = (typeof GENDER_VALUES)[number];
+
+export type MpoDeliveryLocation = (typeof MPO_DELIVERY_LOCATION_VALUES)[number];
+export type MpoDeliveryTiming = (typeof MPO_DELIVERY_TIMING_VALUES)[number];
+export type MpoPaymentEvent = (typeof MPO_PAYMENT_EVENT_VALUES)[number];
+export type MpoPaymentValueKind = (typeof MPO_PAYMENT_VALUE_KIND_VALUES)[number];
 
 // ==================== ENTITIES ====================
 
