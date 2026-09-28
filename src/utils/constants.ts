@@ -348,3 +348,43 @@ export const AUDIT_ACTION_VALUES = ['insert', 'update', 'delete'] as const;
 export const AUDIT_ACTIONS = Object.fromEntries(AUDIT_ACTION_VALUES.map((action) => [action.toUpperCase(), action])) as {
   [K in Uppercase<(typeof AUDIT_ACTION_VALUES)[number]>]: Lowercase<K>;
 };
+
+// ==================== MPO_DELIVERY_LOCATIONS ====================
+
+export const MPO_DELIVERY_LOCATION_VALUES = ['our_10th_ramadan_factories', 'supplier_warehouses'] as const;
+
+export const MPO_DELIVERY_LOCATIONS = Object.fromEntries(
+  MPO_DELIVERY_LOCATION_VALUES.map((location) => [location.toUpperCase(), location]),
+) as {
+  [K in Uppercase<(typeof MPO_DELIVERY_LOCATION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== MPO_DELIVERY_TIMINGS ====================
+
+export const MPO_DELIVERY_TIMING_VALUES = ['immediate', 'within_days'] as const;
+
+export const MPO_DELIVERY_TIMINGS = Object.fromEntries(
+  MPO_DELIVERY_TIMING_VALUES.map((timing) => [timing.toUpperCase(), timing]),
+) as {
+  [K in Uppercase<(typeof MPO_DELIVERY_TIMING_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== MPO_PAYMENT_EVENTS ====================
+
+export const MPO_PAYMENT_EVENT_VALUES = ['advance', 'on_receipt', 'after_receipt', 'after_invoice'] as const;
+
+export const MPO_PAYMENT_EVENTS = Object.fromEntries(
+  MPO_PAYMENT_EVENT_VALUES.map((event) => [event.toUpperCase(), event]),
+) as {
+  [K in Uppercase<(typeof MPO_PAYMENT_EVENT_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== MPO_PAYMENT_VALUE_KINDS ====================
+
+export const MPO_PAYMENT_VALUE_KIND_VALUES = ['percentage', 'fixed_amount', 'remainder'] as const;
+
+export const MPO_PAYMENT_VALUE_KINDS = Object.fromEntries(
+  MPO_PAYMENT_VALUE_KIND_VALUES.map((kind) => [kind.toUpperCase(), kind]),
+) as {
+  [K in Uppercase<(typeof MPO_PAYMENT_VALUE_KIND_VALUES)[number]>]: Lowercase<K>;
+};

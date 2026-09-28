@@ -21,6 +21,10 @@ import {
   APPROVAL_DECISION_VALUES,
   GENDER_VALUES,
   AUDIT_ACTION_VALUES,
+  MPO_DELIVERY_LOCATION_VALUES,
+  MPO_DELIVERY_TIMING_VALUES,
+  MPO_PAYMENT_EVENT_VALUES,
+  MPO_PAYMENT_VALUE_KIND_VALUES,
 } from 'src/utils/constants';
 
 export const permissionEnum = pgEnum('permission', PERMISSION_VALUES);
@@ -67,3 +71,11 @@ export const legacyIssuePermitWorkOrderTypeEnum = pgEnum('legacy_issue_permit_wo
 export const genderEnum = pgEnum('gender', GENDER_VALUES);
 
 export const auditActionEnum = pgEnum('audit_action', AUDIT_ACTION_VALUES);
+
+export const mpoDeliveryLocationEnum = pgEnum('mpo_delivery_location', MPO_DELIVERY_LOCATION_VALUES);
+
+export const mpoDeliveryTimingEnum = pgEnum('mpo_delivery_timing', MPO_DELIVERY_TIMING_VALUES);
+
+export const mpoPaymentEventEnum = pgEnum('mpo_payment_event', MPO_PAYMENT_EVENT_VALUES);
+
+export const mpoPaymentValueKindEnum = pgEnum('mpo_payment_value_kind', MPO_PAYMENT_VALUE_KIND_VALUES);

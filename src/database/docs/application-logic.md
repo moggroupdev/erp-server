@@ -116,6 +116,14 @@ All sources live on the header — one source event per transaction; items only 
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase order items (`material_purchase_order_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
+- Material purchase order payment terms (`material_purchase_order_payment_terms`) (`@APP_CHECKED`):
+  - Contractual slices on the order, not payables generated per receipt or invoice. `after_receipt` / `after_invoice` store a day offset; the due date is resolved later when that document exists
+  - Rows are optional. When any row exists, the set must cover `total_amount` exactly: percentages are of the order total (not of the remainder); fixed amounts are absolute
+  - No remainder row: sum of fixed amounts + percentages of `total_amount` must equal `total_amount`
+  - One remainder row: that sum must be strictly less than `total_amount` (the remainder is what is left, and must be positive)
+  - Re-check when order line totals change — a fixed amount can exceed a smaller `total_amount`
+  - `sequence_order`: display order within the order, assigned from the payload array (`index + 1`)
+  - A monthly schedule is stored as separate rows (for example 30, 60, 90, 120 days), not as a recurrence
 - Material purchase receipt items (`material_purchase_receipt_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
 - Material purchase requisitions (`material_purchase_requisitions`):
