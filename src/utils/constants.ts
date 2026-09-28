@@ -1,3 +1,7 @@
+/** Statutory VAT percent applied to purchase subtotals. `VAT_RATE` is the decimal form. */
+export const VAT_PERCENT = 14;
+export const VAT_RATE = VAT_PERCENT / 100;
+
 export const REQUEST_USER_KEY = 'user';
 export const ALLOWED_PERMISSION_KEY = 'allowedPermission';
 

@@ -17,6 +17,7 @@ import {
   MPO_DELIVERY_TIMINGS,
   MPO_PAYMENT_EVENTS,
   MPO_PAYMENT_VALUE_KINDS,
+  VAT_RATE,
 } from 'src/utils/constants';
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
@@ -29,7 +30,6 @@ import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purcha
 import { CreateMaterialPurchaseOrderPaymentTermDto } from './dto/create-material-purchase-order-payment-term.dto';
 
 const MONEY_SCALE = 1_000_000;
-const MPO_VAT_RATE = 0.14;
 
 function toScaledAmount(amount: number) {
   return Math.round(amount * MONEY_SCALE);
@@ -71,7 +71,7 @@ export class MaterialPurchaseOrdersService {
     const normalizedTerms = this.normalizePaymentTerms(paymentTerms);
 
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
-    const grandTotal = totalAmount + totalAmount * MPO_VAT_RATE;
+    const grandTotal = totalAmount + totalAmount * VAT_RATE;
     this.assertPaymentTermsCoverTotal(normalizedTerms, grandTotal);
 
     return await this.db.transaction(async (tx) => {
