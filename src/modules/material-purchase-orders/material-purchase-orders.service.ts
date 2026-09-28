@@ -29,6 +29,7 @@ import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purcha
 import { CreateMaterialPurchaseOrderPaymentTermDto } from './dto/create-material-purchase-order-payment-term.dto';
 
 const MONEY_SCALE = 1_000_000;
+const MPO_VAT_RATE = 0.14;
 
 function toScaledAmount(amount: number) {
   return Math.round(amount * MONEY_SCALE);
@@ -70,7 +71,8 @@ export class MaterialPurchaseOrdersService {
     const normalizedTerms = this.normalizePaymentTerms(paymentTerms);
 
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
-    this.assertPaymentTermsCoverTotal(normalizedTerms, totalAmount);
+    const grandTotal = totalAmount + totalAmount * MPO_VAT_RATE;
+    this.assertPaymentTermsCoverTotal(normalizedTerms, grandTotal);
 
     return await this.db.transaction(async (tx) => {
       const [order] = await tx
@@ -318,8 +320,8 @@ export class MaterialPurchaseOrdersService {
       if (coveredScaled >= totalScaled) {
         throw new BadRequestException(
           translate(
-            'The remainder must be a positive leftover. Fixed amounts and percentages already cover the order.',
-            'يجب أن يكون الباقي مبلغاً متبقياً موجباً. المبالغ الثابتة والنسب تغطي الأمر بالفعل.',
+            'The remainder must be a positive leftover. Fixed amounts and percentages already cover the grand total.',
+            'يجب أن يكون الباقي مبلغاً متبقياً موجباً. المبالغ الثابتة والنسب تغطي الإجمالي الكلي بالفعل.',
           ),
         );
       }
@@ -329,8 +331,8 @@ export class MaterialPurchaseOrdersService {
     if (coveredScaled !== totalScaled) {
       throw new BadRequestException(
         translate(
-          'Payment terms must cover 100% of the order total.',
-          'يجب أن تغطي شروط السداد 100٪ من إجمالي الأمر.',
+          'Payment terms must cover 100% of the grand total, including VAT.',
+          'يجب أن تغطي شروط السداد 100٪ من الإجمالي الكلي شاملاً ضريبة القيمة المضافة.',
         ),
       );
     }
