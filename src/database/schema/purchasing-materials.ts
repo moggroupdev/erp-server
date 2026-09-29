@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique, uniqueIndex, integer } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
@@ -8,6 +8,10 @@ import {
   positiveNullableQuantityCheck,
   productionSubDepartmentEnum,
   materialUnitEnum,
+  mpoDeliveryLocationEnum,
+  mpoDeliveryTimingEnum,
+  mpoPaymentEventEnum,
+  mpoPaymentValueKindEnum,
   approvalGateColumns,
   approvalGateConstraints,
 } from './common';
@@ -87,6 +91,9 @@ export const materialPurchaseOrders = pgTable(
       .notNull()
       .references(() => suppliers.id),
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity_ordered * unit_price) from material_purchase_order_items
+    deliveryLocation: mpoDeliveryLocationEnum('delivery_location'),
+    deliveryTiming: mpoDeliveryTimingEnum('delivery_timing'),
+    deliveryPeriodDays: integer('delivery_period_days'), // Days when delivery_timing is within_days; null when immediate
     completedAt: timestamp('completed_at', { withTimezone: true }), // @CACHING_APP_SYNCED - Set when all order lines are fully received across all receipts
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
@@ -103,6 +110,27 @@ export const materialPurchaseOrders = pgTable(
     index('mpo_created_by_idx').on(table.createdBy),
     check('mpo_completed_cancelled_exclusive', sql`${table.completedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
     nonNegativeQuantityCheck('mpo_total_amount_non_negative', table.totalAmount),
+    check(
+      'mpo_delivery_terms_all_or_nothing',
+      sql`(
+        ${table.deliveryLocation} IS NULL
+        AND ${table.deliveryTiming} IS NULL
+        AND ${table.deliveryPeriodDays} IS NULL
+      ) OR (
+        ${table.deliveryLocation} IS NOT NULL
+        AND ${table.deliveryTiming} IS NOT NULL
+      )`,
+    ),
+    check(
+      'mpo_delivery_period_days',
+      sql`(
+        ${table.deliveryTiming} IS NULL AND ${table.deliveryPeriodDays} IS NULL
+      ) OR (
+        ${table.deliveryTiming} = 'immediate' AND ${table.deliveryPeriodDays} IS NULL
+      ) OR (
+        ${table.deliveryTiming} = 'within_days' AND ${table.deliveryPeriodDays} > 0
+      )`,
+    ),
   ],
 );
 
@@ -130,6 +158,63 @@ export const materialPurchaseOrderItems = pgTable(
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
     positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
     positiveQuantityCheck('mpoi_unit_price_positive', table.unitPrice),
+  ],
+);
+
+// Contractual payment slices. Percentages are of total_amount. Coverage of 100% is @APP_CHECKED.
+export const materialPurchaseOrderPaymentTerms = pgTable(
+  'material_purchase_order_payment_terms',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseOrderId: uuid('material_purchase_order_id').notNull(),
+    sequenceOrder: integer('sequence_order').notNull(), // @APP_CHECKED - Display order within the order
+    event: mpoPaymentEventEnum('event').notNull(),
+    offsetDays: integer('offset_days'), // Null for advance and on_receipt; days after receipt or invoice otherwise
+    valueKind: mpoPaymentValueKindEnum('value_kind').notNull(),
+    value: numeric('value'), // Null only for remainder; percentage of total_amount, or a fixed amount
+  },
+  (table) => [
+    foreignKey({
+      name: 'mpopt_mpo_id_fk',
+      columns: [table.materialPurchaseOrderId],
+      foreignColumns: [materialPurchaseOrders.id],
+    }),
+    index('mpopt_mpo_id_idx').on(table.materialPurchaseOrderId),
+    unique('mpopt_mpo_sequence_unique').on(table.materialPurchaseOrderId, table.sequenceOrder),
+    check('mpopt_sequence_order_positive', sql`${table.sequenceOrder} > 0`),
+    check(
+      'mpopt_offset_days',
+      sql`(
+        ${table.event} IN ('advance', 'on_receipt') AND ${table.offsetDays} IS NULL
+      ) OR (
+        ${table.event} IN ('after_receipt', 'after_invoice') AND ${table.offsetDays} > 0
+      )`,
+    ),
+    check(
+      'mpopt_value',
+      sql`(
+        ${table.valueKind} = 'remainder' AND ${table.value} IS NULL
+      ) OR (
+        ${table.valueKind} = 'percentage' AND ${table.value} > 0 AND ${table.value} <= 100
+      ) OR (
+        ${table.valueKind} = 'fixed_amount' AND ${table.value} > 0
+      )`,
+    ),
+    uniqueIndex('mpopt_one_advance')
+      .on(table.materialPurchaseOrderId)
+      .where(sql`${table.event} = 'advance'`),
+    uniqueIndex('mpopt_one_on_receipt')
+      .on(table.materialPurchaseOrderId)
+      .where(sql`${table.event} = 'on_receipt'`),
+    uniqueIndex('mpopt_one_remainder')
+      .on(table.materialPurchaseOrderId)
+      .where(sql`${table.valueKind} = 'remainder'`),
+    uniqueIndex('mpopt_after_receipt_offset_unique')
+      .on(table.materialPurchaseOrderId, table.offsetDays)
+      .where(sql`${table.event} = 'after_receipt'`),
+    uniqueIndex('mpopt_after_invoice_offset_unique')
+      .on(table.materialPurchaseOrderId, table.offsetDays)
+      .where(sql`${table.event} = 'after_invoice'`),
   ],
 );
 
@@ -299,8 +384,16 @@ export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders,
     relationName: 'materialPurchaseOrderCreatedBy',
   }),
   items: many(materialPurchaseOrderItems),
+  paymentTerms: many(materialPurchaseOrderPaymentTerms),
   receipts: many(materialPurchaseReceipts),
   invoices: many(supplierInvoices),
+}));
+
+export const materialPurchaseOrderPaymentTermsRelations = relations(materialPurchaseOrderPaymentTerms, ({ one }) => ({
+  materialPurchaseOrder: one(materialPurchaseOrders, {
+    fields: [materialPurchaseOrderPaymentTerms.materialPurchaseOrderId],
+    references: [materialPurchaseOrders.id],
+  }),
 }));
 
 export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrderItems, ({ one, many }) => ({

@@ -116,6 +116,16 @@ All sources live on the header — one source event per transaction; items only 
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase order items (`material_purchase_order_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
+- Material purchase order payment terms (`material_purchase_order_payment_terms`) (`@APP_CHECKED`):
+  - Contractual slices on the order, not payables generated per receipt or invoice. `after_receipt` / `after_invoice` store a day offset; the due date is resolved later when that document exists
+  - `POST /material-purchase-orders` requires delivery location and timing, and at least one payment slice. The set must cover the VAT-inclusive grand total (`total_amount * (1 + VAT_RATE)`, where `VAT_RATE` is the global constant) exactly. `total_amount` itself stays the pre-tax sum of line totals. Percentages are of that grand total (not of the remainder); fixed amounts are absolute. Compare at 6 decimal places
+  - No remainder row: sum of fixed amounts + percentages of the grand total must equal the grand total
+  - One remainder row: that sum must be strictly less than the grand total (the remainder is what is left, and must be positive). A remainder-only set is rejected
+  - At most one advance, one on-receipt row, and one remainder; at most one row per day offset for each deferred event
+  - Orders written outside this API (seeds) may omit delivery and payment rows; `GET` returns null delivery fields and `paymentTerms: []`
+  - Re-check when order line totals change — a fixed amount can exceed a smaller grand total
+  - `sequence_order`: display order within the order, assigned from the payload array (`index + 1`); not accepted from the client
+  - A monthly schedule is stored as separate rows (for example 30, 60, 90, 120 days), not as a recurrence
 - Material purchase receipt items (`material_purchase_receipt_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; independently selectable (need not match the parent order item's unit); must be the linked material's base unit or one of its conversions; `quantity_received` / `quantity_rejected` are in this unit
 - Material purchase requisitions (`material_purchase_requisitions`):

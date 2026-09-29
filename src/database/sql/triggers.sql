@@ -661,6 +661,11 @@ BEGIN
       parent_record_id := p_row->>'material_purchase_order_id';
       root_table_name := 'material_purchase_orders';
       root_record_id := parent_record_id;
+    WHEN 'material_purchase_order_payment_terms' THEN
+      parent_table_name := 'material_purchase_orders';
+      parent_record_id := p_row->>'material_purchase_order_id';
+      root_table_name := 'material_purchase_orders';
+      root_record_id := parent_record_id;
     WHEN 'material_purchase_order_item_requisition_items' THEN
       parent_table_name := 'material_purchase_order_items';
       parent_record_id := p_row->>'material_purchase_order_item_id';

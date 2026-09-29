@@ -1,9 +1,10 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   materialPurchaseOrderItemRequisitionItems,
   materialPurchaseOrderItems,
+  materialPurchaseOrderPaymentTerms,
   materialPurchaseOrders,
   materialPurchaseReceiptItems,
   materialPurchaseRequisitionItems,
@@ -11,7 +12,13 @@ import {
   materials,
   suppliers,
 } from 'src/database/schema';
-import { APPROVAL_DECISIONS } from 'src/utils/constants';
+import {
+  APPROVAL_DECISIONS,
+  MPO_DELIVERY_TIMINGS,
+  MPO_PAYMENT_EVENTS,
+  MPO_PAYMENT_VALUE_KINDS,
+  VAT_RATE,
+} from 'src/utils/constants';
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
@@ -20,6 +27,17 @@ import { MaterialUnitValidationService } from 'src/utils/services/material-unit-
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
 import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purchase-order-item.dto';
+import { CreateMaterialPurchaseOrderPaymentTermDto } from './dto/create-material-purchase-order-payment-term.dto';
+
+const MONEY_SCALE = 1_000_000;
+
+function toScaledAmount(amount: number) {
+  return Math.round(amount * MONEY_SCALE);
+}
+
+function needsPaymentOffset(event: CreateMaterialPurchaseOrderPaymentTermDto['event']) {
+  return event === MPO_PAYMENT_EVENTS.AFTER_RECEIPT || event === MPO_PAYMENT_EVENTS.AFTER_INVOICE;
+}
 
 const MATERIAL_COLUMNS = {
   code: true,
@@ -42,14 +60,19 @@ export class MaterialPurchaseOrdersService {
   ) {}
 
   public async create(createDto: CreateMaterialPurchaseOrderDto, user: User) {
-    const { items, supplierId, notes } = createDto;
+    const { items, supplierId, notes, deliveryLocation, deliveryTiming, paymentTerms } = createDto;
     this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
     await this.assertSupplierExists(supplierId);
     await this.materialUnitValidationService.assertValidSelectedUnits(items);
     this.assertEveryItemHasAllocations(items);
     this.assertNoDuplicateAllocationsPerItem(items);
 
+    const deliveryPeriodDays = this.resolveDeliveryPeriodDays(deliveryTiming, createDto.deliveryPeriodDays);
+    const normalizedTerms = this.normalizePaymentTerms(paymentTerms);
+
     const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
+    const grandTotal = totalAmount + totalAmount * VAT_RATE;
+    this.assertPaymentTermsCoverTotal(normalizedTerms, grandTotal);
 
     return await this.db.transaction(async (tx) => {
       const [order] = await tx
@@ -58,6 +81,9 @@ export class MaterialPurchaseOrdersService {
           code: sql`DEFAULT`,
           supplierId,
           totalAmount,
+          deliveryLocation,
+          deliveryTiming,
+          deliveryPeriodDays,
           notes,
           createdBy: user.id,
         })
@@ -79,7 +105,21 @@ export class MaterialPurchaseOrdersService {
 
       await this.insertRequisitionAllocations(tx, items, insertedItems);
 
-      return { ...order, items: insertedItems };
+      const insertedPaymentTerms = await tx
+        .insert(materialPurchaseOrderPaymentTerms)
+        .values(
+          normalizedTerms.map((term, index) => ({
+            materialPurchaseOrderId: order.id,
+            sequenceOrder: index + 1,
+            event: term.event,
+            offsetDays: term.offsetDays,
+            valueKind: term.valueKind,
+            value: term.value,
+          })),
+        )
+        .returning();
+
+      return { ...order, items: insertedItems, paymentTerms: insertedPaymentTerms };
     });
   }
 
@@ -103,6 +143,9 @@ export class MaterialPurchaseOrdersService {
       with: {
         supplier: { columns: { id: true, name: true } },
         createdBy: { columns: { id: true, name: true } },
+        paymentTerms: {
+          orderBy: [asc(materialPurchaseOrderPaymentTerms.sequenceOrder)],
+        },
         items: {
           with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } },
         },
@@ -132,6 +175,168 @@ export class MaterialPurchaseOrdersService {
   }
 
   // ============================== PRIVATE METHODS ==============================
+
+  private resolveDeliveryPeriodDays(
+    deliveryTiming: CreateMaterialPurchaseOrderDto['deliveryTiming'],
+    deliveryPeriodDays: number | null | undefined,
+  ) {
+    if (deliveryTiming === MPO_DELIVERY_TIMINGS.WITHIN_DAYS) {
+      if (deliveryPeriodDays == null || !Number.isInteger(deliveryPeriodDays) || deliveryPeriodDays <= 0) {
+        throw new BadRequestException(
+          translate(
+            'Enter a positive number of days when delivery is within a period.',
+            'أدخل عدداً موجباً من الأيام عندما يكون التوريد خلال مدة.',
+          ),
+        );
+      }
+      return deliveryPeriodDays;
+    }
+
+    if (deliveryPeriodDays != null) {
+      throw new BadRequestException(
+        translate(
+          'A day count is only allowed when delivery is within a number of days.',
+          'عدد الأيام يُقبل فقط عندما يكون التوريد خلال عدد من الأيام.',
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  private normalizePaymentTerms(terms: CreateMaterialPurchaseOrderPaymentTermDto[]) {
+    const seenDeferred = new Set<string>();
+    let advanceCount = 0;
+    let onReceiptCount = 0;
+    let remainderCount = 0;
+
+    return terms.map((term) => {
+      if (term.event === MPO_PAYMENT_EVENTS.ADVANCE) advanceCount += 1;
+      if (term.event === MPO_PAYMENT_EVENTS.ON_RECEIPT) onReceiptCount += 1;
+      if (term.valueKind === MPO_PAYMENT_VALUE_KINDS.REMAINDER) remainderCount += 1;
+
+      if (advanceCount > 1) {
+        throw new BadRequestException(
+          translate('An order can have only one advance payment.', 'لا يمكن أن يحتوي الأمر على أكثر من دفعة مقدمة.'),
+        );
+      }
+      if (onReceiptCount > 1) {
+        throw new BadRequestException(
+          translate('An order can have only one on-receipt payment.', 'لا يمكن أن يحتوي الأمر على أكثر من دفعة عند الاستلام.'),
+        );
+      }
+      if (remainderCount > 1) {
+        throw new BadRequestException(
+          translate('An order can have only one remainder payment.', 'لا يمكن أن يحتوي الأمر على أكثر من دفعة للباقي.'),
+        );
+      }
+
+      const offsetDays = needsPaymentOffset(term.event) ? (term.offsetDays ?? null) : null;
+      if (!needsPaymentOffset(term.event) && term.offsetDays != null) {
+        throw new BadRequestException(
+          translate(
+            'Advance and on-receipt payments do not take a day count.',
+            'الدفعة المقدمة ودفعة الاستلام لا تأخذان عدد أيام.',
+          ),
+        );
+      }
+      if (needsPaymentOffset(term.event)) {
+        if (offsetDays == null || offsetDays <= 0) {
+          throw new BadRequestException(
+            translate(
+              'Enter a positive number of days for a deferred payment.',
+              'أدخل عدداً موجباً من الأيام للدفعة الآجلة.',
+            ),
+          );
+        }
+        const key = `${term.event}:${offsetDays}`;
+        if (seenDeferred.has(key)) {
+          throw new BadRequestException(
+            translate(
+              'Two payments cannot share the same event and day count.',
+              'لا يمكن أن تشترك دفعتان في نفس الحدث وعدد الأيام.',
+            ),
+          );
+        }
+        seenDeferred.add(key);
+      }
+
+      if (term.valueKind === MPO_PAYMENT_VALUE_KINDS.REMAINDER) {
+        if (term.value != null) {
+          throw new BadRequestException(
+            translate('A remainder payment does not take an amount.', 'دفعة الباقي لا تأخذ قيمة.'),
+          );
+        }
+        return { ...term, offsetDays, value: null };
+      }
+
+      const value = Number(term.value);
+      if (term.valueKind === MPO_PAYMENT_VALUE_KINDS.PERCENTAGE && value > 100) {
+        throw new BadRequestException(
+          translate(
+            'A percentage payment must be greater than 0 and at most 100.',
+            'دفعة النسبة يجب أن تكون أكبر من صفر ولا تتجاوز 100.',
+          ),
+        );
+      }
+
+      return { ...term, offsetDays, value };
+    });
+  }
+
+  private assertPaymentTermsCoverTotal(
+    terms: { valueKind: CreateMaterialPurchaseOrderPaymentTermDto['valueKind']; value: number | null }[],
+    totalAmount: number,
+  ) {
+    const totalScaled = toScaledAmount(totalAmount);
+    let covered = 0;
+    let pricedCount = 0;
+    let hasRemainder = false;
+
+    for (const term of terms) {
+      if (term.valueKind === MPO_PAYMENT_VALUE_KINDS.REMAINDER) {
+        hasRemainder = true;
+        continue;
+      }
+      pricedCount += 1;
+      if (term.valueKind === MPO_PAYMENT_VALUE_KINDS.PERCENTAGE) {
+        covered += (totalAmount * Number(term.value)) / 100;
+      } else {
+        covered += Number(term.value);
+      }
+    }
+
+    const coveredScaled = toScaledAmount(covered);
+
+    if (hasRemainder) {
+      if (pricedCount === 0) {
+        throw new BadRequestException(
+          translate(
+            'A payment schedule cannot be only a remainder. Add the other slices first.',
+            'لا يمكن أن تكون شروط السداد باقياً فقط. أضف الدفعات الأخرى أولاً.',
+          ),
+        );
+      }
+      if (coveredScaled >= totalScaled) {
+        throw new BadRequestException(
+          translate(
+            'The remainder must be a positive leftover. Fixed amounts and percentages already cover the grand total.',
+            'يجب أن يكون الباقي مبلغاً متبقياً موجباً. المبالغ الثابتة والنسب تغطي الإجمالي الكلي بالفعل.',
+          ),
+        );
+      }
+      return;
+    }
+
+    if (coveredScaled !== totalScaled) {
+      throw new BadRequestException(
+        translate(
+          'Payment terms must cover 100% of the grand total, including VAT.',
+          'يجب أن تغطي شروط السداد 100٪ من الإجمالي الكلي شاملاً ضريبة القيمة المضافة.',
+        ),
+      );
+    }
+  }
 
   private assertNoDuplicateMaterials(materialCodes: string[]) {
     if (new Set(materialCodes).size !== materialCodes.length) {
