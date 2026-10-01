@@ -32,19 +32,29 @@ export class DashboardService {
     const weekStart = new Date(now.getTime() - 7 * DAY_MS);
     const monthStart = new Date(now.getTime() - 30 * DAY_MS);
 
-    const [customersCreated, suppliersCreated, materialsCreated, productsCreated, requisitions, purchaseOrders, invoices, permits, stock, recentLegacyIssuePermits] =
-      await Promise.all([
-        this.countCustomers(weekStart, monthStart),
-        this.countSuppliers(weekStart, monthStart),
-        this.countMaterials(weekStart, monthStart),
-        this.countProducts(weekStart, monthStart),
-        this.getRequisitions(weekStart, monthStart),
-        this.getPurchaseOrders(weekStart, monthStart),
-        this.getInvoices(weekStart, monthStart),
-        this.getLegacyIssuePermits(weekStart, monthStart),
-        this.getStock(),
-        this.getRecentLegacyIssuePermits(),
-      ]);
+    const [
+      customersCreated,
+      suppliersCreated,
+      materialsCreated,
+      productsCreated,
+      requisitions,
+      purchaseOrders,
+      invoices,
+      permits,
+      stock,
+      recentLegacyIssuePermits,
+    ] = await Promise.all([
+      this.countCustomers(weekStart, monthStart),
+      this.countSuppliers(weekStart, monthStart),
+      this.countMaterials(weekStart, monthStart),
+      this.countProducts(weekStart, monthStart),
+      this.getRequisitions(weekStart, monthStart),
+      this.getPurchaseOrders(weekStart, monthStart),
+      this.getInvoices(weekStart, monthStart),
+      this.getLegacyIssuePermits(weekStart, monthStart),
+      this.getStock(),
+      this.getRecentLegacyIssuePermits(),
+    ]);
 
     const periods = (['week', 'month', 'overall'] as const).reduce(
       (acc, period) => {
@@ -271,7 +281,7 @@ export class DashboardService {
       })
       .from(legacyIssuePermits)
       .orderBy(desc(legacyIssuePermits.date))
-      .limit(8);
+      .limit(5);
 
     return rows.map((row) => ({
       id: row.id,
@@ -304,7 +314,12 @@ export class DashboardService {
     };
   }
 
-  private pendingCounts(row: Record<string, unknown> | undefined, totalSuffix: string, rejectedSuffix: string, approvedSuffix: string): PeriodCounts {
+  private pendingCounts(
+    row: Record<string, unknown> | undefined,
+    totalSuffix: string,
+    rejectedSuffix: string,
+    approvedSuffix: string,
+  ): PeriodCounts {
     const total = this.pickPeriod(row, totalSuffix);
     const rejected = this.pickPeriod(row, rejectedSuffix);
     const approved = this.pickPeriod(row, approvedSuffix);
