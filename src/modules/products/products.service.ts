@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { productCategorySubs, productDimensions, productProductionRoutes, products } from 'src/database/schema';
@@ -212,12 +212,76 @@ export class ProductsService {
     }
 
     return await this.db.transaction(async (tx) => {
-      await tx.delete(productProductionRoutes).where(eq(productProductionRoutes.productCode, productCode));
+      const existingRows = await tx.query.productProductionRoutes.findMany({
+        where: eq(productProductionRoutes.productCode, productCode),
+      });
 
-      return await tx
-        .insert(productProductionRoutes)
-        .values(routes.map((route) => ({ ...route, productCode })))
-        .returning();
+      const existingByDepartment = new Map(existingRows.map((row) => [row.productionSubDepartment, row]));
+      const incomingDepartments = new Set(routes.map((route) => route.productionSubDepartment));
+
+      const toDeleteIds = existingRows
+        .filter((row) => !incomingDepartments.has(row.productionSubDepartment))
+        .map((row) => row.id);
+
+      const toInsert = routes.filter((route) => !existingByDepartment.has(route.productionSubDepartment));
+
+      const toUpdate = routes.flatMap((route) => {
+        const existing = existingByDepartment.get(route.productionSubDepartment);
+        if (!existing) return [];
+
+        const sequenceChanged = existing.sequenceOrder !== route.sequenceOrder;
+        const percentageChanged = existing.completionPercentage !== route.completionPercentage;
+        if (!sequenceChanged && !percentageChanged) return [];
+
+        return [
+          {
+            id: existing.id,
+            sequenceOrder: route.sequenceOrder,
+            completionPercentage: route.completionPercentage,
+            sequenceChanged,
+          },
+        ];
+      });
+
+      if (toDeleteIds.length > 0)
+        await tx.delete(productProductionRoutes).where(inArray(productProductionRoutes.id, toDeleteIds));
+
+      // Move changed sequences aside first so a swap stays unique on (product_code, sequence_order).
+      const sequenceChanges = toUpdate.filter((row) => row.sequenceChanged);
+      const tempSequenceBase =
+        Math.max(0, ...existingRows.map((row) => row.sequenceOrder), ...routes.map((route) => route.sequenceOrder)) + 1;
+
+      for (const [index, row] of sequenceChanges.entries()) {
+        await tx
+          .update(productProductionRoutes)
+          .set({ sequenceOrder: tempSequenceBase + index })
+          .where(eq(productProductionRoutes.id, row.id));
+      }
+
+      const updatedRows: (typeof existingRows)[number][] = [];
+      for (const row of toUpdate) {
+        const [updated] = await tx
+          .update(productProductionRoutes)
+          .set({ sequenceOrder: row.sequenceOrder, completionPercentage: row.completionPercentage })
+          .where(eq(productProductionRoutes.id, row.id))
+          .returning();
+        if (updated) updatedRows.push(updated);
+      }
+
+      const insertedRows =
+        toInsert.length > 0
+          ? await tx
+              .insert(productProductionRoutes)
+              .values(toInsert.map((route) => ({ ...route, productCode })))
+              .returning()
+          : [];
+
+      const updatedIds = new Set(updatedRows.map((row) => row.id));
+      const unchangedRows = existingRows.filter(
+        (row) => incomingDepartments.has(row.productionSubDepartment) && !updatedIds.has(row.id),
+      );
+
+      return [...unchangedRows, ...updatedRows, ...insertedRows].sort((a, b) => a.sequenceOrder - b.sequenceOrder);
     });
   }
 
