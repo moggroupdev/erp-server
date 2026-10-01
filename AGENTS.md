@@ -43,18 +43,19 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - Use `src/utils/services/query-builder.service.ts` for list/filter/pagination.
 - Quantity updates: `sql\`quantity + ${n}` in transactions — never read-modify-write in Node.
 - After a mutation, avoid a second `get()` just to build the response. Prefer Drizzle `.returning()` on the same `insert`/`update`, or compose `{ ...entity, updatedField }` from data already in hand when the client revalidates anyway. Spotlight: fewer DB round-trips.
+- Replacing a child set: load the existing rows and write the diff. Delete removed keys, insert new keys, and update a kept row only when a mutable column changed. Leave unchanged rows in place so they are not rewritten or re-audited.
 
 ---
 
 ## Docs & triggers
 
-| File                                     | Purpose                                                                                              |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `README.md`                              | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.    |
-| `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes. |
-| `src/database/docs/db-duplications.md`   | `@RFP_APP_CHECKED`, `@CACHING_APP_SYNCED`, and `@HISTORICAL_SNAPSHOT` column inventory.              |
-| `src/database/docs/application-logic.md` | Business logic that is not handled in DB — caching sync, RFP sync, validations, workflow guards.     |
-| `src/database/docs/audit-trail.md`       | Audit trail design — hybrid Nest GUCs + Postgres trigger, file map, query API, ops.                 |
+| File                                     | Purpose                                                                                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                              | High-level business scope, managed domains, end-to-end workflow, and current data-model coverage.                                                  |
+| `src/database/docs/tables-summary.md`    | All schema tables — primary key, deleting behavior, audit columns, and human-readable code prefixes.                                               |
+| `src/database/docs/db-duplications.md`   | `@RFP_APP_CHECKED`, `@CACHING_APP_SYNCED`, and `@HISTORICAL_SNAPSHOT` column inventory.                                                            |
+| `src/database/docs/application-logic.md` | Business logic that is not handled in DB — caching sync, RFP sync, validations, workflow guards.                                                   |
+| `src/database/docs/audit-trail.md`       | Audit trail design — hybrid Nest GUCs + Postgres trigger, file map, query API, ops.                                                                |
 | `src/database/sql/triggers.sql`          | Low-level integrity (auto-generated `code` on INSERT) **and** audit emit infrastructure (`audit_emit` + attach loop). Not business workflow logic. |
 
 **Triggers example:** `CTR-00000001` via sequence + `BEFORE INSERT` on `contracts`. Add new coded entities here; omit `code` from create DTOs.

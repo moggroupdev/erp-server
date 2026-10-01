@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { permissions, roles } from 'src/database/schema';
@@ -60,11 +60,23 @@ export class RolesService {
       // if (Object.keys(roleData).length > 0)
       const [updatedRole] = await tx.update(roles).set(roleData).where(eq(roles.id, id)).returning();
 
-      // @TODO: Enhance this logic to check if the permissions are changed or they are the same as the previous ones.
       if (permissionValues !== undefined) {
-        await tx.delete(permissions).where(eq(permissions.roleId, id));
-        if (permissionValues.length > 0)
-          await tx.insert(permissions).values(permissionValues.map((permission) => ({ roleId: id, permission })));
+        const existingRows = await tx
+          .select({ permission: permissions.permission })
+          .from(permissions)
+          .where(eq(permissions.roleId, id));
+
+        const existing = new Set(existingRows.map((row) => row.permission));
+        const incoming = new Set(permissionValues);
+
+        const toDelete = [...existing].filter((permission) => !incoming.has(permission));
+        const toInsert = permissionValues.filter((permission) => !existing.has(permission));
+
+        if (toDelete.length > 0)
+          await tx.delete(permissions).where(and(eq(permissions.roleId, id), inArray(permissions.permission, toDelete)));
+
+        if (toInsert.length > 0)
+          await tx.insert(permissions).values(toInsert.map((permission) => ({ roleId: id, permission })));
       }
 
       return updatedRole;

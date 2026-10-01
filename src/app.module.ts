@@ -27,6 +27,7 @@ import { InventoryTransactionsModule } from './modules/inventory-transactions/in
 import { MaterialPurchaseOrdersModule } from './modules/material-purchase-orders/material-purchase-orders.module';
 import { LegacyIssuePermitsModule } from './modules/legacy-issue-permits/legacy-issue-permits.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     MaterialPurchaseOrdersModule,
     LegacyIssuePermitsModule,
     ReportsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
