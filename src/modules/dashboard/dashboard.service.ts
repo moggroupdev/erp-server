@@ -8,7 +8,6 @@ import {
   materialPurchaseRequisitions,
   materials,
   products,
-  supplierInvoices,
   suppliers,
 } from 'src/database/schema';
 import { APPROVAL_DECISIONS } from 'src/utils/constants';
@@ -39,8 +38,6 @@ export class DashboardService {
       productsCreated,
       requisitions,
       purchaseOrders,
-      invoices,
-      permits,
       stock,
       recentLegacyIssuePermits,
     ] = await Promise.all([
@@ -50,8 +47,6 @@ export class DashboardService {
       this.countProducts(weekStart, monthStart),
       this.getRequisitions(weekStart, monthStart),
       this.getPurchaseOrders(weekStart, monthStart),
-      this.getInvoices(weekStart, monthStart),
-      this.getLegacyIssuePermits(weekStart, monthStart),
       this.getStock(),
       this.getRecentLegacyIssuePermits(),
     ]);
@@ -72,14 +67,6 @@ export class DashboardService {
             open: purchaseOrders.open[period],
             completed: purchaseOrders.completed[period],
             cancelled: purchaseOrders.cancelled[period],
-          },
-          invoices: {
-            count: invoices.count[period],
-            totalAmount: invoices.totalAmount[period],
-          },
-          legacyIssuePermits: {
-            active: permits.active[period],
-            cancelled: permits.cancelled[period],
           },
         };
         return acc;
@@ -191,54 +178,6 @@ export class DashboardService {
     };
   }
 
-  private async getInvoices(weekStart: Date, monthStart: Date) {
-    const [row] = await this.db
-      .select({
-        weekCount: this.countSince(supplierInvoices.createdAt, weekStart),
-        monthCount: this.countSince(supplierInvoices.createdAt, monthStart),
-        overallCount: count(),
-        weekAmount: this.sumSince(supplierInvoices.totalAmount, supplierInvoices.createdAt, weekStart),
-        monthAmount: this.sumSince(supplierInvoices.totalAmount, supplierInvoices.createdAt, monthStart),
-        overallAmount: sql<number>`coalesce(sum(${supplierInvoices.totalAmount}), 0)`,
-      })
-      .from(supplierInvoices)
-      .where(isNotNull(supplierInvoices.materialPurchaseOrderId));
-
-    return {
-      count: {
-        week: asNumber(row?.weekCount),
-        month: asNumber(row?.monthCount),
-        overall: asNumber(row?.overallCount),
-      },
-      totalAmount: {
-        week: asNumber(row?.weekAmount),
-        month: asNumber(row?.monthAmount),
-        overall: asNumber(row?.overallAmount),
-      },
-    };
-  }
-
-  private async getLegacyIssuePermits(weekStart: Date, monthStart: Date) {
-    const active = eq(legacyIssuePermits.isCancelled, false);
-    const cancelled = eq(legacyIssuePermits.isCancelled, true);
-
-    const [row] = await this.db
-      .select({
-        weekActive: this.countSince(legacyIssuePermits.date, weekStart, active),
-        monthActive: this.countSince(legacyIssuePermits.date, monthStart, active),
-        overallActive: this.countWhere(active),
-        weekCancelled: this.countSince(legacyIssuePermits.date, weekStart, cancelled),
-        monthCancelled: this.countSince(legacyIssuePermits.date, monthStart, cancelled),
-        overallCancelled: this.countWhere(cancelled),
-      })
-      .from(legacyIssuePermits);
-
-    return {
-      active: this.pickPeriod(row, 'Active'),
-      cancelled: this.pickPeriod(row, 'Cancelled'),
-    };
-  }
-
   private async getStock() {
     const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
     const [row] = await this.db
@@ -300,10 +239,6 @@ export class DashboardService {
 
   private countWhere(condition: SQL) {
     return sql<number>`count(*) filter (where ${condition})`;
-  }
-
-  private sumSince(amount: AnyColumn, column: AnyColumn, since: Date) {
-    return sql<number>`coalesce(sum(${amount}) filter (where ${column} >= ${since}), 0)`;
   }
 
   private pickPeriod(row: Record<string, unknown> | undefined, suffix: string): PeriodCounts {
