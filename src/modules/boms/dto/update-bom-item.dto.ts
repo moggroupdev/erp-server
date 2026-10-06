@@ -1,5 +1,5 @@
 import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, ValidateIf } from 'class-validator';
+import { IsIn, Min, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES, MM_SOURCING_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit, type MmSourcingType, type ProductionSubDepartment } from 'src/utils/types';
@@ -12,7 +12,7 @@ export class UpdateBomItemDto {
   materialCode: string;
 
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   @IsOptional()
   @ApiPropertyOptional()
   quantityRequired?: number;
@@ -39,4 +39,10 @@ export class UpdateBomItemDto {
   @IsOptional()
   @ApiPropertyOptional()
   notes: string | null;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @ApiPropertyOptional({ nullable: true })
+  legacyQuantity: number | null;
 }

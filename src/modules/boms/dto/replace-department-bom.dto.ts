@@ -3,10 +3,10 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  Min,
   IsNotEmpty,
   IsNumber,
   IsOptional,
-  IsPositive,
   IsString,
   ValidateIf,
   ValidateNested,
@@ -24,7 +24,7 @@ export class ReplaceDepartmentBomItemDto {
   materialCode: string;
 
   @IsNumber()
-  @IsPositive()
+  @Min(0)
   @ApiProperty()
   quantityRequired: number;
 
@@ -45,6 +45,12 @@ export class ReplaceDepartmentBomItemDto {
   @IsOptional()
   @ApiPropertyOptional()
   notes: string | null;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @ApiPropertyOptional({ nullable: true })
+  legacyQuantity: number | null;
 }
 
 export class ReplaceDepartmentBomDto {

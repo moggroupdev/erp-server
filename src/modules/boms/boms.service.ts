@@ -121,6 +121,7 @@ export class BomsService {
             unitOfMeasurementSelected: true,
             productionSubDepartment: true,
             mmSourcingType: true,
+            legacyQuantity: true,
             notes: true,
           },
           with: {
@@ -229,6 +230,7 @@ export class BomsService {
         quantityRequired: productStandardBoms.quantityRequired,
         unitOfMeasurementSelected: productStandardBoms.unitOfMeasurementSelected,
         productionSubDepartment: productStandardBoms.productionSubDepartment,
+        legacyQuantity: productStandardBoms.legacyQuantity,
         notes: productStandardBoms.notes,
         dimensionId: productDimensions.id,
         length: productDimensions.length,
@@ -249,6 +251,7 @@ export class BomsService {
       quantityRequired: row.quantityRequired,
       unitOfMeasurementSelected: row.unitOfMeasurementSelected,
       productionSubDepartment: row.productionSubDepartment,
+      legacyQuantity: row.legacyQuantity,
       notes: row.notes,
       dimension: {
         id: row.dimensionId,
@@ -372,11 +375,13 @@ export class BomsService {
 
         const mmSourcingType = item.mmSourcingType ?? null;
         const notes = item.notes ?? null;
+        const legacyQuantity = item.legacyQuantity ?? null;
         const changed =
           Number(existing.quantityRequired) !== item.quantityRequired ||
           existing.unitOfMeasurementSelected !== item.unitOfMeasurementSelected ||
           (existing.mmSourcingType ?? null) !== mmSourcingType ||
-          (existing.notes ?? null) !== notes;
+          (existing.notes ?? null) !== notes ||
+          (existing.legacyQuantity ?? null) !== legacyQuantity;
 
         if (!changed) return [];
 
@@ -387,6 +392,7 @@ export class BomsService {
             unitOfMeasurementSelected: item.unitOfMeasurementSelected,
             mmSourcingType,
             notes,
+            legacyQuantity,
           },
         ];
       });
@@ -404,6 +410,7 @@ export class BomsService {
             unitOfMeasurementSelected: item.unitOfMeasurementSelected,
             mmSourcingType: item.mmSourcingType,
             notes: item.notes,
+            legacyQuantity: item.legacyQuantity,
           })
           .where(eq(productStandardBoms.id, item.id))
           .returning();

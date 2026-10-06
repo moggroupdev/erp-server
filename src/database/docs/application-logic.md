@@ -174,6 +174,8 @@ All sources live on the header — one source event per transaction; items only 
 ### Production
 
 - `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
+- `product_standard_boms.quantity_required` — non-negative (>= 0); zero is allowed to represent a line placeholder or reference item without a confirmed quantity. Stored in `unit_of_measurement_selected` (or base unit when null).
+- `product_standard_boms.legacy_quantity` — optional; when set, stored in the same unit as `quantity_required` (i.e. `unit_of_measurement_selected` or base unit when null). Used for reference/comparison only; no business logic depends on it.
 - `product_standard_boms.mm_sourcing_type` (`@APP_CHECKED`):
   - Nullable enum: `purchased` | `internally_manufactured` | `externally_manufactured`
   - Non-null **iff** the line's material has `materials.material_type = 'manufactured_material'`; must be null for raw materials / spare parts

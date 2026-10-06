@@ -7,7 +7,6 @@ import {
   deletedAt,
   nonNegativeQuantityCheck,
   nonNegativeNullableQuantityCheck,
-  positiveQuantityCheck,
   positiveNullableQuantityCheck,
   productSourceTypeEnum,
   productionSubDepartmentEnum,
@@ -100,6 +99,7 @@ export const productStandardBoms = pgTable(
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
     mmSourcingType: mmSourcingTypeEnum('mm_sourcing_type'), // @APP_CHECKED - Non-null iff material is a manufactured_material; null otherwise
+    legacyQuantity: numeric('legacy_quantity'), // Optional reference quantity from legacy data; stored in same unit as quantityRequired (unitOfMeasurementSelected or base unit). Comparison only.
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -118,7 +118,8 @@ export const productStandardBoms = pgTable(
     index('product_standard_boms_product_dimension_id_idx').on(table.productDimensionId),
     index('product_standard_boms_material_code_idx').on(table.materialCode),
     index('product_standard_boms_production_sub_department_idx').on(table.productionSubDepartment),
-    positiveQuantityCheck('product_standard_boms_quantity_required_positive', table.quantityRequired),
+    nonNegativeQuantityCheck('product_standard_boms_quantity_required_non_negative', table.quantityRequired),
+    nonNegativeNullableQuantityCheck('product_standard_boms_legacy_quantity_non_negative', table.legacyQuantity),
   ],
 );
 
