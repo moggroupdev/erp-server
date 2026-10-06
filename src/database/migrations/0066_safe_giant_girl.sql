@@ -1,0 +1,4 @@
+ALTER TABLE "product_standard_boms" DROP CONSTRAINT "product_standard_boms_quantity_required_positive";--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD COLUMN "legacy_quantity" numeric(18, 6);--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD CONSTRAINT "product_standard_boms_quantity_required_non_negative" CHECK ("product_standard_boms"."quantity_required" >= 0);--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD CONSTRAINT "product_standard_boms_legacy_quantity_non_negative" CHECK ("product_standard_boms"."legacy_quantity" IS NULL OR "product_standard_boms"."legacy_quantity" >= 0);
