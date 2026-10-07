@@ -75,9 +75,11 @@ export class BomsService {
     }
 
     await this.assertMmSourcingTypeForItems(items);
+    this.assertNoLongerUsedRule(items);
 
     const values = items.map((item) => ({
       ...item,
+      noLongerUsed: item.noLongerUsed ?? false,
       mmSourcingType: item.mmSourcingType ?? null,
       createdBy: user.id,
       productDimensionId: dimensionId,
@@ -122,6 +124,7 @@ export class BomsService {
             productionSubDepartment: true,
             mmSourcingType: true,
             legacyQuantity: true,
+            noLongerUsed: true,
             notes: true,
           },
           with: {
@@ -304,11 +307,13 @@ export class BomsService {
       );
 
     await this.assertMmSourcingTypeForItems([createBomItemDto]);
+    this.assertNoLongerUsedRule([createBomItemDto]);
 
     const [item] = await this.db
       .insert(productStandardBoms)
       .values({
         ...createBomItemDto,
+        noLongerUsed: createBomItemDto.noLongerUsed ?? false,
         mmSourcingType: createBomItemDto.mmSourcingType ?? null,
         productDimensionId: dimensionId,
         createdBy: user.id,
@@ -347,6 +352,7 @@ export class BomsService {
     }
 
     await this.assertMmSourcingTypeForItems(items);
+    this.assertNoLongerUsedRule(items);
 
     return await this.db.transaction(async (tx) => {
       const existingRows = await tx.query.productStandardBoms.findMany({
@@ -376,12 +382,14 @@ export class BomsService {
         const mmSourcingType = item.mmSourcingType ?? null;
         const notes = item.notes ?? null;
         const legacyQuantity = item.legacyQuantity ?? null;
+        const noLongerUsed = item.noLongerUsed ?? false;
         const changed =
           Number(existing.quantityRequired) !== item.quantityRequired ||
           existing.unitOfMeasurementSelected !== item.unitOfMeasurementSelected ||
           (existing.mmSourcingType ?? null) !== mmSourcingType ||
           (existing.notes ?? null) !== notes ||
-          (existing.legacyQuantity ?? null) !== legacyQuantity;
+          (existing.legacyQuantity ?? null) !== legacyQuantity ||
+          existing.noLongerUsed !== noLongerUsed;
 
         if (!changed) return [];
 
@@ -393,6 +401,7 @@ export class BomsService {
             mmSourcingType,
             notes,
             legacyQuantity,
+            noLongerUsed,
           },
         ];
       });
@@ -411,6 +420,7 @@ export class BomsService {
             mmSourcingType: item.mmSourcingType,
             notes: item.notes,
             legacyQuantity: item.legacyQuantity,
+            noLongerUsed: item.noLongerUsed,
           })
           .where(eq(productStandardBoms.id, item.id))
           .returning();
@@ -424,6 +434,7 @@ export class BomsService {
               .values(
                 toInsert.map((item) => ({
                   ...item,
+                  noLongerUsed: item.noLongerUsed ?? false,
                   mmSourcingType: item.mmSourcingType ?? null,
                   productionSubDepartment,
                   createdBy: user.id,
@@ -445,7 +456,7 @@ export class BomsService {
   public async updateItem(itemId: string, updateBomItemDto: UpdateBomItemDto) {
     const existing = await this.db.query.productStandardBoms.findFirst({
       where: eq(productStandardBoms.id, itemId),
-      columns: { id: true, productDimensionId: true },
+      columns: { id: true, productDimensionId: true, quantityRequired: true, legacyQuantity: true },
     });
 
     if (!existing) {
@@ -474,11 +485,25 @@ export class BomsService {
     }
 
     await this.assertMmSourcingTypeForItems([updateBomItemDto]);
+    this.assertNoLongerUsedRule([
+      {
+        materialCode: updateBomItemDto.materialCode,
+        quantityRequired: updateBomItemDto.quantityRequired ?? Number(existing.quantityRequired),
+        legacyQuantity:
+          updateBomItemDto.legacyQuantity !== undefined
+            ? updateBomItemDto.legacyQuantity
+            : existing.legacyQuantity == null
+              ? null
+              : Number(existing.legacyQuantity),
+        noLongerUsed: updateBomItemDto.noLongerUsed ?? false,
+      },
+    ]);
 
     const [updatedItem] = await this.db
       .update(productStandardBoms)
       .set({
         ...updateBomItemDto,
+        noLongerUsed: updateBomItemDto.noLongerUsed ?? false,
         mmSourcingType: updateBomItemDto.mmSourcingType ?? null,
       })
       .where(eq(productStandardBoms.id, itemId))
@@ -566,6 +591,43 @@ export class BomsService {
           `المنتج ${dimension.product.code} ليس منتجاً مصنعاً.`,
         ),
       );
+    }
+  }
+
+  // Retired lines are comparison-only: quantity 0 and a positive legacy quantity.
+  private assertNoLongerUsedRule(
+    items: {
+      materialCode?: string;
+      quantityRequired: number;
+      legacyQuantity?: number | null;
+      noLongerUsed?: boolean;
+    }[],
+  ) {
+    for (const item of items) {
+      const noLongerUsed = item.noLongerUsed ?? false;
+      const legacyQuantity = item.legacyQuantity ?? null;
+      const materialLabel = item.materialCode ? ` (${item.materialCode})` : '';
+
+      if (noLongerUsed) {
+        if (item.quantityRequired !== 0 || legacyQuantity == null || legacyQuantity <= 0) {
+          throw new BadRequestException(
+            translate(
+              `A line marked as no longer used${materialLabel} must have quantity 0 and a legacy quantity greater than 0.`,
+              `البند المعلّم بأنه لم يعد مستخدماً${materialLabel} يجب أن تكون كميته 0 وكمية قديمة أكبر من 0.`,
+            ),
+          );
+        }
+        continue;
+      }
+
+      if (!(item.quantityRequired > 0)) {
+        throw new BadRequestException(
+          translate(
+            `Quantity${materialLabel} must be greater than 0 unless the line is marked as no longer used.`,
+            `يجب أن تكون الكمية${materialLabel} أكبر من 0 ما لم يُعلَّم البند بأنه لم يعد مستخدماً.`,
+          ),
+        );
+      }
     }
   }
 

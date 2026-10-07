@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   Min,
   IsNotEmpty,
@@ -51,6 +52,12 @@ export class ReplaceDepartmentBomItemDto {
   @IsOptional()
   @ApiPropertyOptional({ nullable: true })
   legacyQuantity: number | null;
+
+  // Omitted means false. True requires quantityRequired = 0 and legacyQuantity > 0.
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional()
+  noLongerUsed?: boolean;
 }
 
 export class ReplaceDepartmentBomDto {

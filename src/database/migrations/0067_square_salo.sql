@@ -1,0 +1,3 @@
+ALTER TABLE "product_standard_boms" ADD COLUMN "no_longer_used" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "product_standard_boms" ADD CONSTRAINT "psb_no_longer_used_check" CHECK (("product_standard_boms"."no_longer_used" = false AND "product_standard_boms"."quantity_required" > 0)
+          OR ("product_standard_boms"."no_longer_used" = true AND "product_standard_boms"."quantity_required" = 0 AND "product_standard_boms"."legacy_quantity" > 0));
