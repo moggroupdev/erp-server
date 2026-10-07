@@ -99,7 +99,8 @@ export const productStandardBoms = pgTable(
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected'), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
     mmSourcingType: mmSourcingTypeEnum('mm_sourcing_type'), // @APP_CHECKED - Non-null iff material is a manufactured_material; null otherwise
-    legacyQuantity: numeric('legacy_quantity'), // Optional reference quantity from legacy data; stored in same unit as quantityRequired (unitOfMeasurementSelected or base unit). Comparison only.
+    legacyQuantity: numeric('legacy_quantity'), // Optional reference quantity from legacy data; stored in same unit as quantityRequired (unitOfMeasurementSelected or base unit). Comparison only. Required and > 0 when noLongerUsed.
+    noLongerUsed: boolean('no_longer_used').notNull().default(false), // True only when the line is kept for legacy comparison: quantityRequired = 0 and legacyQuantity > 0
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -120,6 +121,12 @@ export const productStandardBoms = pgTable(
     index('product_standard_boms_production_sub_department_idx').on(table.productionSubDepartment),
     nonNegativeQuantityCheck('product_standard_boms_quantity_required_non_negative', table.quantityRequired),
     nonNegativeNullableQuantityCheck('product_standard_boms_legacy_quantity_non_negative', table.legacyQuantity),
+    // Active line: quantity > 0, legacy optional. Retired line: quantity = 0 and legacy > 0.
+    check(
+      'psb_no_longer_used_check',
+      sql`(${table.noLongerUsed} = false AND ${table.quantityRequired} > 0)
+          OR (${table.noLongerUsed} = true AND ${table.quantityRequired} = 0 AND ${table.legacyQuantity} > 0)`,
+    ),
   ],
 );
 

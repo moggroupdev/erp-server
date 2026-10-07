@@ -1,5 +1,5 @@
 import { Trim, TrimToNull } from 'src/utils/decorators';
-import { IsIn, Min, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, Min, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateIf } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MATERIAL_UNIT_VALUES, MM_SOURCING_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import { type MaterialUnit, type MmSourcingType, type ProductionSubDepartment } from 'src/utils/types';
@@ -45,4 +45,10 @@ export class UpdateBomItemDto {
   @IsOptional()
   @ApiPropertyOptional({ nullable: true })
   legacyQuantity: number | null;
+
+  // Omitted means false. True requires quantityRequired = 0 and legacyQuantity > 0.
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional()
+  noLongerUsed?: boolean;
 }

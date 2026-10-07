@@ -174,8 +174,13 @@ All sources live on the header — one source event per transaction; items only 
 ### Production
 
 - `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
-- `product_standard_boms.quantity_required` — non-negative (>= 0); zero is allowed to represent a line placeholder or reference item without a confirmed quantity. Stored in `unit_of_measurement_selected` (or base unit when null).
-- `product_standard_boms.legacy_quantity` — optional; when set, stored in the same unit as `quantity_required` (i.e. `unit_of_measurement_selected` or base unit when null). Used for reference/comparison only; no business logic depends on it.
+- `product_standard_boms.quantity_required` — stored in `unit_of_measurement_selected` (or base unit when null). Must be > 0 when `no_longer_used` is false.
+- `product_standard_boms.legacy_quantity` — stored in the same unit as `quantity_required`. Optional (null or >= 0) on an active line. Required and > 0 when `no_longer_used` is true. Comparison only; costing does not use it.
+- `product_standard_boms.no_longer_used` — not null, default false. Marks a line that is no longer used and is kept only so legacy mode can show the old quantity.
+  - `false`: `quantity_required` > 0, and `legacy_quantity` stays optional
+  - `true`: `quantity_required` = 0 and `legacy_quantity` > 0
+  - DB check `psb_no_longer_used_check`. The same rule is rejected with `BadRequestException` on BOM create, append, update, and replace-department. An omitted flag is treated as false.
+  - Costing and suggested price still sum `quantity_required`, so a retired line contributes 0. Bringing the material back updates the same row (clear the flag and set a new quantity); the unique key is `(product_dimension_id, material_code, production_sub_department)`.
 - `product_standard_boms.mm_sourcing_type` (`@APP_CHECKED`):
   - Nullable enum: `purchased` | `internally_manufactured` | `externally_manufactured`
   - Non-null **iff** the line's material has `materials.material_type = 'manufactured_material'`; must be null for raw materials / spare parts
