@@ -253,15 +253,14 @@ export class MaterialPurchaseOrdersService {
         order.deliveryPeriodDays !== deliveryPeriodDays ||
         (order.notes ?? null) !== (notes ?? null);
 
-      const savedOrder = headerChanged
-        ? (
-            await tx
-              .update(materialPurchaseOrders)
-              .set({ totalAmount, deliveryLocation, deliveryTiming, deliveryPeriodDays, notes })
-              .where(eq(materialPurchaseOrders.id, id))
-              .returning()
-          )[0]
-        : order;
+      const [savedOrder] = await tx
+        .update(materialPurchaseOrders)
+        .set({
+          ...(headerChanged ? { totalAmount, deliveryLocation, deliveryTiming, deliveryPeriodDays, notes } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(materialPurchaseOrders.id, id))
+        .returning();
 
       return { ...savedOrder, items: savedItems, paymentTerms: paymentTermsResult };
     });

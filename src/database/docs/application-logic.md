@@ -145,7 +145,7 @@ All sources live on the header — one source event per transaction; items only 
   - `quantity_allocated` is optional and informational, stored in the requisition line's `unit_of_measurement_selected`; not validated against `quantity_requested`
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Written at MPO create (`POST /material-purchase-orders`) and on update (`PATCH /material-purchase-orders/:id`), nested `requisitionAllocations`
-  - Update is allowed only until `createdAt` plus `MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS` (1 day). Reject when `cancelledAt` or `completedAt` is set, or the order already has a receipt or supplier invoice. `supplierId`, `code`, `createdAt`, and `createdBy` stay as created
+  - Update is allowed only until `createdAt` plus `MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS` (1 day). Reject when `cancelledAt` or `completedAt` is set, or the order already has a receipt or supplier invoice. `supplierId`, `code`, `createdAt`, and `createdBy` stay as created. `updatedAt` is null until the first successful update and is set to the current time on each update (receipts and invoices do not stamp it)
   - Every MPO line must include at least one allocation (create and update from open MPReq items only)
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - Requisition item `material_code` must match the MPO line `material_code`

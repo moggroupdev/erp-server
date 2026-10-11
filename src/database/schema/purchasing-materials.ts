@@ -125,6 +125,7 @@ export const materialPurchaseOrders = pgTable(
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
+    updatedAt: timestamp('updated_at', { withTimezone: true }), // Null until the first successful update; set only by PATCH
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
