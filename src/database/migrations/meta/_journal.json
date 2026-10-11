@@ -484,6 +484,13 @@
       "when": 1791710976865,
       "tag": "0068_flawless_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1791721104177,
+      "tag": "0069_massive_celestials",
+      "breakpoints": true
     }
   ]
 }

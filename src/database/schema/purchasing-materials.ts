@@ -21,6 +21,7 @@ import { materials } from './materials';
 import { contractItems } from './contracts';
 import { inventoryTransactions } from './inventory-transactions';
 import { supplierInvoices } from './supplier-invoices';
+import { supplierQuotationItems } from './request-for-quotations';
 
 export const materialPurchaseRequisitions = pgTable(
   'material_purchase_requisitions',
@@ -173,6 +174,7 @@ export const materialPurchaseOrderItems = pgTable(
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitPrice: numeric('unit_price').notNull(),
+    supplierQuotationItemId: uuid('supplier_quotation_item_id'), // @APP_CHECKED - When set, quotation must be submitted and its supplier must match the order
     notes: text('notes'),
   },
   (table) => [
@@ -181,8 +183,14 @@ export const materialPurchaseOrderItems = pgTable(
       columns: [table.materialPurchaseOrderId],
       foreignColumns: [materialPurchaseOrders.id],
     }),
+    foreignKey({
+      name: 'mpoi_sqi_material_fk',
+      columns: [table.supplierQuotationItemId, table.materialCode],
+      foreignColumns: [supplierQuotationItems.id, supplierQuotationItems.materialCode],
+    }),
     index('mpoi_mpo_id_idx').on(table.materialPurchaseOrderId),
     index('mpoi_material_code_idx').on(table.materialCode),
+    index('mpoi_sqi_id_idx').on(table.supplierQuotationItemId),
     unique('mpoi_mpo_material_unique').on(table.materialPurchaseOrderId, table.materialCode),
     positiveQuantityCheck('mpoi_quantity_ordered_positive', table.quantityOrdered),
     positiveQuantityCheck('mpoi_unit_price_positive', table.unitPrice),
@@ -410,6 +418,10 @@ export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrd
   }),
   requisitionItemAllocations: many(materialPurchaseOrderItemRequisitionItems),
   receiptItems: many(materialPurchaseReceiptItems),
+  supplierQuotationItem: one(supplierQuotationItems, {
+    fields: [materialPurchaseOrderItems.supplierQuotationItemId],
+    references: [supplierQuotationItems.id],
+  }),
 }));
 
 export const materialPurchaseRequisitionItemContractItemsRelations = relations(

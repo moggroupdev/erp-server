@@ -30,6 +30,17 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 ---
 
+## Composite-FK integrity copies
+
+Not performance caches. The writer sets them from the parent row on insert. Composite foreign keys reject a mismatch, so the copy cannot drift.
+
+| Column                                              | Must equal                                                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `supplier_quotation_items.request_for_quotation_id` | `supplier_quotations.request_for_quotation_id` and `request_for_quotation_items.request_for_quotation_id`       |
+| `supplier_quotation_items.material_code`            | `request_for_quotation_items.material_code` for `request_for_quotation_item_id`. MPO lines reuse it in `mpoi_sqi_material_fk` |
+
+---
+
 ## @CACHING_APP_SYNCED
 
 | Column                                  | Source                                                                                      |

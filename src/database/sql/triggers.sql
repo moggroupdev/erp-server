@@ -118,6 +118,26 @@ FOR EACH ROW EXECUTE PROCEDURE generate_material_purchase_requisitions_code();
 
 -- ---------------------------------------------------------------------------
 
+-- REQUESTS FOR QUOTATION: RFQ
+CREATE SEQUENCE IF NOT EXISTS request_for_quotations_code_seq START 1 INCREMENT 1;
+
+CREATE OR REPLACE FUNCTION generate_request_for_quotations_code()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.code IS NULL THEN
+    NEW.code := 'RFQ-' || LPAD(nextval('request_for_quotations_code_seq')::text, 8, '0');
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS request_for_quotations_generate_code ON request_for_quotations;
+CREATE TRIGGER request_for_quotations_generate_code
+BEFORE INSERT ON request_for_quotations
+FOR EACH ROW EXECUTE PROCEDURE generate_request_for_quotations_code();
+
+-- ---------------------------------------------------------------------------
+
 -- MATERIAL PURCHASE ORDERS: MPO
 CREATE SEQUENCE IF NOT EXISTS material_purchase_orders_code_seq START 1 INCREMENT 1;
 
@@ -649,6 +669,26 @@ BEGIN
       parent_record_id := p_row->>'customer_reception_id';
       root_table_name := 'customer_receptions';
       root_record_id := parent_record_id;
+
+    -- Requests for quotation
+    WHEN 'request_for_quotation_items' THEN
+      parent_table_name := 'request_for_quotations';
+      parent_record_id := p_row->>'request_for_quotation_id';
+      root_table_name := 'request_for_quotations';
+      root_record_id := parent_record_id;
+    WHEN 'supplier_quotations' THEN
+      parent_table_name := 'request_for_quotations';
+      parent_record_id := p_row->>'request_for_quotation_id';
+      root_table_name := 'request_for_quotations';
+      root_record_id := parent_record_id;
+    WHEN 'supplier_quotation_items' THEN
+      parent_table_name := 'supplier_quotations';
+      parent_record_id := p_row->>'supplier_quotation_id';
+      root_table_name := 'request_for_quotations';
+      SELECT request_for_quotation_id::text INTO v
+      FROM supplier_quotations
+      WHERE id = (p_row->>'supplier_quotation_id')::uuid;
+      root_record_id := v;
 
     -- Material purchasing
     WHEN 'material_purchase_requisition_items' THEN

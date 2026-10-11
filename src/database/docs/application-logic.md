@@ -105,6 +105,23 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Purchasing
 
+- Requests for quotation (`request_for_quotations` / items), separate from `supplier_quotation_emails` and from requisitions:
+  - No requisition foreign key. An RFQ is created on its own
+  - Header status is derived from timestamps: `draft` (no `issued_at`, no `cancelled_at`), `issued` (`issued_at` set, not closed or cancelled), `closed` (`closed_at`), `cancelled` (`cancelled_at`). `closed_at` requires `issued_at`. `closed_at` and `cancelled_at` are exclusive. A draft may be cancelled
+  - `response_deadline` is required once `issued_at` is set (database check)
+  - `request_for_quotation_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_requested` is in this unit
+  - One material per RFQ (database unique)
+- Supplier quotations (`supplier_quotations` / items): one row per `(request_for_quotation_id, supplier_id)`, edited in place
+  - Status is derived: `invited` (no `submitted_at` or `declined_at`), `submitted` (`submitted_at`), `declined` (`declined_at`). Those timestamps are exclusive
+  - On submit, `valid_until` and `delivery_period_days` are required (database check). `payment_terms` and `delivery_terms` stay optional text. A declined row must not carry those commercial fields (database check)
+  - A declined quotation has no `supplier_quotation_items` (`@APP_CHECKED`)
+  - `supplier_quotation_items.request_for_quotation_id` and `material_code` are composite-FK integrity copies. Set them from the supplier quotation and the RFQ line on insert. The database rejects a line whose RFQ or material does not match
+  - `supplier_quotation_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base unit or one of its conversions. It may differ from the RFQ line's unit. `unit_price` is in this unit. No offered quantity and no allocation in this phase
+- Material purchase order items (`material_purchase_order_items.supplier_quotation_item_id`) (`@APP_CHECKED`):
+  - Nullable. Lines with no quotation stay valid. `mpoi_sqi_material_fk` skips the check when the id is null and, when set, requires `material_code` to match the quotation item
+  - The quotation must be submitted (`submitted_at` set, `declined_at` null)
+  - `supplier_quotations.supplier_id` must equal `material_purchase_orders.supplier_id` for every linked line. An order can mix quotation items from several RFQs when they belong to that same supplier
+  - No quotation quantity allocation or remaining-quantity cap
 - Material purchase receipts (`material_purchase_receipts` / items):
   - Create via `POST /material-purchase-receipts` with permission `add_material_purchase_receipt`
   - Reject cancelled MPOs; require at least one line with `quantity_received + quantity_rejected > 0`
@@ -276,6 +293,8 @@ All sources live on the header — one source event per transaction; items only 
 | Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
 Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, derive status as: `rejected` (any gate `decision = 'rejected'`) → `approved` (all three gates `approved`) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` in the line's `unit_of_measurement_selected` (not cached).
+
+Requests for quotation: `draft` when `issued_at` and `cancelled_at` are null; `issued` when `issued_at` is set and `closed_at` and `cancelled_at` are null; `closed` when `closed_at` is set; `cancelled` when `cancelled_at` is set. Supplier quotations: `invited` when `submitted_at` and `declined_at` are null; `submitted` when `submitted_at` is set; `declined` when `declined_at` is set. Being chosen on an MPO is `material_purchase_order_items.supplier_quotation_item_id`, not a quotation status.
 
 ---
 
