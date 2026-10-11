@@ -2,6 +2,9 @@
 export const VAT_PERCENT = 14;
 export const VAT_RATE = VAT_PERCENT / 100;
 
+/** MPO may be updated only until createdAt plus this duration (1 day). */
+export const MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export const REQUEST_USER_KEY = 'user';
 export const ALLOWED_PERMISSION_KEY = 'allowedPermission';
 
@@ -73,6 +76,7 @@ export const PERMISSION_VALUES = [
   'add_inventory_transaction',
   'read_material_purchase_orders',
   'add_material_purchase_order',
+  'update_material_purchase_order',
   'add_material_purchase_receipt',
   'read_supplier_invoices',
   'add_supplier_invoice',

@@ -144,14 +144,15 @@ All sources live on the header — one source event per transaction; items only 
   - Links are editable only before any requisition gate decision (same lock as header and item edits)
   - `quantity_allocated` is optional and informational, stored in the requisition line's `unit_of_measurement_selected`; not validated against `quantity_requested`
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
-  - Written only at MPO create (`POST /material-purchase-orders` nested `requisitionAllocations`); no post-create allocation edit API
-  - Every MPO line must include at least one allocation (create from open MPReq items only)
+  - Written at MPO create (`POST /material-purchase-orders`) and on update (`PATCH /material-purchase-orders/:id`), nested `requisitionAllocations`
+  - Update is allowed only until `createdAt` plus `MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS` (1 day). Reject when `cancelledAt` or `completedAt` is set, or the order already has a receipt or supplier invoice. `supplierId`, `code`, `createdAt`, and `createdBy` stay as created
+  - Every MPO line must include at least one allocation (create and update from open MPReq items only)
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - Requisition item `material_code` must match the MPO line `material_code`
   - `quantity_allocated` is stored in the requisition line's `unit_of_measurement_selected` (junction has no unit column)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (requisition line unit)
   - `SUM(quantity_allocated)` per MPO line must equal `quantity_ordered` — convert both sides to the material's base unit when units differ
-  - Concurrent creates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the create transaction before insert
+  - Concurrent creates and updates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the transaction before write. On update, that sum ignores this order's current allocations so the order does not count against itself. Open requisition lines used while editing pass `excludeMaterialPurchaseOrderId` so this order's allocations stay available
   - When MPO cancel is added later, allocation SUMs must ignore cancelled orders or remaining qty will stay consumed
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):
   - Create via authenticated multipart upload (`POST /supplier-invoices`): PDF required; `supplier_id` copied from the linked material purchase order (`@RFP_APP_CHECKED`); do not accept `supplier_id` from the client; reject cancelled orders; enforce unique `(supplier_id, invoice_number)` with a clear conflict message

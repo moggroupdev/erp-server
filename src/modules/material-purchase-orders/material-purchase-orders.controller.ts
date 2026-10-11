@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -8,6 +8,7 @@ import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator'
 import { PERMISSIONS } from 'src/utils/constants';
 import { MaterialPurchaseOrdersService } from './material-purchase-orders.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
+import { UpdateMaterialPurchaseOrderDto } from './dto/update-material-purchase-order.dto';
 
 @Controller('material-purchase-orders')
 export class MaterialPurchaseOrdersController {
@@ -19,6 +20,14 @@ export class MaterialPurchaseOrdersController {
   @ApiBearerAuth()
   create(@Body() createDto: CreateMaterialPurchaseOrderDto, @RequestUser() user: User) {
     return this.materialPurchaseOrdersService.create(createDto, user);
+  }
+
+  @Patch(':id')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_MATERIAL_PURCHASE_ORDER)
+  @ApiBearerAuth()
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateDto: UpdateMaterialPurchaseOrderDto) {
+    return this.materialPurchaseOrdersService.update(id, updateDto);
   }
 
   @Get()

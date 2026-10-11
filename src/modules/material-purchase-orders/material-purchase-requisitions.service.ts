@@ -148,8 +148,23 @@ export class MaterialPurchaseRequisitionsService {
   }
 
   /** Fully approved requisition lines with remaining qty > 0, optionally filtered by material. */
-  public async listOpenItems(materialCode?: string) {
+  public async listOpenItems(materialCode?: string, excludeMaterialPurchaseOrderId?: string) {
     const trimmedCode = materialCode?.trim() || undefined;
+    const excludeOrderId = excludeMaterialPurchaseOrderId?.trim() || undefined;
+    if (
+      excludeOrderId &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(excludeOrderId)
+    ) {
+      throw new BadRequestException(translate('Invalid purchase order id.', 'معرف أمر التوريد غير صالح.'));
+    }
+
+    const allocatedExcludingOrder = excludeOrderId
+      ? sql`and ${materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId} not in (
+          select ${materialPurchaseOrderItems.id}
+          from ${materialPurchaseOrderItems}
+          where ${materialPurchaseOrderItems.materialPurchaseOrderId} = ${excludeOrderId}
+        )`
+      : sql``;
 
     const rows = await this.db
       .select({
@@ -179,6 +194,7 @@ export class MaterialPurchaseRequisitionsService {
           select sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated})
           from ${materialPurchaseOrderItemRequisitionItems}
           where ${materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId} = ${materialPurchaseRequisitionItems.id}
+          ${allocatedExcludingOrder}
         ), 0)`,
       })
       .from(materialPurchaseRequisitionItems)

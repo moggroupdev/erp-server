@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -7,13 +7,16 @@ import {
   materialPurchaseOrderPaymentTerms,
   materialPurchaseOrders,
   materialPurchaseReceiptItems,
+  materialPurchaseReceipts,
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
+  supplierInvoices,
   suppliers,
 } from 'src/database/schema';
 import {
   APPROVAL_DECISIONS,
+  MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS,
   MPO_DELIVERY_TIMINGS,
   MPO_PAYMENT_EVENTS,
   MPO_PAYMENT_VALUE_KINDS,
@@ -26,6 +29,7 @@ import { resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
+import { UpdateMaterialPurchaseOrderDto } from './dto/update-material-purchase-order.dto';
 import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purchase-order-item.dto';
 import { CreateMaterialPurchaseOrderPaymentTermDto } from './dto/create-material-purchase-order-payment-term.dto';
 
@@ -33,6 +37,12 @@ const MONEY_SCALE = 1_000_000;
 
 function toScaledAmount(amount: number) {
   return Math.round(amount * MONEY_SCALE);
+}
+
+function sameNullableNumber(current: string | number | null, next: number | null) {
+  if (current == null && next == null) return true;
+  if (current == null || next == null) return false;
+  return Number(current) === next;
 }
 
 function needsPaymentOffset(event: CreateMaterialPurchaseOrderPaymentTermDto['event']) {
@@ -120,6 +130,140 @@ export class MaterialPurchaseOrdersService {
         .returning();
 
       return { ...order, items: insertedItems, paymentTerms: insertedPaymentTerms };
+    });
+  }
+
+  public async update(id: string, updateDto: UpdateMaterialPurchaseOrderDto) {
+    const { items, notes, deliveryLocation, deliveryTiming, paymentTerms } = updateDto;
+    this.assertNoDuplicateMaterials(items.map((item) => item.materialCode));
+    await this.materialUnitValidationService.assertValidSelectedUnits(items);
+    this.assertEveryItemHasAllocations(items);
+    this.assertNoDuplicateAllocationsPerItem(items);
+
+    const deliveryPeriodDays = this.resolveDeliveryPeriodDays(deliveryTiming, updateDto.deliveryPeriodDays);
+    const normalizedTerms = this.normalizePaymentTerms(paymentTerms);
+
+    const totalAmount = items.reduce((sum, item) => sum + Number(item.quantityOrdered) * Number(item.unitPrice), 0);
+    const grandTotal = totalAmount + totalAmount * VAT_RATE;
+    this.assertPaymentTermsCoverTotal(normalizedTerms, grandTotal);
+
+    return await this.db.transaction(async (tx) => {
+      const [order] = await tx.select().from(materialPurchaseOrders).where(eq(materialPurchaseOrders.id, id)).for('update');
+
+      if (!order) {
+        throw new NotFoundException(
+          translate(`Material purchase order with ID ${id} does not exist.`, `لا يوجد أمر شراء مواد بالمعرف ${id}.`),
+        );
+      }
+
+      this.assertOrderIsEditable(order);
+      await this.assertNoReceiptsOrInvoices(tx, id);
+
+      const existingItems = await tx
+        .select()
+        .from(materialPurchaseOrderItems)
+        .where(eq(materialPurchaseOrderItems.materialPurchaseOrderId, id));
+
+      const existingByCode = new Map(existingItems.map((item) => [item.materialCode, item]));
+      const incomingCodes = new Set(items.map((item) => item.materialCode));
+      const resolvedItems: { id: string; materialCode: string }[] = [];
+      const savedItems: typeof existingItems = [];
+
+      for (const item of items) {
+        const existing = existingByCode.get(item.materialCode);
+        if (!existing) {
+          const [inserted] = await tx
+            .insert(materialPurchaseOrderItems)
+            .values({
+              materialPurchaseOrderId: id,
+              materialCode: item.materialCode,
+              unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+              quantityOrdered: item.quantityOrdered,
+              unitPrice: item.unitPrice,
+              notes: item.notes,
+            })
+            .returning();
+          resolvedItems.push(inserted);
+          savedItems.push(inserted);
+          continue;
+        }
+
+        const lineChanged =
+          existing.unitOfMeasurementSelected !== item.unitOfMeasurementSelected ||
+          Number(existing.quantityOrdered) !== Number(item.quantityOrdered) ||
+          Number(existing.unitPrice) !== Number(item.unitPrice) ||
+          (existing.notes ?? null) !== (item.notes ?? null);
+
+        if (lineChanged) {
+          const [updated] = await tx
+            .update(materialPurchaseOrderItems)
+            .set({
+              unitOfMeasurementSelected: item.unitOfMeasurementSelected,
+              quantityOrdered: item.quantityOrdered,
+              unitPrice: item.unitPrice,
+              notes: item.notes,
+            })
+            .where(eq(materialPurchaseOrderItems.id, existing.id))
+            .returning();
+          resolvedItems.push(updated);
+          savedItems.push(updated);
+          continue;
+        }
+
+        resolvedItems.push(existing);
+        savedItems.push(existing);
+      }
+
+      const allocationRows = await this.insertRequisitionAllocations(tx, items, resolvedItems, {
+        excludeOrderItemIds: existingItems.map((item) => item.id),
+        persist: false,
+      });
+
+      const existingItemIds = existingItems.map((item) => item.id);
+      const existingAllocations =
+        existingItemIds.length === 0
+          ? []
+          : await tx
+              .select()
+              .from(materialPurchaseOrderItemRequisitionItems)
+              .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, existingItemIds));
+
+      await this.diffRequisitionAllocations(
+        tx,
+        allocationRows,
+        existingAllocations,
+        new Set(resolvedItems.map((item) => item.id)),
+      );
+
+      const removedItems = existingItems.filter((item) => !incomingCodes.has(item.materialCode));
+      if (removedItems.length > 0) {
+        const removedIds = removedItems.map((item) => item.id);
+        await tx
+          .delete(materialPurchaseOrderItemRequisitionItems)
+          .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, removedIds));
+        await tx.delete(materialPurchaseOrderItems).where(inArray(materialPurchaseOrderItems.id, removedIds));
+      }
+
+      const paymentTermsResult = await this.diffPaymentTerms(tx, id, normalizedTerms);
+
+      const headerChanged =
+        Number(order.totalAmount) !== totalAmount ||
+        order.deliveryLocation !== deliveryLocation ||
+        order.deliveryTiming !== deliveryTiming ||
+        order.deliveryPeriodDays !== deliveryPeriodDays ||
+        (order.notes ?? null) !== (notes ?? null);
+
+      const savedOrder = headerChanged
+        ? (
+            await tx
+              .update(materialPurchaseOrders)
+              .set({ totalAmount, deliveryLocation, deliveryTiming, deliveryPeriodDays, notes })
+              .where(eq(materialPurchaseOrders.id, id))
+              .returning()
+          )[0]
+        : order;
+
+      return { ...savedOrder, items: savedItems, paymentTerms: paymentTermsResult };
     });
   }
 
@@ -390,10 +534,189 @@ export class MaterialPurchaseOrdersService {
     }
   }
 
+  private assertOrderIsEditable(order: { cancelledAt: Date | null; completedAt: Date | null; createdAt: Date }) {
+    if (order.cancelledAt) {
+      throw new BadRequestException(
+        translate('A cancelled purchase order cannot be updated.', 'لا يمكن تحديث أمر توريد ملغى.'),
+      );
+    }
+    if (order.completedAt) {
+      throw new BadRequestException(
+        translate('A completed purchase order cannot be updated.', 'لا يمكن تحديث أمر توريد مكتمل.'),
+      );
+    }
+    if (Date.now() > order.createdAt.getTime() + MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS) {
+      throw new BadRequestException(
+        translate(
+          'This purchase order can only be updated within one day of creation.',
+          'يمكن تحديث أمر التوريد خلال يوم واحد فقط من إنشائه.',
+        ),
+      );
+    }
+  }
+
+  private async assertNoReceiptsOrInvoices(tx: Tx, orderId: string) {
+    const [receipt] = await tx
+      .select({ id: materialPurchaseReceipts.id })
+      .from(materialPurchaseReceipts)
+      .where(eq(materialPurchaseReceipts.materialPurchaseOrderId, orderId))
+      .limit(1);
+
+    if (receipt) {
+      throw new BadRequestException(
+        translate(
+          'A purchase order that already has a receipt cannot be updated.',
+          'لا يمكن تحديث أمر توريد له سند استلام.',
+        ),
+      );
+    }
+
+    const [invoice] = await tx
+      .select({ id: supplierInvoices.id })
+      .from(supplierInvoices)
+      .where(eq(supplierInvoices.materialPurchaseOrderId, orderId))
+      .limit(1);
+
+    if (invoice) {
+      throw new BadRequestException(
+        translate(
+          'A purchase order that already has a supplier invoice cannot be updated.',
+          'لا يمكن تحديث أمر توريد له فاتورة مورد.',
+        ),
+      );
+    }
+  }
+
+  private async diffRequisitionAllocations(
+    tx: Tx,
+    desired: {
+      materialPurchaseOrderItemId: string;
+      materialPurchaseRequisitionItemId: string;
+      quantityAllocated: number;
+    }[],
+    existing: {
+      id: string;
+      materialPurchaseOrderItemId: string;
+      materialPurchaseRequisitionItemId: string;
+      quantityAllocated: string | number;
+    }[],
+    activeOrderItemIds: Set<string>,
+  ) {
+    const existingForActive = existing.filter((row) => activeOrderItemIds.has(row.materialPurchaseOrderItemId));
+    const keyOf = (orderItemId: string, requisitionItemId: string) => `${orderItemId}:${requisitionItemId}`;
+    const desiredByKey = new Map(
+      desired.map((row) => [keyOf(row.materialPurchaseOrderItemId, row.materialPurchaseRequisitionItemId), row]),
+    );
+    const existingByKey = new Map(
+      existingForActive.map((row) => [keyOf(row.materialPurchaseOrderItemId, row.materialPurchaseRequisitionItemId), row]),
+    );
+
+    const toInsert = desired.filter(
+      (row) => !existingByKey.has(keyOf(row.materialPurchaseOrderItemId, row.materialPurchaseRequisitionItemId)),
+    );
+    if (toInsert.length > 0) {
+      await tx.insert(materialPurchaseOrderItemRequisitionItems).values(
+        toInsert.map((row) => ({
+          materialPurchaseOrderItemId: row.materialPurchaseOrderItemId,
+          materialPurchaseRequisitionItemId: row.materialPurchaseRequisitionItemId,
+          quantityAllocated: row.quantityAllocated,
+        })),
+      );
+    }
+
+    for (const row of desired) {
+      const current = existingByKey.get(keyOf(row.materialPurchaseOrderItemId, row.materialPurchaseRequisitionItemId));
+      if (!current || Number(current.quantityAllocated) === row.quantityAllocated) continue;
+      await tx
+        .update(materialPurchaseOrderItemRequisitionItems)
+        .set({ quantityAllocated: row.quantityAllocated })
+        .where(eq(materialPurchaseOrderItemRequisitionItems.id, current.id));
+    }
+
+    const toDeleteIds = existingForActive
+      .filter((row) => !desiredByKey.has(keyOf(row.materialPurchaseOrderItemId, row.materialPurchaseRequisitionItemId)))
+      .map((row) => row.id);
+    if (toDeleteIds.length > 0) {
+      await tx
+        .delete(materialPurchaseOrderItemRequisitionItems)
+        .where(inArray(materialPurchaseOrderItemRequisitionItems.id, toDeleteIds));
+    }
+  }
+
+  private async diffPaymentTerms(
+    tx: Tx,
+    orderId: string,
+    terms: {
+      event: CreateMaterialPurchaseOrderPaymentTermDto['event'];
+      offsetDays: number | null;
+      valueKind: CreateMaterialPurchaseOrderPaymentTermDto['valueKind'];
+      value: number | null;
+    }[],
+  ) {
+    const existing = await tx
+      .select()
+      .from(materialPurchaseOrderPaymentTerms)
+      .where(eq(materialPurchaseOrderPaymentTerms.materialPurchaseOrderId, orderId));
+    const existingBySequence = new Map(existing.map((term) => [term.sequenceOrder, term]));
+    const saved: (typeof existing)[number][] = [];
+
+    for (let index = 0; index < terms.length; index++) {
+      const term = terms[index];
+      const sequenceOrder = index + 1;
+      const current = existingBySequence.get(sequenceOrder);
+      if (!current) {
+        const [inserted] = await tx
+          .insert(materialPurchaseOrderPaymentTerms)
+          .values({
+            materialPurchaseOrderId: orderId,
+            sequenceOrder,
+            event: term.event,
+            offsetDays: term.offsetDays,
+            valueKind: term.valueKind,
+            value: term.value,
+          })
+          .returning();
+        saved.push(inserted);
+        continue;
+      }
+
+      const changed =
+        current.event !== term.event ||
+        current.offsetDays !== term.offsetDays ||
+        current.valueKind !== term.valueKind ||
+        !sameNullableNumber(current.value, term.value);
+
+      if (!changed) {
+        saved.push(current);
+        continue;
+      }
+
+      const [updated] = await tx
+        .update(materialPurchaseOrderPaymentTerms)
+        .set({
+          event: term.event,
+          offsetDays: term.offsetDays,
+          valueKind: term.valueKind,
+          value: term.value,
+        })
+        .where(eq(materialPurchaseOrderPaymentTerms.id, current.id))
+        .returning();
+      saved.push(updated);
+    }
+
+    const staleIds = existing.filter((term) => term.sequenceOrder > terms.length).map((term) => term.id);
+    if (staleIds.length > 0) {
+      await tx.delete(materialPurchaseOrderPaymentTerms).where(inArray(materialPurchaseOrderPaymentTerms.id, staleIds));
+    }
+
+    return saved;
+  }
+
   private async insertRequisitionAllocations(
     tx: Tx,
     items: CreateMaterialPurchaseOrderItemDto[],
     insertedItems: { id: string; materialCode: string }[],
+    options?: { excludeOrderItemIds?: string[]; persist?: boolean },
   ) {
     const allocationRows: {
       materialPurchaseOrderItemId: string;
@@ -473,13 +796,25 @@ export class MaterialPurchaseOrdersService {
     });
     const materialByCode = new Map(materialRows.map((row) => [row.code, row]));
 
+    const excludeOrderItemIds = options?.excludeOrderItemIds?.filter(Boolean) ?? [];
+    const requisitionFilter = inArray(
+      materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+      requisitionItemIds,
+    );
     const existingAllocations = await tx
       .select({
         materialPurchaseRequisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
         totalAllocated: sql<string>`coalesce(sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated}), 0)`,
       })
       .from(materialPurchaseOrderItemRequisitionItems)
-      .where(inArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId, requisitionItemIds))
+      .where(
+        excludeOrderItemIds.length > 0
+          ? and(
+              requisitionFilter,
+              notInArray(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, excludeOrderItemIds),
+            )
+          : requisitionFilter,
+      )
       .groupBy(materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId);
 
     const existingAllocatedByReqItemId = new Map(
@@ -585,13 +920,17 @@ export class MaterialPurchaseOrdersService {
       }
     }
 
-    await tx.insert(materialPurchaseOrderItemRequisitionItems).values(
-      allocationRows.map((row) => ({
-        materialPurchaseOrderItemId: row.materialPurchaseOrderItemId,
-        materialPurchaseRequisitionItemId: row.materialPurchaseRequisitionItemId,
-        quantityAllocated: row.quantityAllocated,
-      })),
-    );
+    if (options?.persist !== false) {
+      await tx.insert(materialPurchaseOrderItemRequisitionItems).values(
+        allocationRows.map((row) => ({
+          materialPurchaseOrderItemId: row.materialPurchaseOrderItemId,
+          materialPurchaseRequisitionItemId: row.materialPurchaseRequisitionItemId,
+          quantityAllocated: row.quantityAllocated,
+        })),
+      );
+    }
+
+    return allocationRows;
   }
 
   /**

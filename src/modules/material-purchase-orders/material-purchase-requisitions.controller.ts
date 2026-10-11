@@ -49,8 +49,11 @@ export class MaterialPurchaseRequisitionsController {
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_REQUISITIONS)
   @ApiBearerAuth()
-  listOpenItems(@Query('materialCode') materialCode?: string) {
-    return this.materialPurchaseRequisitionsService.listOpenItems(materialCode);
+  listOpenItems(
+    @Query('materialCode') materialCode?: string,
+    @Query('excludeMaterialPurchaseOrderId') excludeMaterialPurchaseOrderId?: string,
+  ) {
+    return this.materialPurchaseRequisitionsService.listOpenItems(materialCode, excludeMaterialPurchaseOrderId);
   }
 
   @Get(':id')
