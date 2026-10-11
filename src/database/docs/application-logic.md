@@ -139,6 +139,10 @@ All sources live on the header — one source event per transaction; items only 
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Gate decide is not idempotent — second decision on the same party returns 400
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
+- `material_purchase_requisition_item_contract_items` (`@APP_CHECKED`):
+  - Contract line must not be cancelled at link time
+  - Links are editable only before any requisition gate decision (same lock as header and item edits)
+  - `quantity_allocated` is optional and informational, stored in the requisition line's `unit_of_measurement_selected`; not validated against `quantity_requested`
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
   - Written only at MPO create (`POST /material-purchase-orders` nested `requisitionAllocations`); no post-create allocation edit API
   - Every MPO line must include at least one allocation (create from open MPReq items only)

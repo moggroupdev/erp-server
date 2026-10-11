@@ -656,6 +656,14 @@ BEGIN
       parent_record_id := p_row->>'material_purchase_requisition_id';
       root_table_name := 'material_purchase_requisitions';
       root_record_id := parent_record_id;
+    WHEN 'material_purchase_requisition_item_contract_items' THEN
+      parent_table_name := 'material_purchase_requisition_items';
+      parent_record_id := p_row->>'material_purchase_requisition_item_id';
+      root_table_name := 'material_purchase_requisitions';
+      SELECT material_purchase_requisition_id::text INTO v
+      FROM material_purchase_requisition_items
+      WHERE id = (p_row->>'material_purchase_requisition_item_id')::uuid;
+      root_record_id := v;
     WHEN 'material_purchase_order_items' THEN
       parent_table_name := 'material_purchase_orders';
       parent_record_id := p_row->>'material_purchase_order_id';
@@ -667,14 +675,6 @@ BEGIN
       root_table_name := 'material_purchase_orders';
       root_record_id := parent_record_id;
     WHEN 'material_purchase_order_item_requisition_items' THEN
-      parent_table_name := 'material_purchase_order_items';
-      parent_record_id := p_row->>'material_purchase_order_item_id';
-      root_table_name := 'material_purchase_orders';
-      SELECT material_purchase_order_id::text INTO v
-      FROM material_purchase_order_items
-      WHERE id = (p_row->>'material_purchase_order_item_id')::uuid;
-      root_record_id := v;
-    WHEN 'material_purchase_order_item_contract_items' THEN
       parent_table_name := 'material_purchase_order_items';
       parent_record_id := p_row->>'material_purchase_order_item_id';
       root_table_name := 'material_purchase_orders';

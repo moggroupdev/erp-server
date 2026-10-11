@@ -82,6 +82,33 @@ export const materialPurchaseRequisitionItems = pgTable(
   ],
 );
 
+// Links requisition lines to the contract lines driving the demand; qty is informational only.
+export const materialPurchaseRequisitionItemContractItems = pgTable(
+  'material_purchase_requisition_item_contract_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    materialPurchaseRequisitionItemId: uuid('material_purchase_requisition_item_id').notNull(),
+    contractItemId: uuid('contract_item_id').notNull(), // @APP_CHECKED - Contract line must not be cancelled at link time; links are editable only before any requisition gate decision
+    quantityAllocated: numeric('quantity_allocated'), // Optional, informational only, in the requisition line's unit_of_measurement_selected; not validated against quantity_requested
+  },
+  (table) => [
+    foreignKey({
+      name: 'mprqici_mprqi_id_fk',
+      columns: [table.materialPurchaseRequisitionItemId],
+      foreignColumns: [materialPurchaseRequisitionItems.id],
+    }),
+    foreignKey({
+      name: 'mprqici_contract_item_id_fk',
+      columns: [table.contractItemId],
+      foreignColumns: [contractItems.id],
+    }),
+    index('mprqici_mprqi_id_idx').on(table.materialPurchaseRequisitionItemId),
+    index('mprqici_contract_item_id_idx').on(table.contractItemId),
+    unique('mprqici_mprqi_contract_item_unique').on(table.materialPurchaseRequisitionItemId, table.contractItemId),
+    positiveNullableQuantityCheck('mprqici_quantity_allocated_positive', table.quantityAllocated),
+  ],
+);
+
 export const materialPurchaseOrders = pgTable(
   'material_purchase_orders',
   {
@@ -245,32 +272,6 @@ export const materialPurchaseOrderItemRequisitionItems = pgTable(
   ],
 );
 
-export const materialPurchaseOrderItemContractItems = pgTable(
-  'material_purchase_order_item_contract_items',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    materialPurchaseOrderItemId: uuid('material_purchase_order_item_id').notNull(),
-    contractItemId: uuid('contract_item_id').notNull(),
-    quantityAllocated: numeric('quantity_allocated'), // Optional — informational only, not validated against quantity_ordered
-  },
-  (table) => [
-    foreignKey({
-      name: 'mpoici_mpoi_id_fk',
-      columns: [table.materialPurchaseOrderItemId],
-      foreignColumns: [materialPurchaseOrderItems.id],
-    }),
-    foreignKey({
-      name: 'mpoici_contract_item_id_fk',
-      columns: [table.contractItemId],
-      foreignColumns: [contractItems.id],
-    }),
-    index('mpoici_mpoi_id_idx').on(table.materialPurchaseOrderItemId),
-    index('mpoici_contract_item_id_idx').on(table.contractItemId),
-    unique('mpoici_mpoi_contract_item_unique').on(table.materialPurchaseOrderItemId, table.contractItemId),
-    positiveNullableQuantityCheck('mpoici_quantity_allocated_positive', table.quantityAllocated),
-  ],
-);
-
 export const materialPurchaseReceipts = pgTable(
   'material_purchase_receipts',
   {
@@ -371,6 +372,7 @@ export const materialPurchaseRequisitionItemsRelations = relations(materialPurch
     references: [materials.code],
   }),
   orderItemAllocations: many(materialPurchaseOrderItemRequisitionItems),
+  contractItemAllocations: many(materialPurchaseRequisitionItemContractItems),
 }));
 
 export const materialPurchaseOrdersRelations = relations(materialPurchaseOrders, ({ one, many }) => ({
@@ -405,20 +407,19 @@ export const materialPurchaseOrderItemsRelations = relations(materialPurchaseOrd
     fields: [materialPurchaseOrderItems.materialCode],
     references: [materials.code],
   }),
-  contractItemAllocations: many(materialPurchaseOrderItemContractItems),
   requisitionItemAllocations: many(materialPurchaseOrderItemRequisitionItems),
   receiptItems: many(materialPurchaseReceiptItems),
 }));
 
-export const materialPurchaseOrderItemContractItemsRelations = relations(
-  materialPurchaseOrderItemContractItems,
+export const materialPurchaseRequisitionItemContractItemsRelations = relations(
+  materialPurchaseRequisitionItemContractItems,
   ({ one }) => ({
-    materialPurchaseOrderItem: one(materialPurchaseOrderItems, {
-      fields: [materialPurchaseOrderItemContractItems.materialPurchaseOrderItemId],
-      references: [materialPurchaseOrderItems.id],
+    materialPurchaseRequisitionItem: one(materialPurchaseRequisitionItems, {
+      fields: [materialPurchaseRequisitionItemContractItems.materialPurchaseRequisitionItemId],
+      references: [materialPurchaseRequisitionItems.id],
     }),
     contractItem: one(contractItems, {
-      fields: [materialPurchaseOrderItemContractItems.contractItemId],
+      fields: [materialPurchaseRequisitionItemContractItems.contractItemId],
       references: [contractItems.id],
     }),
   }),

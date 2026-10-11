@@ -25,12 +25,12 @@ Tables deleted (child rows first):
   material_purchase_receipt_items
   material_purchase_receipts
   supplier_invoices
-  material_purchase_order_item_contract_items      (required FK child)
   material_purchase_order_item_requisition_items   (required FK child)
   material_purchase_order_items
   material_purchase_orders
 
 When --with-requisitions / interactive yes is chosen, also:
+  material_purchase_requisition_item_contract_items
   material_purchase_requisition_items
   material_purchase_requisitions
 
@@ -58,13 +58,13 @@ const PURCHASING_INVENTORY_TABLES = [
   { name: 'material_purchase_receipt_items', table: schema.materialPurchaseReceiptItems },
   { name: 'material_purchase_receipts', table: schema.materialPurchaseReceipts },
   { name: 'supplier_invoices', table: schema.supplierInvoices },
-  { name: 'material_purchase_order_item_contract_items', table: schema.materialPurchaseOrderItemContractItems },
   { name: 'material_purchase_order_item_requisition_items', table: schema.materialPurchaseOrderItemRequisitionItems },
   { name: 'material_purchase_order_items', table: schema.materialPurchaseOrderItems },
   { name: 'material_purchase_orders', table: schema.materialPurchaseOrders },
 ] as const;
 
 const REQUISITION_TABLES = [
+  { name: 'material_purchase_requisition_item_contract_items', table: schema.materialPurchaseRequisitionItemContractItems },
   { name: 'material_purchase_requisition_items', table: schema.materialPurchaseRequisitionItems },
   { name: 'material_purchase_requisitions', table: schema.materialPurchaseRequisitions },
 ] as const;
@@ -291,11 +291,12 @@ async function confirmDeletion(
     console.log('\n========== DELETE PURCHASING + INVENTORY ==========');
     console.log('This permanently deletes ALL rows in the tables below.');
     console.log('inventory_transactions includes every source type (receipt, issue, return).');
-    console.log('material_purchase_order_item_contract_items is included because it references order items.');
     console.log('material_purchase_order_item_requisition_items is included because it references order items.');
     console.log('MPO / MPR / IVT code sequences will restart at 1.');
     if (withRequisitions) {
-      console.log('Requisitions ARE included: material_purchase_requisition_items, material_purchase_requisitions.');
+      console.log(
+        'Requisitions ARE included: material_purchase_requisition_item_contract_items, material_purchase_requisition_items, material_purchase_requisitions.',
+      );
       console.log('material_purchase_requisitions_code_seq will also restart at 1.');
     } else {
       console.log('Material purchase requisitions are NOT included (kept intact; MPO allocations cleared).');

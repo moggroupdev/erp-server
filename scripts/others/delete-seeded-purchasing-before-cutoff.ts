@@ -15,7 +15,7 @@ dotenv.config();
 const USAGE = `Usage: npm run delete:seeded-purchasing-before-cutoff -- [options]
 
 Deletes seeded material purchase orders dated before the cutoff, plus every
-child row under those MPOs (items, contract/requisition links, invoices,
+child row under those MPOs (items, requisition links, invoices,
 receipts, inventory transactions). Uploaded invoice PDFs are removed from
 disk after a successful commit.
 
@@ -33,7 +33,6 @@ Child tables deleted (regardless of their own notes/dates):
   inventory_transactions
   material_purchase_receipt_items
   material_purchase_receipts
-  material_purchase_order_item_contract_items
   material_purchase_order_item_requisition_items
   supplier_invoices (+ PDF files under uploads/supplier-invoices/)
   material_purchase_order_items
@@ -159,7 +158,6 @@ async function countChildRows(db: SeedClient, mpoIds: string[]): Promise<CountTa
     { name: 'inventory_transactions', count: 0 },
     { name: 'material_purchase_receipt_items', count: 0 },
     { name: 'material_purchase_receipts', count: 0 },
-    { name: 'material_purchase_order_item_contract_items', count: 0 },
     { name: 'material_purchase_order_item_requisition_items', count: 0 },
     { name: 'supplier_invoices', count: 0 },
     { name: 'material_purchase_order_items', count: 0 },
@@ -228,16 +226,6 @@ async function countChildRows(db: SeedClient, mpoIds: string[]): Promise<CountTa
       .where(inArray(schema.materialPurchaseReceipts.materialPurchaseOrderId, mpoIds)),
   );
 
-  const materialPurchaseOrderItemContractItems =
-    orderItemIds.length === 0
-      ? 0
-      : await countMatching(
-          db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(schema.materialPurchaseOrderItemContractItems)
-            .where(inArray(schema.materialPurchaseOrderItemContractItems.materialPurchaseOrderItemId, orderItemIds)),
-        );
-
   const materialPurchaseOrderItemRequisitionItems =
     orderItemIds.length === 0
       ? 0
@@ -276,7 +264,6 @@ async function countChildRows(db: SeedClient, mpoIds: string[]): Promise<CountTa
     { name: 'inventory_transactions', count: inventoryTransactions },
     { name: 'material_purchase_receipt_items', count: materialPurchaseReceiptItems },
     { name: 'material_purchase_receipts', count: materialPurchaseReceipts },
-    { name: 'material_purchase_order_item_contract_items', count: materialPurchaseOrderItemContractItems },
     { name: 'material_purchase_order_item_requisition_items', count: materialPurchaseOrderItemRequisitionItems },
     { name: 'supplier_invoices', count: supplierInvoices },
     { name: 'material_purchase_order_items', count: materialPurchaseOrderItems },
@@ -386,14 +373,6 @@ async function deleteTargetTrees(tx: SeedClient, mpoIds: string[]): Promise<stri
   }
 
   if (orderItemIds.length > 0) {
-    const deletedContractLinks = await tx
-      .delete(schema.materialPurchaseOrderItemContractItems)
-      .where(inArray(schema.materialPurchaseOrderItemContractItems.materialPurchaseOrderItemId, orderItemIds))
-      .returning({ id: schema.materialPurchaseOrderItemContractItems.id });
-    console.log(
-      `  deleted ${String(deletedContractLinks.length).padStart(8)}  material_purchase_order_item_contract_items`,
-    );
-
     const deletedRequisitionLinks = await tx
       .delete(schema.materialPurchaseOrderItemRequisitionItems)
       .where(inArray(schema.materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, orderItemIds))
@@ -402,7 +381,6 @@ async function deleteTargetTrees(tx: SeedClient, mpoIds: string[]): Promise<stri
       `  deleted ${String(deletedRequisitionLinks.length).padStart(8)}  material_purchase_order_item_requisition_items`,
     );
   } else {
-    console.log(`  deleted ${String(0).padStart(8)}  material_purchase_order_item_contract_items`);
     console.log(`  deleted ${String(0).padStart(8)}  material_purchase_order_item_requisition_items`);
   }
 
