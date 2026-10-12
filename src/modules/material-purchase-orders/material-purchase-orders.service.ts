@@ -11,7 +11,10 @@ import {
   materialPurchaseRequisitionItems,
   materialPurchaseRequisitions,
   materials,
+  requestForQuotations,
   supplierInvoices,
+  supplierQuotationItems,
+  supplierQuotations,
   suppliers,
 } from 'src/database/schema';
 import {
@@ -76,6 +79,7 @@ export class MaterialPurchaseOrdersService {
     await this.materialUnitValidationService.assertValidSelectedUnits(items);
     this.assertEveryItemHasAllocations(items);
     this.assertNoDuplicateAllocationsPerItem(items);
+    await this.assertSupplierQuotationLinks(supplierId, items);
 
     const deliveryPeriodDays = this.resolveDeliveryPeriodDays(deliveryTiming, createDto.deliveryPeriodDays);
     const normalizedTerms = this.normalizePaymentTerms(paymentTerms);
@@ -109,6 +113,7 @@ export class MaterialPurchaseOrdersService {
             quantityOrdered: item.quantityOrdered,
             unitPrice: item.unitPrice,
             notes: item.notes,
+            supplierQuotationItemId: item.supplierQuotationItemId ?? null,
           })),
         )
         .returning();
@@ -157,6 +162,7 @@ export class MaterialPurchaseOrdersService {
       }
 
       this.assertOrderIsEditable(order);
+      await this.assertSupplierQuotationLinks(order.supplierId, items);
       await this.assertNoReceiptsOrInvoices(tx, id);
 
       const existingItems = await tx
@@ -181,6 +187,7 @@ export class MaterialPurchaseOrdersService {
               quantityOrdered: item.quantityOrdered,
               unitPrice: item.unitPrice,
               notes: item.notes,
+              supplierQuotationItemId: item.supplierQuotationItemId ?? null,
             })
             .returning();
           resolvedItems.push(inserted);
@@ -192,7 +199,8 @@ export class MaterialPurchaseOrdersService {
           existing.unitOfMeasurementSelected !== item.unitOfMeasurementSelected ||
           Number(existing.quantityOrdered) !== Number(item.quantityOrdered) ||
           Number(existing.unitPrice) !== Number(item.unitPrice) ||
-          (existing.notes ?? null) !== (item.notes ?? null);
+          (existing.notes ?? null) !== (item.notes ?? null) ||
+          (existing.supplierQuotationItemId ?? null) !== (item.supplierQuotationItemId ?? null);
 
         if (lineChanged) {
           const [updated] = await tx
@@ -202,6 +210,7 @@ export class MaterialPurchaseOrdersService {
               quantityOrdered: item.quantityOrdered,
               unitPrice: item.unitPrice,
               notes: item.notes,
+              supplierQuotationItemId: item.supplierQuotationItemId ?? null,
             })
             .where(eq(materialPurchaseOrderItems.id, existing.id))
             .returning();
@@ -302,6 +311,9 @@ export class MaterialPurchaseOrdersService {
 
     const progressByItemId = await this.getQuantityProgressByOrderItemId(order.items);
     const allocationsByOrderItemId = await this.getRequisitionAllocationsByOrderItemIds(order.items.map((item) => item.id));
+    const quotationLinkByItemId = await this.getQuotationLinksByItemId(
+      order.items.map((item) => item.supplierQuotationItemId).filter((id): id is string => !!id),
+    );
 
     return {
       ...order,
@@ -312,6 +324,9 @@ export class MaterialPurchaseOrdersService {
           quantityReceived: progress?.quantityReceived ?? 0,
           quantityRemaining: progress?.quantityRemaining ?? Number(item.quantityOrdered),
           requisitionAllocations: allocationsByOrderItemId.get(item.id) ?? [],
+          supplierQuotation: item.supplierQuotationItemId
+            ? (quotationLinkByItemId.get(item.supplierQuotationItemId) ?? null)
+            : null,
         };
       }),
     };
@@ -518,6 +533,83 @@ export class MaterialPurchaseOrdersService {
         );
       }
     }
+  }
+
+  private async assertSupplierQuotationLinks(
+    supplierId: string,
+    items: { materialCode: string; supplierQuotationItemId?: string | null }[],
+  ) {
+    const linked = items.filter((item) => item.supplierQuotationItemId);
+    if (linked.length === 0) return;
+
+    const ids = [...new Set(linked.map((item) => item.supplierQuotationItemId!))];
+    const rows = await this.db
+      .select({
+        id: supplierQuotationItems.id,
+        materialCode: supplierQuotationItems.materialCode,
+        supplierId: supplierQuotations.supplierId,
+        submittedAt: supplierQuotations.submittedAt,
+        declinedAt: supplierQuotations.declinedAt,
+      })
+      .from(supplierQuotationItems)
+      .innerJoin(supplierQuotations, eq(supplierQuotationItems.supplierQuotationId, supplierQuotations.id))
+      .where(inArray(supplierQuotationItems.id, ids));
+
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    for (const item of linked) {
+      const row = byId.get(item.supplierQuotationItemId!);
+      if (!row) {
+        throw new NotFoundException(translate('Supplier quotation line not found.', 'بند عرض سعر المورد غير موجود.'));
+      }
+      if (row.materialCode !== item.materialCode) {
+        throw new BadRequestException(
+          translate(
+            `Quotation line material ${row.materialCode} does not match order line material ${item.materialCode}.`,
+            `مادة بند عرض السعر ${row.materialCode} لا تطابق مادة بند أمر التوريد ${item.materialCode}.`,
+          ),
+        );
+      }
+      if (!row.submittedAt || row.declinedAt) {
+        throw new BadRequestException(
+          translate(
+            'Only a submitted supplier quotation can be linked to a purchase order.',
+            'يمكن ربط أمر التوريد بعرض سعر مورد مقدم فقط.',
+          ),
+        );
+      }
+      if (row.supplierId !== supplierId) {
+        throw new BadRequestException(
+          translate(
+            'The quotation supplier must match the purchase order supplier.',
+            'يجب أن يطابق مورد عرض السعر مورد أمر التوريد.',
+          ),
+        );
+      }
+    }
+  }
+
+  private async getQuotationLinksByItemId(ids: string[]) {
+    const links = new Map<string, { requestForQuotationId: string; requestForQuotationCode: string }>();
+    if (ids.length === 0) return links;
+
+    const rows = await this.db
+      .select({
+        id: supplierQuotationItems.id,
+        requestForQuotationId: requestForQuotations.id,
+        requestForQuotationCode: requestForQuotations.code,
+      })
+      .from(supplierQuotationItems)
+      .innerJoin(supplierQuotations, eq(supplierQuotationItems.supplierQuotationId, supplierQuotations.id))
+      .innerJoin(requestForQuotations, eq(supplierQuotations.requestForQuotationId, requestForQuotations.id))
+      .where(inArray(supplierQuotationItems.id, ids));
+
+    for (const row of rows) {
+      links.set(row.id, {
+        requestForQuotationId: row.requestForQuotationId,
+        requestForQuotationCode: row.requestForQuotationCode,
+      });
+    }
+    return links;
   }
 
   private async assertSupplierExists(supplierId: string) {

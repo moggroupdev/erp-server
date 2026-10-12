@@ -122,6 +122,7 @@ All sources live on the header — one source event per transaction; items only 
   - The quotation must be submitted (`submitted_at` set, `declined_at` null)
   - `supplier_quotations.supplier_id` must equal `material_purchase_orders.supplier_id` for every linked line. An order can mix quotation items from several RFQs when they belong to that same supplier
   - No quotation quantity allocation or remaining-quantity cap
+  - API: `POST/GET/PATCH /request-for-quotations`, item routes, `POST :id/issue|close|cancel`, and nested `supplier-quotations` (invite, patch, submit, decline, items). `GET /request-for-quotations/quotation-items?supplierId=&materialCode=` lists submitted lines for purchase-order linking. Permissions: `add_request_for_quotation`, `read_request_for_quotations`, `update_request_for_quotation`
 - Material purchase receipts (`material_purchase_receipts` / items):
   - Create via `POST /material-purchase-receipts` with permission `add_material_purchase_receipt`
   - Reject cancelled MPOs; require at least one line with `quantity_received + quantity_rejected > 0`

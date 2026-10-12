@@ -25,6 +25,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { BomsModule } from './modules/boms/boms.module';
 import { InventoryTransactionsModule } from './modules/inventory-transactions/inventory-transactions.module';
 import { MaterialPurchaseOrdersModule } from './modules/material-purchase-orders/material-purchase-orders.module';
+import { RequestForQuotationsModule } from './modules/request-for-quotations/request-for-quotations.module';
 import { LegacyIssuePermitsModule } from './modules/legacy-issue-permits/legacy-issue-permits.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -50,6 +51,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     BomsModule,
     InventoryTransactionsModule,
     MaterialPurchaseOrdersModule,
+    RequestForQuotationsModule,
     LegacyIssuePermitsModule,
     ReportsModule,
     DashboardModule,
