@@ -548,8 +548,6 @@ export class MaterialPurchaseOrdersService {
         id: supplierQuotationItems.id,
         materialCode: supplierQuotationItems.materialCode,
         supplierId: supplierQuotations.supplierId,
-        submittedAt: supplierQuotations.submittedAt,
-        declinedAt: supplierQuotations.declinedAt,
       })
       .from(supplierQuotationItems)
       .innerJoin(supplierQuotations, eq(supplierQuotationItems.supplierQuotationId, supplierQuotations.id))
@@ -566,14 +564,6 @@ export class MaterialPurchaseOrdersService {
           translate(
             `Quotation line material ${row.materialCode} does not match order line material ${item.materialCode}.`,
             `مادة بند عرض السعر ${row.materialCode} لا تطابق مادة بند أمر التوريد ${item.materialCode}.`,
-          ),
-        );
-      }
-      if (!row.submittedAt || row.declinedAt) {
-        throw new BadRequestException(
-          translate(
-            'Only a submitted supplier quotation can be linked to a purchase order.',
-            'يمكن ربط أمر التوريد بعرض سعر مورد مقدم فقط.',
           ),
         );
       }

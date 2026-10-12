@@ -52,7 +52,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Supplier invoices: tax/e-invoice documents linked to exactly one of a material purchase order, product purchase order, or outsourcing order; one order may have multiple invoices over time; invoices can be created from an uploaded ETA PDF on a material purchase order (parsed in the app, confirmed by the user, then saved with the PDF), or seeded and later given a PDF via attach/replace (same parse-and-confirm flow, which also overwrites invoice number, date, and totals from the PDF)
 - Product purchasing: orders and receipts for imported equipment tied to contract lines, registering each received unit with supplier serial numbers where applicable
 - Quotation request emails sent to suppliers when sourcing materials
-- Requests for quotation (`RFQ-`): an RFQ lists materials and quantities with no requisition. Each supplier has one quotation row on that RFQ (invited until submitted, or declined). A material purchase order line may point at a submitted quotation item from that supplier, including items from more than one RFQ, or at no quotation. Separate from quotation-request emails. Comparison is calculated later and is not stored
+- Requests for quotation (`RFQ-`): an RFQ lists materials and quantities with no requisition. It stays open until it is closed or cancelled. Each supplier has one quotation row on that RFQ. A material purchase order line may point at a quotation item from that supplier, including items from more than one RFQ, or at no quotation. Separate from quotation-request emails. Comparison is calculated later and is not stored
 
 ### Outsourcing
 

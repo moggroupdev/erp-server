@@ -1,15 +1,10 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsDateString, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TrimToNull } from 'src/utils/decorators';
 import { CreateRequestForQuotationItemDto } from './create-request-for-quotation-item.dto';
 
 export class CreateRequestForQuotationDto {
-  @IsDateString()
-  @IsOptional()
-  @ApiPropertyOptional()
-  responseDeadline?: string | null;
-
   @TrimToNull()
   @IsString()
   @IsOptional()

@@ -11,12 +11,10 @@ import { CreateRequestForQuotationDto } from './dto/create-request-for-quotation
 import { UpdateRequestForQuotationDto } from './dto/update-request-for-quotation.dto';
 import { CreateRequestForQuotationItemDto } from './dto/create-request-for-quotation-item.dto';
 import { UpdateRequestForQuotationItemDto } from './dto/update-request-for-quotation-item.dto';
-import { IssueRequestForQuotationDto } from './dto/issue-request-for-quotation.dto';
 import { CreateSupplierQuotationDto } from './dto/create-supplier-quotation.dto';
 import { UpdateSupplierQuotationDto } from './dto/update-supplier-quotation.dto';
 import { CreateSupplierQuotationItemDto } from './dto/create-supplier-quotation-item.dto';
 import { UpdateSupplierQuotationItemDto } from './dto/update-supplier-quotation-item.dto';
-import { SubmitSupplierQuotationDto } from './dto/submit-supplier-quotation.dto';
 
 @Controller('request-for-quotations')
 export class RequestForQuotationsController {
@@ -91,14 +89,6 @@ export class RequestForQuotationsController {
     return this.requestForQuotationsService.deleteItem(id, itemId);
   }
 
-  @Post(':id/issue')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_REQUEST_FOR_QUOTATION)
-  @ApiBearerAuth()
-  issue(@Param('id', ParseUUIDPipe) id: string, @Body() issueDto: IssueRequestForQuotationDto) {
-    return this.requestForQuotationsService.issue(id, issueDto);
-  }
-
   @Post(':id/close')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_REQUEST_FOR_QUOTATION)
@@ -137,26 +127,6 @@ export class RequestForQuotationsController {
     @Body() updateDto: UpdateSupplierQuotationDto,
   ) {
     return this.requestForQuotationsService.updateQuotation(id, quotationId, updateDto);
-  }
-
-  @Post(':id/supplier-quotations/:quotationId/submit')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_REQUEST_FOR_QUOTATION)
-  @ApiBearerAuth()
-  submitQuotation(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('quotationId', ParseUUIDPipe) quotationId: string,
-    @Body() submitDto: SubmitSupplierQuotationDto,
-  ) {
-    return this.requestForQuotationsService.submitQuotation(id, quotationId, submitDto);
-  }
-
-  @Post(':id/supplier-quotations/:quotationId/decline')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_REQUEST_FOR_QUOTATION)
-  @ApiBearerAuth()
-  declineQuotation(@Param('id', ParseUUIDPipe) id: string, @Param('quotationId', ParseUUIDPipe) quotationId: string) {
-    return this.requestForQuotationsService.declineQuotation(id, quotationId);
   }
 
   @Post(':id/supplier-quotations/:quotationId/items')

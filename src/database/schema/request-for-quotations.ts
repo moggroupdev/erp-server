@@ -5,35 +5,25 @@ import { users } from './users';
 import { suppliers } from './suppliers';
 import { materials } from './materials';
 
-// Status is derived: draft (no issued_at), issued, closed (closed_at), cancelled (cancelled_at).
+// Status is derived: open (no closed_at or cancelled_at), closed (closed_at), cancelled (cancelled_at).
 export const requestForQuotations = pgTable(
   'request_for_quotations',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: RFQ-00000001
-    responseDeadline: timestamp('response_deadline', { withTimezone: true }), // Required once issued_at is set
     notes: text('notes'),
-    issuedAt: timestamp('issued_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     createdAt,
-    updatedAt: timestamp('updated_at', { withTimezone: true }), // Null until the first successful update
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
   },
   (table) => [
-    index('rfq_response_deadline_idx').on(table.responseDeadline),
-    index('rfq_issued_at_idx').on(table.issuedAt),
     index('rfq_closed_at_idx').on(table.closedAt),
     index('rfq_cancelled_at_idx').on(table.cancelledAt),
     index('rfq_created_at_idx').on(table.createdAt),
     index('rfq_created_by_idx').on(table.createdBy),
-    check(
-      'rfq_deadline_required_when_issued',
-      sql`${table.issuedAt} IS NULL OR ${table.responseDeadline} IS NOT NULL`,
-    ),
-    check('rfq_closed_requires_issued', sql`${table.closedAt} IS NULL OR ${table.issuedAt} IS NOT NULL`),
     check('rfq_closed_cancelled_exclusive', sql`${table.closedAt} IS NULL OR ${table.cancelledAt} IS NULL`),
   ],
 );
@@ -68,7 +58,7 @@ export const requestForQuotationItems = pgTable(
   ],
 );
 
-// One row per RFQ and supplier: invitation until submitted_at, or declined. Separate from supplier_quotation_emails.
+// One row per RFQ and supplier. Separate from supplier_quotation_emails.
 export const supplierQuotations = pgTable(
   'supplier_quotations',
   {
@@ -79,13 +69,10 @@ export const supplierQuotations = pgTable(
       .references(() => suppliers.id),
     paymentTerms: text('payment_terms'),
     deliveryTerms: text('delivery_terms'),
-    deliveryPeriodDays: integer('delivery_period_days'), // Required when submitted; comparison key
-    validUntil: timestamp('valid_until', { withTimezone: true }), // Required when submitted
-    submittedAt: timestamp('submitted_at', { withTimezone: true }),
-    declinedAt: timestamp('declined_at', { withTimezone: true }),
+    deliveryPeriodDays: integer('delivery_period_days'), // Optional; comparison key when set
+    validUntil: timestamp('valid_until', { withTimezone: true }),
     notes: text('notes'),
     createdAt,
-    updatedAt: timestamp('updated_at', { withTimezone: true }), // Null until the first successful update
     createdBy: uuid('created_by')
       .notNull()
       .references(() => users.id),
@@ -98,31 +85,12 @@ export const supplierQuotations = pgTable(
     }),
     index('sq_rfq_id_idx').on(table.requestForQuotationId),
     index('sq_supplier_id_idx').on(table.supplierId),
-    index('sq_submitted_at_idx').on(table.submittedAt),
-    index('sq_declined_at_idx').on(table.declinedAt),
     index('sq_valid_until_idx').on(table.validUntil),
     index('sq_created_at_idx').on(table.createdAt),
     index('sq_created_by_idx').on(table.createdBy),
     unique('sq_rfq_supplier_unique').on(table.requestForQuotationId, table.supplierId),
     unique('sq_id_rfq_id_unique').on(table.id, table.requestForQuotationId),
     unique('sq_id_supplier_id_unique').on(table.id, table.supplierId),
-    check('sq_submitted_declined_exclusive', sql`${table.submittedAt} IS NULL OR ${table.declinedAt} IS NULL`),
-    check(
-      'sq_declined_clears_commercial',
-      sql`${table.declinedAt} IS NULL OR (
-        ${table.paymentTerms} IS NULL
-        AND ${table.deliveryTerms} IS NULL
-        AND ${table.deliveryPeriodDays} IS NULL
-        AND ${table.validUntil} IS NULL
-      )`,
-    ),
-    check(
-      'sq_submitted_requires_commercial',
-      sql`${table.submittedAt} IS NULL OR (
-        ${table.validUntil} IS NOT NULL
-        AND ${table.deliveryPeriodDays} IS NOT NULL
-      )`,
-    ),
     check(
       'sq_delivery_period_days_positive',
       sql`${table.deliveryPeriodDays} IS NULL OR ${table.deliveryPeriodDays} > 0`,
