@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -153,9 +153,11 @@ export class RequestForQuotationsService {
       .where(
         and(
           eq(supplierQuotations.supplierId, trimmedSupplierId),
+          isNull(requestForQuotations.cancelledAt),
           trimmedCode ? eq(supplierQuotationItems.materialCode, trimmedCode) : undefined,
         ),
-      );
+      )
+      .orderBy(desc(requestForQuotations.createdAt));
 
     return rows.map((row) => ({
       ...row,

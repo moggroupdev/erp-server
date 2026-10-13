@@ -548,9 +548,11 @@ export class MaterialPurchaseOrdersService {
         id: supplierQuotationItems.id,
         materialCode: supplierQuotationItems.materialCode,
         supplierId: supplierQuotations.supplierId,
+        cancelledAt: requestForQuotations.cancelledAt,
       })
       .from(supplierQuotationItems)
       .innerJoin(supplierQuotations, eq(supplierQuotationItems.supplierQuotationId, supplierQuotations.id))
+      .innerJoin(requestForQuotations, eq(supplierQuotations.requestForQuotationId, requestForQuotations.id))
       .where(inArray(supplierQuotationItems.id, ids));
 
     const byId = new Map(rows.map((row) => [row.id, row]));
@@ -572,6 +574,14 @@ export class MaterialPurchaseOrdersService {
           translate(
             'The quotation supplier must match the purchase order supplier.',
             'يجب أن يطابق مورد عرض السعر مورد أمر التوريد.',
+          ),
+        );
+      }
+      if (row.cancelledAt) {
+        throw new BadRequestException(
+          translate(
+            'A purchase order line cannot use a price from a cancelled request for quotation.',
+            'لا يمكن استخدام سعر من طلب عرض سعر ملغى في بند أمر التوريد.',
           ),
         );
       }

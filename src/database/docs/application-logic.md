@@ -117,8 +117,9 @@ All sources live on the header — one source event per transaction; items only 
 - Material purchase order items (`material_purchase_order_items.supplier_quotation_item_id`) (`@APP_CHECKED`):
   - Nullable. Lines with no quotation stay valid. `mpoi_sqi_material_fk` skips the check when the id is null and, when set, requires `material_code` to match the quotation item
   - `supplier_quotations.supplier_id` must equal `material_purchase_orders.supplier_id` for every linked line. An order can mix quotation items from several RFQs when they belong to that same supplier
+  - The linked request for quotation must not be cancelled (`cancelled_at` is null). Open and closed requests both remain valid. Supplier quotations have no submitted status; a priced `supplier_quotation_items` row is the selectable price
   - No quotation quantity allocation or remaining-quantity cap
-  - API: `POST/GET/PATCH /request-for-quotations`, item routes, `POST :id/close|cancel`, and nested `supplier-quotations` (add supplier, patch, items). `GET /request-for-quotations/quotation-items?supplierId=&materialCode=` lists quotation lines for purchase-order linking. Permissions: `add_request_for_quotation`, `read_request_for_quotations`, `update_request_for_quotation`
+  - API: `POST/GET/PATCH /request-for-quotations`, item routes, `POST :id/close|cancel`, and nested `supplier-quotations` (add supplier, patch, items). `GET /request-for-quotations/quotation-items?supplierId=&materialCode=` lists quotation lines for purchase-order linking and omits cancelled requests. Permissions: `add_request_for_quotation`, `read_request_for_quotations`, `update_request_for_quotation`
 - Material purchase receipts (`material_purchase_receipts` / items):
   - Create via `POST /material-purchase-receipts` with permission `add_material_purchase_receipt`
   - Reject cancelled MPOs; require at least one line with `quantity_received + quantity_rejected > 0`
