@@ -1,7 +1,14 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { supplierAddresses, suppliers } from 'src/database/schema';
+import {
+  materialCategorySubs,
+  materialPurchaseOrderItems,
+  materialPurchaseOrders,
+  materials,
+  supplierAddresses,
+  suppliers,
+} from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -25,14 +32,43 @@ export class SuppliersService {
   }
 
   public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute(suppliers, queryParams, {
+    const { mainCategoryId, ...listParams } = queryParams;
+    const additionalConditions = [isNull(suppliers.blacklistedAt)];
+
+    // Suppliers who have a non-cancelled purchase order for a material in this main category.
+    if (typeof mainCategoryId === 'string' && mainCategoryId.length > 0) {
+      additionalConditions.push(this.purchasedMainCategoryCondition(mainCategoryId));
+    }
+
+    return await this.queryBuilderService.execute(suppliers, listParams, {
       filtering: true,
       searchableFields: ['name', 'code', 'email', 'phone', 'taxNumber'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      additionalConditions: [isNull(suppliers.blacklistedAt)],
+      additionalConditions,
     });
+  }
+
+  private purchasedMainCategoryCondition(mainCategoryId: string) {
+    return exists(
+      this.db
+        .select({ id: materialPurchaseOrders.id })
+        .from(materialPurchaseOrders)
+        .innerJoin(
+          materialPurchaseOrderItems,
+          eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id),
+        )
+        .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+        .innerJoin(materialCategorySubs, eq(materials.subCategoryId, materialCategorySubs.id))
+        .where(
+          and(
+            eq(materialPurchaseOrders.supplierId, suppliers.id),
+            isNull(materialPurchaseOrders.cancelledAt),
+            eq(materialCategorySubs.mainCategoryId, mainCategoryId),
+          ),
+        ),
+    );
   }
 
   // We allow the `get` method to return a blacklisted supplier too
