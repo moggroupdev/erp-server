@@ -18,6 +18,7 @@ export * from './inventory-transactions';
 export * from './legacy-issue-permits';
 export * from './supplier-quotation-emails';
 export * from './purchasing-materials';
+export * from './request-for-quotations';
 export * from './purchasing-products';
 export * from './outsourcing';
 export * from './supplier-invoices';

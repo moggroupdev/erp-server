@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsUUID,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -43,6 +44,11 @@ export class CreateMaterialPurchaseOrderItemDto {
   @IsOptional()
   @ApiPropertyOptional()
   notes: string | null;
+
+  @IsUUID()
+  @IsOptional()
+  @ApiPropertyOptional()
+  supplierQuotationItemId?: string | null;
 
   @IsArray()
   @ArrayMinSize(1)

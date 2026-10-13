@@ -105,6 +105,21 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Purchasing
 
+- Requests for quotation (`request_for_quotations` / items), separate from `supplier_quotation_emails` and from requisitions:
+  - No requisition foreign key. An RFQ is created on its own
+  - Header status is derived from timestamps: `open` (no `closed_at` or `cancelled_at`), `closed` (`closed_at`), `cancelled` (`cancelled_at`). `closed_at` and `cancelled_at` are exclusive. Header notes, material lines, and supplier quotations can change only while open
+  - `request_for_quotation_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_requested` is in this unit
+  - One material per RFQ (database unique). A material line that already has a supplier quotation price cannot be removed or given a different material
+- Supplier quotations (`supplier_quotations` / items): one row per `(request_for_quotation_id, supplier_id)`, edited in place. No quotation status
+  - `valid_until`, `delivery_period_days`, `payment_terms`, and `delivery_terms` are optional. When set, `delivery_period_days` must be positive (database check)
+  - `supplier_quotation_items.request_for_quotation_id` and `material_code` are composite-FK integrity copies. Set them from the supplier quotation and the RFQ line on insert. The database rejects a line whose RFQ or material does not match
+  - `supplier_quotation_items.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base unit or one of its conversions. It may differ from the RFQ line's unit. `unit_price` is in this unit. No offered quantity and no allocation in this phase
+- Material purchase order items (`material_purchase_order_items.supplier_quotation_item_id`) (`@APP_CHECKED`):
+  - Nullable. Lines with no quotation stay valid. `mpoi_sqi_material_fk` skips the check when the id is null and, when set, requires `material_code` to match the quotation item
+  - `supplier_quotations.supplier_id` must equal `material_purchase_orders.supplier_id` for every linked line. An order can mix quotation items from several RFQs when they belong to that same supplier
+  - The linked request for quotation must not be cancelled (`cancelled_at` is null). Open and closed requests both remain valid. Supplier quotations have no submitted status; a priced `supplier_quotation_items` row is the selectable price
+  - No quotation quantity allocation or remaining-quantity cap
+  - API: `POST/GET/PATCH /request-for-quotations`, item routes, `POST :id/close|cancel`, and nested `supplier-quotations` (add supplier, patch, items). `GET /request-for-quotations/quotation-items?supplierId=&materialCode=` lists quotation lines for purchase-order linking and omits cancelled requests. Permissions: `add_request_for_quotation`, `read_request_for_quotations`, `update_request_for_quotation`
 - Material purchase receipts (`material_purchase_receipts` / items):
   - Create via `POST /material-purchase-receipts` with permission `add_material_purchase_receipt`
   - Reject cancelled MPOs; require at least one line with `quantity_received + quantity_rejected > 0`
@@ -139,15 +154,20 @@ All sources live on the header — one source event per transaction; items only 
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Gate decide is not idempotent — second decision on the same party returns 400
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
+- `material_purchase_requisition_item_contract_items` (`@APP_CHECKED`):
+  - Contract line must not be cancelled at link time
+  - Links are editable only before any requisition gate decision (same lock as header and item edits)
+  - `quantity_allocated` is optional and informational, stored in the requisition line's `unit_of_measurement_selected`; not validated against `quantity_requested`
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
-  - Written only at MPO create (`POST /material-purchase-orders` nested `requisitionAllocations`); no post-create allocation edit API
-  - Every MPO line must include at least one allocation (create from open MPReq items only)
+  - Written at MPO create (`POST /material-purchase-orders`) and on update (`PATCH /material-purchase-orders/:id`), nested `requisitionAllocations`
+  - Update is allowed only until `createdAt` plus `MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS` (1 day). Reject when `cancelledAt` or `completedAt` is set, or the order already has a receipt or supplier invoice. `supplierId`, `code`, `createdAt`, and `createdBy` stay as created. `updatedAt` is null until the first successful update and is set to the current time on each update (receipts and invoices do not stamp it)
+  - Every MPO line must include at least one allocation (create and update from open MPReq items only)
   - Parent requisition must be fully approved (all three `decision = 'approved'`)
   - Requisition item `material_code` must match the MPO line `material_code`
   - `quantity_allocated` is stored in the requisition line's `unit_of_measurement_selected` (junction has no unit column)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (requisition line unit)
   - `SUM(quantity_allocated)` per MPO line must equal `quantity_ordered` — convert both sides to the material's base unit when units differ
-  - Concurrent creates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the create transaction before insert
+  - Concurrent creates and updates: lock targeted requisition item rows (`FOR UPDATE`) and re-sum existing allocations inside the transaction before write. On update, that sum ignores this order's current allocations so the order does not count against itself. Open requisition lines used while editing pass `excludeMaterialPurchaseOrderId` so this order's allocations stay available
   - When MPO cancel is added later, allocation SUMs must ignore cancelled orders or remaining qty will stay consumed
 - Supplier invoices (`supplier_invoices`) (`@APP_CHECKED`):
   - Create via authenticated multipart upload (`POST /supplier-invoices`): PDF required; `supplier_id` copied from the linked material purchase order (`@RFP_APP_CHECKED`); do not accept `supplier_id` from the client; reject cancelled orders; enforce unique `(supplier_id, invoice_number)` with a clear conflict message
@@ -271,6 +291,8 @@ All sources live on the header — one source event per transaction; items only 
 | Receipts (`material_purchase_receipts`, `product_purchase_receipts`, `outsourcing_receipts`) | —                                | `received_at`             | —              |
 
 Mutually exclusive `completed_at` and `cancelled_at` where both exist. For requisitions, derive status as: `rejected` (any gate `decision = 'rejected'`) → `approved` (all three gates `approved`) → else `pending`. Remaining ordered qty per line is `quantity_requested − SUM(quantity_allocated)` in the line's `unit_of_measurement_selected` (not cached).
+
+Requests for quotation: `open` when `closed_at` and `cancelled_at` are null; `closed` when `closed_at` is set; `cancelled` when `cancelled_at` is set. Supplier quotations have no status. Being chosen on an MPO is `material_purchase_order_items.supplier_quotation_item_id`.
 
 ---
 
