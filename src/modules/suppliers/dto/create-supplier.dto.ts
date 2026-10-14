@@ -27,7 +27,19 @@ export class CreateSupplierDto {
   @IsString()
   @IsOptional()
   @ApiPropertyOptional()
+  website: string | null;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
   taxNumber: string | null;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  commercialRegistrationNumber: string | null;
 
   @IsIn(SUPPLIER_CLASSIFICATION_VALUES)
   @IsOptional()

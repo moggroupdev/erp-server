@@ -1,12 +1,13 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { customerAddresses, customers } from 'src/database/schema';
+import { customerAddresses, customerContactPersons, customers } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
+import { CreateContactPersonDto } from 'src/utils/dto/create-contact-person.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 
 @Injectable()
@@ -27,7 +28,7 @@ export class CustomersService {
   public async list(queryParams: QueryParams) {
     return await this.queryBuilderService.execute(customers, queryParams, {
       filtering: true,
-      searchableFields: ['name', 'code', 'email', 'phone'],
+      searchableFields: ['name', 'code', 'email', 'phone', 'website', 'taxNumber', 'commercialRegistrationNumber'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
@@ -117,6 +118,66 @@ export class CustomersService {
         .returning();
 
       return updatedAddress;
+    });
+  }
+
+  // ========================= Contact persons =========================
+
+  public async addContactPerson(customerId: string, createContactPersonDto: CreateContactPersonDto) {
+    const { isPrimary, ...contactData } = createContactPersonDto;
+
+    return await this.db.transaction(async (tx) => {
+      if (isPrimary) {
+        await tx
+          .update(customerContactPersons)
+          .set({ isPrimary: false })
+          .where(and(eq(customerContactPersons.customerId, customerId), eq(customerContactPersons.isPrimary, true)));
+      }
+
+      const [contactPerson] = await tx
+        .insert(customerContactPersons)
+        .values({ ...contactData, customerId, isPrimary: isPrimary || false })
+        .returning();
+
+      return contactPerson;
+    });
+  }
+
+  public async listContactPersons(customerId: string) {
+    return await this.db.query.customerContactPersons.findMany({
+      where: eq(customerContactPersons.customerId, customerId),
+      orderBy: desc(customerContactPersons.isPrimary),
+    });
+  }
+
+  public async setPrimaryContactPerson(customerId: string, contactPersonId: string) {
+    const contactPerson = await this.db.query.customerContactPersons.findFirst({
+      where: and(eq(customerContactPersons.id, contactPersonId), eq(customerContactPersons.customerId, customerId)),
+    });
+
+    if (!contactPerson)
+      throw new NotFoundException(
+        translate(
+          `Contact person with ID ${contactPersonId} does not exist for customer ${customerId}.`,
+          `لا يوجد شخص اتصال بالمعرف ${contactPersonId} للعميل ${customerId}.`,
+        ),
+      );
+
+    if (contactPerson.isPrimary) return contactPerson;
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .update(customerContactPersons)
+        .set({ isPrimary: false })
+        .where(and(eq(customerContactPersons.customerId, customerId), eq(customerContactPersons.isPrimary, true)));
+
+      const [updatedContactPerson] = await tx
+        .update(customerContactPersons)
+        .set({ isPrimary: true })
+        .where(eq(customerContactPersons.id, contactPersonId))
+        .returning();
+
+      return updatedContactPerson;
     });
   }
 }

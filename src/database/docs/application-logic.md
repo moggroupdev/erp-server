@@ -267,6 +267,10 @@ All sources live on the header — one source event per transaction; items only 
 - `supplier_addresses.city_id` — required when `country_id = EGYPT_COUNTRY_ID`; must be omitted (null) for other countries
 - At most one default address per supplier (`supplier_addresses_one_default`); setting a new default clears the previous one in `addAddress` and `setDefaultAddress`
 
+### Contact persons
+
+- At most one primary contact per customer (`customer_contact_persons_one_primary`) and per supplier (`supplier_contact_persons_one_primary`); setting a new primary clears the previous one in `addContactPerson` and `setPrimaryContactPerson`
+
 ---
 
 ## Workflow guards
