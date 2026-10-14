@@ -17,6 +17,9 @@ export const customers = pgTable(
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
+    website: text('website'),
+    taxNumber: text('tax_number').unique(),
+    commercialRegistrationNumber: text('commercial_registration_number').unique(),
     classification: customerClassificationEnum('classification'),
     notes: text('notes'),
     blacklistedAt,
@@ -59,6 +62,27 @@ export const customerAddresses = pgTable(
   ],
 );
 
+export const customerContactPersons = pgTable(
+  'customer_contact_persons',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    customerId: uuid('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    name: text('name').notNull(),
+    jobTitle: text('job_title'),
+    phone: text('phone'),
+    email: text('email'),
+    isPrimary: boolean('is_primary').notNull().default(false),
+  },
+  (table) => [
+    index('customer_contact_persons_customer_id_idx').on(table.customerId),
+    uniqueIndex('customer_contact_persons_one_primary')
+      .on(table.customerId)
+      .where(sql`${table.isPrimary} = true`),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -73,6 +97,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
     relationName: 'customerAddedToBlacklistBy',
   }),
   addresses: many(customerAddresses),
+  contactPersons: many(customerContactPersons),
   inquiries: many(inquiries),
   contracts: many(contracts),
   customerReceptions: many(customerReceptions),
@@ -93,4 +118,11 @@ export const customerAddressesRelations = relations(customerAddresses, ({ one, m
     references: [cities.id],
   }),
   serviceAgreements: many(serviceAgreements),
+}));
+
+export const customerContactPersonsRelations = relations(customerContactPersons, ({ one }) => ({
+  customer: one(customers, {
+    fields: [customerContactPersons.customerId],
+    references: [customers.id],
+  }),
 }));
