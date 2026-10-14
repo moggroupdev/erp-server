@@ -20,7 +20,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Product inquiries listing requested equipment and quantities, progressing through preview scheduling, site visit, quotation, and acceptance or rejection
 - Site previews: scheduled visits with assigned staff, per-item measurements, and technical notes
 - Sales offers (quotations) with line pricing, validity period, status, and optional blanket discount negotiation (round log before acceptance)
-- Contracts — the confirmed order — preserving the trail from inquiry through preview and offer, along with delivery address, expected delivery time, and work-order start date
+- Contracts, the confirmed order, preserving the trail from inquiry through preview and offer, along with delivery address, expected delivery time, and work-order start date. Legacy contracts are entered without that trail and may omit the delivery address when fulfillment is at the factory; they keep the paper contract number and work order number
 
 ### Products & Engineering
 
@@ -63,7 +63,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Delivery & Installation
 
-- Each delivery and installation belongs to one contract; the site address is the contract's `delivery_address_id` (not stored on the task)
+- Each delivery and installation belongs to one contract; the site address is the contract's `delivery_address_id` when set (not stored on the task). A null address means fulfillment at the factory
 - Trips group deliveries, installations, and maintenance orders that travel together on the same vehicle across multiple addresses
 - Installation scheduling and assignment for on-site commissioning
 - Customer receptions: formal handover when the customer receives product units (factory pickup, after delivery, or after installation); starts the 1-year warranty period per unit
@@ -94,7 +94,7 @@ A project begins when a customer reaches out requesting equipment and pricing. T
 
 When a site visit is needed, the Preview Team schedules a preview, assigns staff, and visits the customer's location. They take measurements, assess installation constraints, and capture technical requirements — typically one preview line per inquiry product, copied at scheduling time as a standalone snapshot (same pattern as offer and contract lines). When multiple site visits travel on the same vehicle, they can be grouped into a trip.
 
-With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer counters on price, sales records negotiation rounds (blanket discount) until terms are agreed. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability. When production or fulfillment work begins, the contract's work-order start date (`started_at`) is recorded.
+With preview findings in hand, the Sales Team prepares a quotation — an offer with line-level pricing and a validity period — and sends it to the customer. If the customer counters on price, sales records negotiation rounds (blanket discount) until terms are agreed. If the customer accepts, a contract is created. This is the confirmed order: it carries the agreed products, prices, delivery address, and expected delivery time, and it remains linked to the original inquiry, preview, and offer for full traceability. When production or fulfillment work begins, the contract's work-order start date (`started_at`) is recorded. Legacy contracts already in the paper system are recorded directly, without an inquiry, preview, or offer, and may have no customer delivery address when the order is fulfilled at the factory.
 
 ### Order Breakdown
 
@@ -120,7 +120,7 @@ For catalog items sourced from outside suppliers rather than built in-house, Pur
 
 ### Delivery, Installation, and Completion
 
-Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Each delivery and installation is tied to one contract; the visit address comes from that contract's delivery address. When multiple tasks travel on the same vehicle, they are grouped into a trip — a preview, delivery, installation, or maintenance visit to different addresses can share one trip.
+Whether a unit was manufactured internally or received from a supplier, it eventually moves toward the customer. Each delivery and installation is tied to one contract; the visit address comes from that contract's delivery address when one is set, and is the factory when it is not. When multiple tasks travel on the same vehicle, they are grouped into a trip — a preview, delivery, installation, or maintenance visit to different addresses can share one trip.
 
 Customer reception is recorded separately when the customer physically receives units — at the factory, after delivery, or after installation. That handover starts the 1-year warranty period for each unit. When every item is received and the project is accepted, the contract is marked complete.
 

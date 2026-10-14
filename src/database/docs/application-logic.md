@@ -39,7 +39,7 @@ Set from canonical source on INSERT; immutable unless driving FK changes.
 
 | Column                                                  | Rule                                                                                                |
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `contracts.customer_id`                                 | Copy `inquiries.customer_id`; must match `customer_addresses.customer_id` for `delivery_address_id` |
+| `contracts.customer_id`                                 | Copy `inquiries.customer_id` when `inquiry_id` is set; entered directly when `inquiry_id` is null. When `delivery_address_id` is set, it must belong to that customer |
 | `maintenance_orders.customer_id`                        | From `customer_address_id` or service agreement address when `service_contract`                     |
 | `*_items.product_code` (inquiry/offer/preview/contract) | Copy `product_dimensions.product_code` for `product_dimension_id`                                   |
 | `supplier_invoices.supplier_id`                         | Copy from linked order's `supplier_id` (`material_purchase_orders`, `product_purchase_orders`, or `outsourcing_orders`); must match parent |
@@ -225,13 +225,15 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Contracts
 
-- `contracts.delivery_address_id` — must belong to `contracts.customer_id`
+- `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contracts
+- `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contracts
+- `contracts.delivery_address_id` — null means fulfillment at the factory. When set, must belong to `contracts.customer_id`
 - `contracts.discount_pct` — when `offer_id` set, must match `offers.discount_pct`; when null offer, set on create with role cap
 
 ### Deliveries & installations
 
 - `delivery_items.product_unit_id` / `installation_items.product_unit_id` — unit must belong to parent `contract_id`
-- Site address from `contracts.delivery_address_id` (not stored on delivery/installation)
+- Site address from `contracts.delivery_address_id` when set (not stored on delivery/installation). Null means fulfillment at the factory
 
 ### Customer receptions
 
@@ -278,6 +280,7 @@ All sources live on the header — one source event per transaction; items only 
 ### Inquiry → preview → offer → contract
 
 - Contract from offer only if `offers.status = 'accepted'`; cannot downgrade accepted offer while contract references it
+- Normal contract create requires `inquiry_id`. Legacy contracts omit `inquiry_id`, and then `preview_id` and `offer_id` must be null (DB-checked via `contracts_null_inquiry_no_preview_offer`)
 - Enforce inquiry/offer status transitions in service
 - `offer_negotiations` — append-only log; `offers.discount_pct` = currently agreed (updated on accept, not auto-synced from last row)
 - Company negotiation rows capped by role; reject rounds when offer is accepted/rejected/cancelled

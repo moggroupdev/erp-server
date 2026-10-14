@@ -19,10 +19,11 @@ export const contracts = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: CTR-00000001
-    inquiryId: uuid('inquiry_id')
-      .notNull()
+    legacyNumber: text('legacy_number').unique(), // @APP_CHECKED - Paper contract number; null on ERP-native contracts
+    legacyWorkOrderNumber: text('legacy_work_order_number').unique(), // @APP_CHECKED - Paper work order number; null on ERP-native contracts
+    inquiryId: uuid('inquiry_id') // Nullable for legacy contracts only; required on normal create in the service
       .references(() => inquiries.id),
-    customerId: uuid('customer_id') // @RFP_APP_CHECKED - Must match inquiries.customer_id for inquiry_id and customer_addresses.customer_id for delivery_address_id
+    customerId: uuid('customer_id') // @RFP_APP_CHECKED - Copy inquiries.customer_id when inquiry_id is set; entered directly when null. When delivery_address_id is set, it must belong to that customer
       .notNull()
       .references(() => customers.id),
     previewId: uuid('preview_id') // Nullable — some contracts are not from previews
@@ -31,8 +32,7 @@ export const contracts = pgTable(
     offerId: uuid('offer_id') // Nullable — some contracts are not from offers
       .unique()
       .references(() => offers.id),
-    deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Must belong to contracts.customer_id
-      .notNull()
+    deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Null means factory fulfillment. When set, must belong to contracts.customer_id
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
@@ -72,6 +72,18 @@ export const contracts = pgTable(
     check(
       'contracts_discount_pct_check',
       sql`${table.discountPct} IS NULL OR (${table.discountPct} >= 0 AND ${table.discountPct} <= 100)`,
+    ),
+    check(
+      'contracts_null_inquiry_no_preview_offer',
+      sql`${table.inquiryId} IS NOT NULL OR (${table.previewId} IS NULL AND ${table.offerId} IS NULL)`,
+    ),
+    check(
+      'contracts_legacy_number_nonblank',
+      sql`${table.legacyNumber} IS NULL OR length(btrim(${table.legacyNumber})) > 0`,
+    ),
+    check(
+      'contracts_legacy_wo_number_nonblank',
+      sql`${table.legacyWorkOrderNumber} IS NULL OR length(btrim(${table.legacyWorkOrderNumber})) > 0`,
     ),
   ],
 );
