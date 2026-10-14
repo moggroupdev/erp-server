@@ -310,6 +310,7 @@ export const LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES = [
   'in_warranty_maintenance',
   'out_of_warranty_maintenance',
   'service_contract',
+  'sold_goods',
 ] as const;
 
 export const LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPES = Object.fromEntries(
