@@ -132,4 +132,4 @@ Once equipment is in the field, the company services it under three arrangements
 
 ## Current Scope
 
-The data model covers the full project lifecycle described above — from customer inquiry through contract, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
+The data model covers the full project lifecycle described above — from customer inquiry through contract, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Contract list and detail reads are available. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.

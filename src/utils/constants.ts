@@ -43,6 +43,7 @@ export const PERMISSION_VALUES = [
   'add_customer',
   'read_customers',
   'update_customer',
+  'read_contracts',
   'add_material',
   'read_materials',
   'update_material',

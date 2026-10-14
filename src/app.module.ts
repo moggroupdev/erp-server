@@ -18,6 +18,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { MaterialsModule } from './modules/materials/materials.module';
 import { MmBomsModule } from './modules/mm-boms/mm-boms.module';
@@ -44,6 +45,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     UsersModule,
     SuppliersModule,
     CustomersModule,
+    ContractsModule,
     CategoriesModule,
     MaterialsModule,
     MmBomsModule,

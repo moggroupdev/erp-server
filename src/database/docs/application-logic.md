@@ -225,6 +225,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Contracts
 
+- Contract reads: `GET /contracts` and `GET /contracts/:id` require `read_contracts`. List keyword search covers code, legacy number, legacy work order number, and notes. `status` is `open` (no `completed_at` and no `cancelled_at`), `completed`, or `cancelled`
 - `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contracts
 - `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contracts
 - `contracts.delivery_address_id` — null means fulfillment at the factory. When set, must belong to `contracts.customer_id`
