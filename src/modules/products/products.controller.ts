@@ -26,6 +26,7 @@ import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
 import { ProductsRenderer } from './products.renderer';
+import { ExportProductsExcelQueryDto } from './dto/export-products-excel-query.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -63,8 +64,8 @@ export class ProductsController {
   @AllowedPermission(PERMISSIONS.PRINT_PRODUCTS_LIST)
   @ApiBearerAuth()
   @Header('Cache-Control', 'no-store')
-  excel() {
-    return this.productsService.exportCatalogExcel();
+  excel(@Query() query: ExportProductsExcelQueryDto) {
+    return this.productsService.exportCatalogExcel(query);
   }
 
   @Get(':code')

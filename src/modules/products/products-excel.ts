@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { getLocale, type Locale } from 'src/utils/i18n/locale.context';
 import { translate } from 'src/utils/i18n/translate';
 
-const COLUMN_COUNT = 3;
+const BASE_COLUMN_COUNT = 3;
 
 const FONT = 'Calibri';
 const CODE_FONT = 'Consolas';
@@ -42,11 +42,58 @@ type CategoryGroup = {
   products: CatalogProductForExcel[];
 };
 
-export async function buildProductsCatalogWorkbook(products: CatalogProductForExcel[]): Promise<Buffer> {
+export type ProductsExcelColumns = {
+  reviewEstimate?: boolean;
+  addedToDatabase?: boolean;
+  design?: boolean;
+  completionDate?: boolean;
+  notes?: boolean;
+};
+
+type OptionalColumn = {
+  header: string;
+  width: number;
+  date?: boolean;
+  notes?: boolean;
+};
+
+const OPTIONAL_COLUMNS: {
+  key: keyof ProductsExcelColumns;
+  width: number;
+  date?: boolean;
+  notes?: boolean;
+  header: () => string;
+}[] = [
+  {
+    key: 'reviewEstimate',
+    width: 30,
+    header: () => translate('Review estimate in Excel', 'مراجعة المقايسة في الأكسيل'),
+  },
+  {
+    key: 'addedToDatabase',
+    width: 28,
+    header: () => translate('Added to the database', 'الإضافة في قاعدة البيانات'),
+  },
+  { key: 'design', width: 16, header: () => translate('Design', 'التصميم') },
+  { key: 'completionDate', width: 18, date: true, header: () => translate('Completion date', 'تاريخ الانتهاء') },
+  { key: 'notes', width: 32, notes: true, header: () => translate('Notes', 'ملاحظات') },
+];
+
+export async function buildProductsCatalogWorkbook(
+  products: CatalogProductForExcel[],
+  columns: ProductsExcelColumns = {},
+): Promise<Buffer> {
   const locale = getLocale();
   const isRtl = locale === 'ar';
   const readingOrder: 'rtl' | 'ltr' = isRtl ? 'rtl' : 'ltr';
   const unit = translate('cm', 'سم');
+  const optionalColumns = OPTIONAL_COLUMNS.filter((column) => columns[column.key]).map((column) => ({
+    header: column.header(),
+    width: column.width,
+    date: column.date,
+    notes: column.notes,
+  }));
+  const columnCount = BASE_COLUMN_COUNT + optionalColumns.length;
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'ERP';
@@ -68,15 +115,20 @@ export async function buildProductsCatalogWorkbook(products: CatalogProductForEx
   });
 
   sheet.properties.tabColor = { argb: NAVY };
-  sheet.columns = [{ width: 18 }, { width: 52 }, { width: 36 }];
+  sheet.columns = [
+    { width: 18 },
+    { width: 52 },
+    { width: 36 },
+    ...optionalColumns.map((column) => ({ width: column.width })),
+  ];
 
-  writeTitleRow(sheet, locale, readingOrder);
-  writeHeaderRow(sheet, unit, readingOrder);
+  writeTitleRow(sheet, locale, readingOrder, columnCount);
+  writeHeaderRow(sheet, unit, readingOrder, optionalColumns);
 
   let rowIndex = 3;
   let dataRowIndex = 0;
   for (const group of groupByMainCategory(products, locale)) {
-    writeCategoryRow(sheet, rowIndex, group.title, readingOrder);
+    writeCategoryRow(sheet, rowIndex, group.title, readingOrder, columnCount);
     rowIndex += 1;
 
     for (const product of group.products) {
@@ -86,6 +138,7 @@ export async function buildProductsCatalogWorkbook(products: CatalogProductForEx
           shaded: dataRowIndex % 2 === 1,
           readingOrder,
           isRtl,
+          optionalColumns,
         });
         rowIndex += 1;
         dataRowIndex += 1;
@@ -100,10 +153,10 @@ export async function buildProductsCatalogWorkbook(products: CatalogProductForEx
   return Buffer.from(buffer);
 }
 
-function writeTitleRow(sheet: ExcelJS.Worksheet, locale: Locale, readingOrder: 'rtl' | 'ltr') {
+function writeTitleRow(sheet: ExcelJS.Worksheet, locale: Locale, readingOrder: 'rtl' | 'ltr', columnCount: number) {
   const row = sheet.getRow(1);
   row.height = 36;
-  sheet.mergeCells(1, 1, 1, COLUMN_COUNT);
+  sheet.mergeCells(1, 1, 1, columnCount);
 
   const title = translate('Products Catalog', 'كتالوج المنتجات');
   const date = new Date().toLocaleDateString(locale === 'ar' ? 'ar' : 'en', {
@@ -112,7 +165,7 @@ function writeTitleRow(sheet: ExcelJS.Worksheet, locale: Locale, readingOrder: '
     year: 'numeric',
   });
 
-  for (let column = 1; column <= COLUMN_COUNT; column++) {
+  for (let column = 1; column <= columnCount; column++) {
     const cell = row.getCell(column);
     cell.fill = solidFill(HAZE_WASH);
     cell.border = thinBorder;
@@ -127,15 +180,21 @@ function writeTitleRow(sheet: ExcelJS.Worksheet, locale: Locale, readingOrder: '
   };
 }
 
-function writeHeaderRow(sheet: ExcelJS.Worksheet, unit: string, readingOrder: 'rtl' | 'ltr') {
+function writeHeaderRow(
+  sheet: ExcelJS.Worksheet,
+  unit: string,
+  readingOrder: 'rtl' | 'ltr',
+  optionalColumns: OptionalColumn[],
+) {
   const headers = [
     translate('Code', 'الكود'),
     translate('Product Name', 'اسم المنتج'),
     `${translate('Standard Dimensions', 'الأبعاد النمطية')} (${unit})`,
+    ...optionalColumns.map((column) => column.header),
   ];
 
   const row = sheet.getRow(2);
-  row.height = 28;
+  row.height = optionalColumns.length > 0 ? 44 : 28;
   headers.forEach((header, index) => {
     const cell = row.getCell(index + 1);
     cell.value = header;
@@ -146,12 +205,18 @@ function writeHeaderRow(sheet: ExcelJS.Worksheet, unit: string, readingOrder: 'r
   });
 }
 
-function writeCategoryRow(sheet: ExcelJS.Worksheet, rowIndex: number, title: string, readingOrder: 'rtl' | 'ltr') {
+function writeCategoryRow(
+  sheet: ExcelJS.Worksheet,
+  rowIndex: number,
+  title: string,
+  readingOrder: 'rtl' | 'ltr',
+  columnCount: number,
+) {
   const row = sheet.getRow(rowIndex);
   row.height = 26;
-  sheet.mergeCells(rowIndex, 1, rowIndex, COLUMN_COUNT);
+  sheet.mergeCells(rowIndex, 1, rowIndex, columnCount);
 
-  for (let column = 1; column <= COLUMN_COUNT; column++) {
+  for (let column = 1; column <= columnCount; column++) {
     const cell = row.getCell(column);
     cell.font = { name: FONT, bold: true, size: 13, color: { argb: WHITE } };
     cell.fill = solidFill(HAZE);
@@ -167,9 +232,9 @@ function writeDimensionRow(
   rowIndex: number,
   product: CatalogProductForExcel,
   dimension: string,
-  options: { shaded: boolean; readingOrder: 'rtl' | 'ltr'; isRtl: boolean },
+  options: { shaded: boolean; readingOrder: 'rtl' | 'ltr'; isRtl: boolean; optionalColumns: OptionalColumn[] },
 ) {
-  const values = [product.code, product.title, dimension];
+  const values = [product.code, product.title, dimension, ...options.optionalColumns.map(() => '')];
   const lineCount = estimateWrappedLines(product.title, 48);
   const row = sheet.getRow(rowIndex);
   row.height = Math.max(22, lineCount * 16 + 8);
@@ -177,6 +242,7 @@ function writeDimensionRow(
 
   values.forEach((value, index) => {
     const column = index + 1;
+    const optionalColumn = options.optionalColumns[index - BASE_COLUMN_COUNT];
     const cell = row.getCell(column);
     cell.value = value;
     cell.font = {
@@ -188,11 +254,12 @@ function writeDimensionRow(
     cell.fill = solidFill(options.shaded ? HAZE_WASH : WHITE);
     cell.border = thinBorder;
     cell.alignment = {
-      horizontal: column === 1 ? 'center' : startAlign,
+      horizontal: column === 1 || (optionalColumn && !optionalColumn.notes) ? 'center' : startAlign,
       vertical: 'middle',
       wrapText: column !== 1,
       readingOrder: options.readingOrder,
     };
+    if (optionalColumn?.date) cell.numFmt = 'dd/mm/yyyy';
   });
 }
 

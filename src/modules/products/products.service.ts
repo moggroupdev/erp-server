@@ -13,7 +13,7 @@ import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
 import { omitPricingFactorIfUnauthorized } from './product-pricing-factor.helper';
-import { buildProductsCatalogWorkbook } from './products-excel';
+import { buildProductsCatalogWorkbook, type ProductsExcelColumns } from './products-excel';
 
 @Injectable()
 export class ProductsService {
@@ -58,7 +58,7 @@ export class ProductsService {
     };
   }
 
-  public async exportCatalogExcel(): Promise<StreamableFile> {
+  public async exportCatalogExcel(columns: ProductsExcelColumns = {}): Promise<StreamableFile> {
     const catalogProducts = await this.db.query.products.findMany({
       where: isNull(products.deletedAt),
       with: {
@@ -68,7 +68,7 @@ export class ProductsService {
       orderBy: asc(products.title),
     });
 
-    const buffer = await buildProductsCatalogWorkbook(catalogProducts);
+    const buffer = await buildProductsCatalogWorkbook(catalogProducts, columns);
     return new StreamableFile(buffer, {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       disposition: 'attachment; filename="products-catalog.xlsx"',
