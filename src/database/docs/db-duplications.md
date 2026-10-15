@@ -18,7 +18,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 | Column                           | Canonical source                                                                                                 | Why                                                    |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `contracts.customer_id`          | `inquiries.customer_id` via `inquiry_id`                                                                         | Filter contracts by customer without joining inquiries |
+| `contracts.customer_id`          | `inquiries.customer_id` via `inquiry_id` when set; entered directly when `inquiry_id` is null                    | Filter contracts by customer without joining inquiries |
 | `maintenance_orders.customer_id` | `customer_addresses.customer_id` via `customer_address_id`; or service agreement address when `service_contract` | Filter MOs by customer without deep joins              |
 | `inquiry_items.product_code`     | `product_dimensions.product_code` via `product_dimension_id`                                                     | Filter lines by product without joining dimensions     |
 | `offer_items.product_code`       | Same                                                                                                             | Same                                                   |
@@ -26,7 +26,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 | `contract_items.product_code`    | Same                                                                                                             | Same                                                   |
 | `supplier_invoices.supplier_id`  | Linked order's `supplier_id` (`material_purchase_orders`, `product_purchase_orders`, or `outsourcing_orders`) | Unique (supplier, invoice number) and supplier filters without joining the parent order |
 
-**Sync:** copy from canonical source on INSERT; immutable unless the driving FK changes (re-validate in service).
+**Sync:** copy from canonical source on INSERT; immutable unless the driving FK changes (re-validate in service). Exception: `contracts.customer_id` is entered directly when `inquiry_id` is null.
 
 ---
 

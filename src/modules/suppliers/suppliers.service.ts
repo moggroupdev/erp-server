@@ -7,6 +7,7 @@ import {
   materialPurchaseOrders,
   materials,
   supplierAddresses,
+  supplierContactPersons,
   suppliers,
 } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
@@ -14,6 +15,7 @@ import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
+import { CreateContactPersonDto } from 'src/utils/dto/create-contact-person.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 
 @Injectable()
@@ -42,7 +44,7 @@ export class SuppliersService {
 
     return await this.queryBuilderService.execute(suppliers, listParams, {
       filtering: true,
-      searchableFields: ['name', 'code', 'email', 'phone', 'taxNumber'],
+      searchableFields: ['name', 'code', 'email', 'phone', 'website', 'taxNumber', 'commercialRegistrationNumber'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
@@ -153,6 +155,66 @@ export class SuppliersService {
         .returning();
 
       return updatedAddress;
+    });
+  }
+
+  // ========================= Contact persons =========================
+
+  public async addContactPerson(supplierId: string, createContactPersonDto: CreateContactPersonDto) {
+    const { isPrimary, ...contactData } = createContactPersonDto;
+
+    return await this.db.transaction(async (tx) => {
+      if (isPrimary) {
+        await tx
+          .update(supplierContactPersons)
+          .set({ isPrimary: false })
+          .where(and(eq(supplierContactPersons.supplierId, supplierId), eq(supplierContactPersons.isPrimary, true)));
+      }
+
+      const [contactPerson] = await tx
+        .insert(supplierContactPersons)
+        .values({ ...contactData, supplierId, isPrimary: isPrimary || false })
+        .returning();
+
+      return contactPerson;
+    });
+  }
+
+  public async listContactPersons(supplierId: string) {
+    return await this.db.query.supplierContactPersons.findMany({
+      where: eq(supplierContactPersons.supplierId, supplierId),
+      orderBy: desc(supplierContactPersons.isPrimary),
+    });
+  }
+
+  public async setPrimaryContactPerson(supplierId: string, contactPersonId: string) {
+    const contactPerson = await this.db.query.supplierContactPersons.findFirst({
+      where: and(eq(supplierContactPersons.id, contactPersonId), eq(supplierContactPersons.supplierId, supplierId)),
+    });
+
+    if (!contactPerson)
+      throw new NotFoundException(
+        translate(
+          `Contact person with ID ${contactPersonId} does not exist for supplier ${supplierId}.`,
+          `لا يوجد شخص اتصال بالمعرف ${contactPersonId} للمورد ${supplierId}.`,
+        ),
+      );
+
+    if (contactPerson.isPrimary) return contactPerson;
+
+    return await this.db.transaction(async (tx) => {
+      await tx
+        .update(supplierContactPersons)
+        .set({ isPrimary: false })
+        .where(and(eq(supplierContactPersons.supplierId, supplierId), eq(supplierContactPersons.isPrimary, true)));
+
+      const [updatedContactPerson] = await tx
+        .update(supplierContactPersons)
+        .set({ isPrimary: true })
+        .where(eq(supplierContactPersons.id, contactPersonId))
+        .returning();
+
+      return updatedContactPerson;
     });
   }
 }

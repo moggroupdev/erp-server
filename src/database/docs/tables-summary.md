@@ -31,8 +31,10 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | cities                                            | uuid        | —     | NO                          | NO        | NO             |
 | customers                                         | uuid        | CUS   | blacklistedAt field         | YES       | YES (NOT NULL) |
 | customer_addresses                                | uuid        | —     | NO                          | NO        | NO             |
+| customer_contact_persons                          | uuid        | —     | NO                          | NO        | NO             |
 | suppliers                                         | uuid        | SUP   | blacklistedAt field         | YES       | YES (NOT NULL) |
 | supplier_addresses                                | uuid        | —     | NO                          | NO        | NO             |
+| supplier_contact_persons                          | uuid        | —     | NO                          | NO        | NO             |
 | material_category_mains                           | uuid        | —     | NO                          | NO        | NO             |
 | material_category_subs                            | uuid        | —     | NO                          | NO        | NO             |
 | product_category_mains                            | uuid        | —     | NO                          | NO        | NO             |

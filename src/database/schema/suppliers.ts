@@ -16,7 +16,9 @@ export const suppliers = pgTable(
     name: text('name').notNull(),
     phone: text('phone').unique(),
     email: text('email').unique(),
+    website: text('website'),
     taxNumber: text('tax_number').unique(),
+    commercialRegistrationNumber: text('commercial_registration_number').unique(),
     classification: supplierClassificationEnum('classification'),
     notes: text('notes'),
     blacklistedAt,
@@ -59,6 +61,27 @@ export const supplierAddresses = pgTable(
   ],
 );
 
+export const supplierContactPersons = pgTable(
+  'supplier_contact_persons',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    supplierId: uuid('supplier_id')
+      .notNull()
+      .references(() => suppliers.id),
+    name: text('name').notNull(),
+    jobTitle: text('job_title'),
+    phone: text('phone'),
+    email: text('email'),
+    isPrimary: boolean('is_primary').notNull().default(false),
+  },
+  (table) => [
+    index('supplier_contact_persons_supplier_id_idx').on(table.supplierId),
+    uniqueIndex('supplier_contact_persons_one_primary')
+      .on(table.supplierId)
+      .where(sql`${table.isPrimary} = true`),
+  ],
+);
+
 // ============================== RELATIONS ==============================
 
 export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
@@ -73,6 +96,7 @@ export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
     relationName: 'supplierAddedToBlacklistBy',
   }),
   addresses: many(supplierAddresses),
+  contactPersons: many(supplierContactPersons),
   materialPurchaseOrders: many(materialPurchaseOrders),
   productPurchaseOrders: many(productPurchaseOrders),
   quotationEmails: many(supplierQuotationEmails),
@@ -91,5 +115,12 @@ export const supplierAddressesRelations = relations(supplierAddresses, ({ one })
   city: one(cities, {
     fields: [supplierAddresses.cityId],
     references: [cities.id],
+  }),
+}));
+
+export const supplierContactPersonsRelations = relations(supplierContactPersons, ({ one }) => ({
+  supplier: one(suppliers, {
+    fields: [supplierContactPersons.supplierId],
+    references: [suppliers.id],
   }),
 }));

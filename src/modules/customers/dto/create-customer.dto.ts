@@ -23,6 +23,24 @@ export class CreateCustomerDto {
   @ApiPropertyOptional()
   email: string | null;
 
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  website: string | null;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  taxNumber: string | null;
+
+  @TrimToNull()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  commercialRegistrationNumber: string | null;
+
   @IsIn(CUSTOMER_CLASSIFICATION_VALUES)
   @IsOptional()
   @ApiPropertyOptional({ enum: CUSTOMER_CLASSIFICATION_VALUES })

@@ -9,6 +9,7 @@ import { PERMISSIONS } from 'src/utils/constants';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
+import { CreateContactPersonDto } from 'src/utils/dto/create-contact-person.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 
 @Controller('suppliers')
@@ -72,5 +73,34 @@ export class SuppliersController {
   @ApiBearerAuth()
   setDefaultAddress(@Param('id', ParseUUIDPipe) id: string, @Param('addressId', ParseUUIDPipe) addressId: string) {
     return this.suppliersService.setDefaultAddress(id, addressId);
+  }
+
+  // ========================= Contact persons =========================
+
+  @Post(':id/contact-persons')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
+  @ApiBearerAuth()
+  addContactPerson(@Param('id', ParseUUIDPipe) id: string, @Body() createContactPersonDto: CreateContactPersonDto) {
+    return this.suppliersService.addContactPerson(id, createContactPersonDto);
+  }
+
+  @Get(':id/contact-persons')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_SUPPLIERS)
+  @ApiBearerAuth()
+  listContactPersons(@Param('id', ParseUUIDPipe) id: string) {
+    return this.suppliersService.listContactPersons(id);
+  }
+
+  @Put(':id/contact-persons/:contactPersonId/primary')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
+  @ApiBearerAuth()
+  setPrimaryContactPerson(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('contactPersonId', ParseUUIDPipe) contactPersonId: string,
+  ) {
+    return this.suppliersService.setPrimaryContactPerson(id, contactPersonId);
   }
 }

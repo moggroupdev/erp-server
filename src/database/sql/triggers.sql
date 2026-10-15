@@ -566,7 +566,17 @@ BEGIN
       parent_record_id := p_row->>'customer_id';
       root_table_name := 'customers';
       root_record_id := parent_record_id;
+    WHEN 'customer_contact_persons' THEN
+      parent_table_name := 'customers';
+      parent_record_id := p_row->>'customer_id';
+      root_table_name := 'customers';
+      root_record_id := parent_record_id;
     WHEN 'supplier_addresses' THEN
+      parent_table_name := 'suppliers';
+      parent_record_id := p_row->>'supplier_id';
+      root_table_name := 'suppliers';
+      root_record_id := parent_record_id;
+    WHEN 'supplier_contact_persons' THEN
       parent_table_name := 'suppliers';
       parent_record_id := p_row->>'supplier_id';
       root_table_name := 'suppliers';
