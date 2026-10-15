@@ -1,6 +1,6 @@
 import { randomInt } from 'crypto';
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { productCategorySubs, productDimensions, productProductionRoutes, products } from 'src/database/schema';
 import { QueryParams, User, UserWithRoleWithPermissions } from 'src/utils/types';
@@ -13,6 +13,7 @@ import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
 import { omitPricingFactorIfUnauthorized } from './product-pricing-factor.helper';
+import { buildProductsCatalogWorkbook } from './products-excel';
 
 @Injectable()
 export class ProductsService {
@@ -55,6 +56,24 @@ export class ProductsService {
         omitPricingFactorIfUnauthorized(product as { pricingFactor?: unknown }, user as UserWithRoleWithPermissions),
       ),
     };
+  }
+
+  public async exportCatalogExcel(): Promise<StreamableFile> {
+    const catalogProducts = await this.db.query.products.findMany({
+      where: isNull(products.deletedAt),
+      with: {
+        dimensions: true,
+        subCategory: { with: { mainCategory: true } },
+      },
+      orderBy: asc(products.title),
+    });
+
+    const buffer = await buildProductsCatalogWorkbook(catalogProducts);
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="products-catalog.xlsx"',
+      length: buffer.length,
+    });
   }
 
   // We allow the `get` method to return a deleted product too

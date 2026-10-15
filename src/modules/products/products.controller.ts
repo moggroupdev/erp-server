@@ -58,6 +58,15 @@ export class ProductsController {
     return this.productsRenderer.renderCatatlog();
   }
 
+  @Get('excel')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.PRINT_PRODUCTS_LIST)
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  excel() {
+    return this.productsService.exportCatalogExcel();
+  }
+
   @Get(':code')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_PRODUCTS)
