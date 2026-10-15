@@ -1,9 +1,8 @@
 import ExcelJS from 'exceljs';
-import { PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { getLocale, type Locale } from 'src/utils/i18n/locale.context';
 import { translate } from 'src/utils/i18n/translate';
 
-const COLUMN_COUNT = 5;
+const COLUMN_COUNT = 3;
 
 const FONT = 'Calibri';
 const CODE_FONT = 'Consolas';
@@ -11,7 +10,6 @@ const CODE_FONT = 'Consolas';
 const NAVY = 'FF052565';
 const HAZE = 'FF2478B5';
 const HAZE_WASH = 'FFE4F5FD';
-const TEAL = 'FF115E59';
 const BORDER = 'FFD2D8E2';
 const WHITE = 'FFFFFFFF';
 
@@ -33,10 +31,8 @@ type CatalogDimension = {
 export type CatalogProductForExcel = {
   code: string;
   title: string;
-  sourceType: string;
   dimensions: CatalogDimension[];
   subCategory: {
-    title: string;
     mainCategory: { id: string; title: string } | null;
   } | null;
 };
@@ -51,7 +47,6 @@ export async function buildProductsCatalogWorkbook(products: CatalogProductForEx
   const isRtl = locale === 'ar';
   const readingOrder: 'rtl' | 'ltr' = isRtl ? 'rtl' : 'ltr';
   const unit = translate('cm', 'سم');
-  const defaultLabel = translate('Default', 'افتراضي');
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'ERP';
@@ -73,26 +68,29 @@ export async function buildProductsCatalogWorkbook(products: CatalogProductForEx
   });
 
   sheet.properties.tabColor = { argb: NAVY };
-  sheet.columns = [{ width: 16 }, { width: 44 }, { width: 28 }, { width: 18 }, { width: 38 }];
+  sheet.columns = [{ width: 18 }, { width: 52 }, { width: 36 }];
 
   writeTitleRow(sheet, locale, readingOrder);
   writeHeaderRow(sheet, unit, readingOrder);
 
   let rowIndex = 3;
+  let dataRowIndex = 0;
   for (const group of groupByMainCategory(products, locale)) {
     writeCategoryRow(sheet, rowIndex, group.title, readingOrder);
     rowIndex += 1;
 
-    group.products.forEach((product, index) => {
-      writeProductRow(sheet, rowIndex, product, {
-        shaded: index % 2 === 1,
-        readingOrder,
-        isRtl,
-        unit,
-        defaultLabel,
-      });
-      rowIndex += 1;
-    });
+    for (const product of group.products) {
+      const dimensions = formatDimensionLines(product.dimensions, unit);
+      for (const dimension of dimensions) {
+        writeDimensionRow(sheet, rowIndex, product, dimension, {
+          shaded: dataRowIndex % 2 === 1,
+          readingOrder,
+          isRtl,
+        });
+        rowIndex += 1;
+        dataRowIndex += 1;
+      }
+    }
   }
 
   const pageNumber = translate('&RPage &P of &N', '&Rصفحة &P من &N');
@@ -133,8 +131,6 @@ function writeHeaderRow(sheet: ExcelJS.Worksheet, unit: string, readingOrder: 'r
   const headers = [
     translate('Code', 'الكود'),
     translate('Product Name', 'اسم المنتج'),
-    translate('Subcategory', 'الفئة الفرعية'),
-    translate('Source Type', 'نوع المصدر'),
     `${translate('Standard Dimensions', 'الأبعاد النمطية')} (${unit})`,
   ];
 
@@ -166,40 +162,23 @@ function writeCategoryRow(sheet: ExcelJS.Worksheet, rowIndex: number, title: str
   row.getCell(1).value = title;
 }
 
-function writeProductRow(
+function writeDimensionRow(
   sheet: ExcelJS.Worksheet,
   rowIndex: number,
   product: CatalogProductForExcel,
-  options: {
-    shaded: boolean;
-    readingOrder: 'rtl' | 'ltr';
-    isRtl: boolean;
-    unit: string;
-    defaultLabel: string;
-  },
+  dimension: string,
+  options: { shaded: boolean; readingOrder: 'rtl' | 'ltr'; isRtl: boolean },
 ) {
-  const dimensions = formatDimensions(product.dimensions, options.unit, options.defaultLabel);
-  const values = [
-    product.code,
-    product.title,
-    product.subCategory?.title || '-',
-    sourceTypeLabel(product.sourceType),
-    dimensions.plain,
-  ];
-  const lineCount = Math.max(
-    dimensions.lineCount,
-    estimateWrappedLines(product.title, 42),
-    estimateWrappedLines(product.subCategory?.title || '-', 26),
-  );
-
+  const values = [product.code, product.title, dimension];
+  const lineCount = estimateWrappedLines(product.title, 48);
   const row = sheet.getRow(rowIndex);
   row.height = Math.max(22, lineCount * 16 + 8);
   const startAlign = options.isRtl ? 'right' : 'left';
 
   values.forEach((value, index) => {
-    const cell = row.getCell(index + 1);
     const column = index + 1;
-    cell.value = column === 5 ? dimensions.value : value;
+    const cell = row.getCell(column);
+    cell.value = value;
     cell.font = {
       name: column === 1 ? CODE_FONT : FONT,
       size: 11,
@@ -209,52 +188,30 @@ function writeProductRow(
     cell.fill = solidFill(options.shaded ? HAZE_WASH : WHITE);
     cell.border = thinBorder;
     cell.alignment = {
-      horizontal: column === 1 || column === 4 ? 'center' : startAlign,
+      horizontal: column === 1 ? 'center' : startAlign,
       vertical: 'middle',
-      wrapText: column !== 1 && column !== 4,
+      wrapText: column !== 1,
       readingOrder: options.readingOrder,
     };
   });
 }
 
-function formatDimensions(dimensions: CatalogDimension[], unit: string, defaultLabel: string) {
-  if (dimensions.length === 0) {
-    return { plain: '-', value: '-' as string | ExcelJS.CellRichTextValue, lineCount: 1 };
-  }
+function formatDimensionLines(dimensions: CatalogDimension[], unit: string): string[] {
+  if (dimensions.length === 0) return ['-'];
 
-  const sorted = [...dimensions].sort((a, b) => {
-    if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-    return a.height - b.height;
-  });
-
-  const lines = sorted.map((dimension) => {
-    const height = formatMeasure(dimension.height);
-    const size =
-      dimension.diameter != null
-        ? `⌀${formatMeasure(dimension.diameter)} × ${height}`
-        : `${formatMeasure(dimension.length)} × ${formatMeasure(dimension.depth)} × ${height}`;
-    const label = `${size} ${unit}`;
-    return {
-      text: dimension.isDefault ? `${label} (${defaultLabel})` : label,
-      isDefault: dimension.isDefault,
-    };
-  });
-
-  return {
-    plain: lines.map((line) => line.text).join('\n'),
-    lineCount: lines.length,
-    value: {
-      richText: lines.map((line, index) => ({
-        font: {
-          name: FONT,
-          size: 11,
-          bold: line.isDefault,
-          color: { argb: line.isDefault ? TEAL : NAVY },
-        },
-        text: index === 0 ? line.text : `\n${line.text}`,
-      })),
-    } satisfies ExcelJS.CellRichTextValue,
-  };
+  return [...dimensions]
+    .sort((a, b) => {
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      return a.height - b.height;
+    })
+    .map((dimension) => {
+      const height = formatMeasure(dimension.height);
+      const size =
+        dimension.diameter != null
+          ? `⌀${formatMeasure(dimension.diameter)} × ${height}`
+          : `${formatMeasure(dimension.length)} × ${formatMeasure(dimension.depth)} × ${height}`;
+      return `${size} ${unit}`;
+    });
 }
 
 function groupByMainCategory(products: CatalogProductForExcel[], locale: Locale): CategoryGroup[] {
@@ -284,12 +241,6 @@ function groupByMainCategory(products: CatalogProductForExcel[], locale: Locale)
   }
 
   return ordered;
-}
-
-function sourceTypeLabel(sourceType: string): string {
-  if (sourceType === PRODUCT_SOURCE_TYPES.MANUFACTURED) return translate('Manufactured', 'مُصنع');
-  if (sourceType === PRODUCT_SOURCE_TYPES.IMPORTED) return translate('Imported', 'مستورد');
-  return sourceType;
 }
 
 function formatMeasure(value: number | null): string {
