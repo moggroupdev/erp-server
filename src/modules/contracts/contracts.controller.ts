@@ -8,10 +8,37 @@ import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
 import { ContractsService } from './contracts.service';
 import { CreateLegacyContractDto } from './dto/create-legacy-contract.dto';
+import { ValidateLegacyContractDto } from './dto/validate-legacy-contract.dto';
+import { ValidateLegacyContractItemsDto } from './dto/validate-legacy-contract-items.dto';
+import { ValidateLegacyContractUnitsDto } from './dto/validate-legacy-contract-units.dto';
 
 @Controller('contracts')
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
+
+  @Post('legacy/validate-contract')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.ADD_LEGACY_CONTRACT)
+  @ApiBearerAuth()
+  validateLegacyContract(@Body() dto: ValidateLegacyContractDto) {
+    return this.contractsService.validateLegacyContract(dto);
+  }
+
+  @Post('legacy/validate-items')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.ADD_LEGACY_CONTRACT)
+  @ApiBearerAuth()
+  validateLegacyItems(@Body() dto: ValidateLegacyContractItemsDto) {
+    return this.contractsService.validateLegacyItems(dto);
+  }
+
+  @Post('legacy/validate-units')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.ADD_LEGACY_CONTRACT)
+  @ApiBearerAuth()
+  validateLegacyUnits(@Body() dto: ValidateLegacyContractUnitsDto) {
+    return this.contractsService.validateLegacyUnits(dto);
+  }
 
   @Post('legacy')
   @UseGuards(PermissionGuard)
