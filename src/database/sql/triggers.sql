@@ -78,14 +78,14 @@ FOR EACH ROW EXECUTE PROCEDURE generate_suppliers_code();
 
 -- ---------------------------------------------------------------------------
 
--- CONTRACTS: CTR
+-- CONTRACTS: CR
 CREATE SEQUENCE IF NOT EXISTS contracts_code_seq START 1 INCREMENT 1;
 
 CREATE OR REPLACE FUNCTION generate_contracts_code()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.code IS NULL THEN
-    NEW.code := 'CTR-' || LPAD(nextval('contracts_code_seq')::text, 8, '0');
+    NEW.code := 'CR-' || LPAD(nextval('contracts_code_seq')::text, 8, '0');
   END IF;
   RETURN NEW;
 END;
