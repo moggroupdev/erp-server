@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'add_legacy_contract' BEFORE 'add_material';
