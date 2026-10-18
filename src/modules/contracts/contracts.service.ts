@@ -161,7 +161,7 @@ export class ContractsService {
       throw new ConflictException(
         translate(
           `Legacy contract number ${dto.legacyNumber} is already used.`,
-          `رقم العقد الورقي ${dto.legacyNumber} مستخدم بالفعل.`,
+          `رقم مراجعة العقد ${dto.legacyNumber} مستخدم بالفعل.`,
         ),
       );
     }
@@ -169,7 +169,7 @@ export class ContractsService {
       throw new ConflictException(
         translate(
           `Legacy work order number ${dto.legacyWorkOrderNumber} is already used.`,
-          `رقم أمر الشغل الورقي ${dto.legacyWorkOrderNumber} مستخدم بالفعل.`,
+          `رقم أمر الشغل ${dto.legacyWorkOrderNumber} مستخدم بالفعل.`,
         ),
       );
     }
