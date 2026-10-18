@@ -44,6 +44,7 @@ export const PERMISSION_VALUES = [
   'read_customers',
   'update_customer',
   'read_contracts',
+  'add_legacy_contract',
   'add_material',
   'read_materials',
   'update_material',

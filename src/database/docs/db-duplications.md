@@ -55,7 +55,7 @@ Not performance caches. The writer sets them from the parent row on insert. Comp
 | `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
 | `outsourcing_orders.completed_at`       | All lines fully received (`received + rejected = ordered`) across receipts                  |
-| `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit                                      |
+| `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit. Legacy contract create may set it directly when the unit was already produced |
 | `product_units.received_at`             | Parent `product_purchase_receipts.received_at` via receipt item                             |
 | `product_units.delivered_at`            | Parent `deliveries.completed_at` via `delivery_items`                                       |
 | `product_units.installed_at`            | Parent `installations.completed_at` via `installation_items`                                |

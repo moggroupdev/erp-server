@@ -74,9 +74,9 @@ Recalculate inside a transaction when source rows change.
 
 **`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
 
-**`product_units` timestamps** — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only).
+**`product_units` timestamps** — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only). Legacy contract create may set `produced_at` directly when the unit was already produced. Later production-plan completion still owns the column.
 
-**Serial numbers** — auto-generate on unit creation; unique; omit from update DTOs.
+**Serial numbers** — auto-generate on unit creation; unique; omit from update DTOs. Legacy contract create accepts a client-supplied 12-digit serial instead, plus a supplier serial when the product is imported.
 
 ---
 
@@ -226,6 +226,7 @@ All sources live on the header — one source event per transaction; items only 
 ### Contracts
 
 - Contract reads: `GET /contracts` and `GET /contracts/:id` require `read_contracts`. List keyword search covers code, legacy number, legacy work order number, and notes. `status` is `open` (no `completed_at` and no `cancelled_at`), `completed`, or `cancelled`
+- Legacy create: `POST /contracts/legacy` requires `add_legacy_contract`. It omits `inquiry_id`, `preview_id`, `offer_id`, and `discount_pct`. `legacy_number` and `legacy_work_order_number` are required and unique. `created_at`, `started_at`, and `delivery_time` are client dates. `delivery_address_id` is optional and, when set, must belong to `customer_id`. Each line stores `product_code` from its dimension, and inserts one `product_units` row per quantity. `total_amount` is the sum of active line amounts
 - `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contracts
 - `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contracts
 - `contracts.delivery_address_id` — null means fulfillment at the factory. When set, must belong to `contracts.customer_id`
