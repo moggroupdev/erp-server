@@ -18,7 +18,7 @@ Sync/validation rules → `[application-logic.md](./application-logic.md)`.
 
 | Column                           | Canonical source                                                                                                 | Why                                                    |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `contracts.customer_id`          | `inquiries.customer_id` via `inquiry_id` when set; entered directly when `inquiry_id` is null                    | Filter contracts by customer without joining inquiries |
+| `contracts.customer_id`          | `inquiries.customer_id` via `inquiry_id` when set; entered directly when `inquiry_id` is null                    | Filter contract reviews by customer without joining inquiries |
 | `maintenance_orders.customer_id` | `customer_addresses.customer_id` via `customer_address_id`; or service agreement address when `service_contract` | Filter MOs by customer without deep joins              |
 | `inquiry_items.product_code`     | `product_dimensions.product_code` via `product_dimension_id`                                                     | Filter lines by product without joining dimensions     |
 | `offer_items.product_code`       | Same                                                                                                             | Same                                                   |
@@ -55,7 +55,7 @@ Not performance caches. The writer sets them from the parent row on insert. Comp
 | `material_purchase_orders.completed_at` | All lines fully received (`received + rejected = ordered`) across receipts                  |
 | `product_purchase_orders.completed_at`  | Every ordered unit has a `product_purchase_receipt_items` row                               |
 | `outsourcing_orders.completed_at`       | All lines fully received (`received + rejected = ordered`) across receipts                  |
-| `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit. Legacy contract create may set it directly when the unit was already produced |
+| `product_units.produced_at`             | Last `production_plan_items.completed_at` for the unit. Legacy contract review create may set it directly when the unit was already produced |
 | `product_units.received_at`             | Parent `product_purchase_receipts.received_at` via receipt item                             |
 | `product_units.delivered_at`            | Parent `deliveries.completed_at` via `delivery_items`                                       |
 | `product_units.installed_at`            | Parent `installations.completed_at` via `installation_items`                                |

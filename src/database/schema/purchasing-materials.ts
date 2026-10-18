@@ -89,7 +89,7 @@ export const materialPurchaseRequisitionItemContractItems = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     materialPurchaseRequisitionItemId: uuid('material_purchase_requisition_item_id').notNull(),
-    contractItemId: uuid('contract_item_id').notNull(), // @APP_CHECKED - Contract line must not be cancelled at link time; links are editable only before any requisition gate decision
+    contractItemId: uuid('contract_item_id').notNull(), // @APP_CHECKED - Contract review line must not be cancelled at link time; links are editable only before any requisition gate decision
     quantityAllocated: numeric('quantity_allocated'), // Optional, informational only, in the requisition line's unit_of_measurement_selected; not validated against quantity_requested
   },
   (table) => [

@@ -110,7 +110,9 @@ export class ContractsService {
     });
 
     if (!contract) {
-      throw new NotFoundException(translate(`Contract with ID ${id} does not exist.`, `لا يوجد عقد بالمعرف ${id}.`));
+      throw new NotFoundException(
+        translate(`Contract review with ID ${id} does not exist.`, `لا توجد مراجعة عقد بالمعرف ${id}.`),
+      );
     }
 
     return {
@@ -245,7 +247,7 @@ export class ContractsService {
     if (startedAt < createdAt) {
       throw new BadRequestException(
         translate(
-          'Work order start date cannot be earlier than the contract date.',
+          'Work order start date cannot be earlier than the contract review date.',
           'لا يمكن أن يسبق تاريخ بدء أمر الشغل تاريخ مراجعة العقد.',
         ),
       );
@@ -269,7 +271,7 @@ export class ContractsService {
     if (numberClashes.some((row) => row.legacyNumber === dto.legacyNumber)) {
       throw new ConflictException(
         translate(
-          `Legacy contract number ${dto.legacyNumber} is already used.`,
+          `Legacy contract review number ${dto.legacyNumber} is already used.`,
           `رقم مراجعة العقد ${dto.legacyNumber} مستخدم بالفعل.`,
         ),
       );
@@ -375,8 +377,8 @@ export class ContractsService {
     if (repeatedSerial) {
       throw new BadRequestException(
         translate(
-          `Serial number ${repeatedSerial} is repeated in this contract.`,
-          `الرقم التسلسلي ${repeatedSerial} مكرر في هذا العقد.`,
+          `Serial number ${repeatedSerial} is repeated in this contract review.`,
+          `الرقم التسلسلي ${repeatedSerial} مكرر في مراجعة العقد هذه.`,
         ),
       );
     }
@@ -384,8 +386,8 @@ export class ContractsService {
     if (repeatedSupplierSerial) {
       throw new BadRequestException(
         translate(
-          `Supplier serial number ${repeatedSupplierSerial} is repeated in this contract.`,
-          `الرقم التسلسلي للمورد ${repeatedSupplierSerial} مكرر في هذا العقد.`,
+          `Supplier serial number ${repeatedSupplierSerial} is repeated in this contract review.`,
+          `الرقم التسلسلي للمورد ${repeatedSupplierSerial} مكرر في مراجعة العقد هذه.`,
         ),
       );
     }
@@ -429,6 +431,6 @@ export class ContractsService {
     if (status === 'open') return and(isNull(contracts.completedAt), isNull(contracts.cancelledAt));
     if (status === 'completed') return isNotNull(contracts.completedAt);
     if (status === 'cancelled') return isNotNull(contracts.cancelledAt);
-    throw new BadRequestException(translate('Unknown contract status.', 'حالة العقد غير معروفة.'));
+    throw new BadRequestException(translate('Unknown contract review status.', 'حالة مراجعة العقد غير معروفة.'));
   }
 }

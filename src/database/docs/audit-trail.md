@@ -174,7 +174,7 @@ Drizzle: [`audit-logs.ts`](../schema/audit-logs.ts).
 - **Parent** — immediate composition FK (e.g. receipt item → receipt).
 - **Root** — owning business document (e.g. receipt item → material purchase order via receipt header lookup).
 
-Reference/master tables (countries, categories, roles, …) usually leave both pairs null. Top-level documents (contracts, MPOs, …) may set root to self.
+Reference/master tables (countries, categories, roles, …) usually leave both pairs null. Top-level documents (contract reviews, MPOs, …) may set root to self.
 
 Polymorphic cases:
 

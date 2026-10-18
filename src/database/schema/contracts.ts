@@ -13,31 +13,31 @@ import { productUnits } from './product-units';
 import { productPurchaseOrderItems } from './purchasing-products';
 import { materialPurchaseRequisitionItemContractItems } from './purchasing-materials';
 
-// This represents the contract between the customer and the company (An Order)
+// This represents the contract review between the customer and the company (An Order)
 export const contracts = pgTable(
   'contracts',
   {
     id: uuid('id').defaultRandom().primaryKey(),
     code: text('code').unique().notNull(), // Format: CTR-00000001
-    legacyNumber: text('legacy_number').unique(), // @APP_CHECKED - Paper contract number; null on ERP-native contracts
-    legacyWorkOrderNumber: text('legacy_work_order_number').unique(), // @APP_CHECKED - Paper work order number; null on ERP-native contracts
-    inquiryId: uuid('inquiry_id') // Nullable for legacy contracts only; required on normal create in the service
+    legacyNumber: text('legacy_number').unique(), // @APP_CHECKED - Paper contract review number; null on ERP-native contract reviews
+    legacyWorkOrderNumber: text('legacy_work_order_number').unique(), // @APP_CHECKED - Paper work order number; null on ERP-native contract reviews
+    inquiryId: uuid('inquiry_id') // Nullable for legacy contract reviews only; required on normal create in the service
       .references(() => inquiries.id),
     customerId: uuid('customer_id') // @RFP_APP_CHECKED - Copy inquiries.customer_id when inquiry_id is set; entered directly when null. When delivery_address_id is set, it must belong to that customer
       .notNull()
       .references(() => customers.id),
-    previewId: uuid('preview_id') // Nullable — some contracts are not from previews
+    previewId: uuid('preview_id') // Nullable — some contract reviews are not from previews
       .unique()
       .references(() => previews.id),
-    offerId: uuid('offer_id') // Nullable — some contracts are not from offers
+    offerId: uuid('offer_id') // Nullable — some contract reviews are not from offers
       .unique()
       .references(() => offers.id),
     deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Null means factory fulfillment. When set, must belong to contracts.customer_id
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
     totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
-    discountPct: percentage('discount_pct'), // @APP_CHECKED - When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract creation
-    // Contract status can be deduced from these dates:
+    discountPct: percentage('discount_pct'), // @APP_CHECKED - When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract review creation
+    // Contract review status can be deduced from these dates:
     startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
     completedAt: timestamp('completed_at', { withTimezone: true }),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
@@ -109,7 +109,7 @@ export const contractItems = pgTable(
       .notNull()
       .references(() => users.id), // May differ from contract creator when lines are appended later
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
-    cancelledBy: uuid('cancelled_by').references(() => users.id), // Null when cancelled via parent contract cascade
+    cancelledBy: uuid('cancelled_by').references(() => users.id), // Null when cancelled via parent contract review cascade
     cancellationReason: text('cancellation_reason'), // Set on the old row when cancelled or replaced
     previousVersionId: uuid('previous_version_id').references((): AnyPgColumn => contractItems.id), // Set on replacement rows only — cancel-and-replace history link
   },

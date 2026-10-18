@@ -44,7 +44,7 @@ Set from canonical source on INSERT; immutable unless driving FK changes.
 | `*_items.product_code` (inquiry/offer/preview/contract) | Copy `product_dimensions.product_code` for `product_dimension_id`                                   |
 | `supplier_invoices.supplier_id`                         | Copy from linked order's `supplier_id` (`material_purchase_orders`, `product_purchase_orders`, or `outsourcing_orders`); must match parent |
 
-On contract creation: when `offer_id` is set, copy `offers.discount_pct` to `contracts.discount_pct` (`@APP_CHECKED`, not snapshot).
+On contract review creation: when `offer_id` is set, copy `offers.discount_pct` to `contracts.discount_pct` (`@APP_CHECKED`, not snapshot).
 
 ---
 
@@ -74,9 +74,9 @@ Recalculate inside a transaction when source rows change.
 
 **`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
 
-**`product_units` timestamps** — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only). Legacy contract create may set `produced_at` directly when the unit was already produced. Later production-plan completion still owns the column.
+**`product_units` timestamps** — mirror workflow events; update or clear when source is undone (e.g. delivery cancelled). Ignore cancelled plan items when computing `produced_at`. Warranty end = `warranty_started_at` + 1 year (API only). Legacy contract review create may set `produced_at` directly when the unit was already produced. Later production-plan completion still owns the column.
 
-**Serial numbers** — auto-generate on unit creation; unique; omit from update DTOs. Legacy contract create accepts a client-supplied 12-digit serial instead, plus a supplier serial when the product is imported.
+**Serial numbers** — auto-generate on unit creation; unique; omit from update DTOs. Legacy contract review create accepts a client-supplied 12-digit serial instead, plus a supplier serial when the product is imported.
 
 ---
 
@@ -155,7 +155,7 @@ All sources live on the header — one source event per transaction; items only 
   - Gate decide is not idempotent — second decision on the same party returns 400
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
 - `material_purchase_requisition_item_contract_items` (`@APP_CHECKED`):
-  - Contract line must not be cancelled at link time
+  - Contract review line must not be cancelled at link time
   - Links are editable only before any requisition gate decision (same lock as header and item edits)
   - `quantity_allocated` is optional and informational, stored in the requisition line's `unit_of_measurement_selected`; not validated against `quantity_requested`
 - `material_purchase_order_item_requisition_items` (`@APP_CHECKED`):
@@ -220,16 +220,16 @@ All sources live on the header — one source event per transaction; items only 
 - `users.is_login_enabled` — paired with `password` (DB-checked via `users_login_enabled_check`): when true, `password` and (`email` or `phone`) are required; when false, `password` must be NULL (employee-only records with no system access; email/phone remain optional)
 - `users.role_id` — required for login-enabled non-admin users; must be NULL for admins and for users with `is_login_enabled = false` (DB-checked via `users_admin_or_role_check`)
 - `users.production_sub_department` — required if `department_id = PRODUCTION_DEPARTMENT_ID`
-- `roles.max_discount_pct` — cap company negotiation rounds and direct contract discounts; `NULL` = no discount; admins exempt
+- `roles.max_discount_pct` — cap company negotiation rounds and direct contract review discounts; `NULL` = no discount; admins exempt
 - `roles.department_id` — when set, user's `department_id` must match on role assignment
 
-### Contracts
+### Contract reviews
 
-- Contract reads: `GET /contracts` and `GET /contracts/:id` require `read_contracts`. List keyword search covers code, legacy number, legacy work order number, and notes. `status` is `open` (no `completed_at` and no `cancelled_at`), `completed`, or `cancelled`
+- Contract review reads: `GET /contracts` and `GET /contracts/:id` require `read_contracts`. List keyword search covers code, legacy number, legacy work order number, and notes. `status` is `open` (no `completed_at` and no `cancelled_at`), `completed`, or `cancelled`
 - Legacy create: `POST /contracts/legacy` requires `add_legacy_contract`. It omits `inquiry_id`, `preview_id`, `offer_id`, and `discount_pct`. `legacy_number` and `legacy_work_order_number` are required and unique. `created_at`, `started_at`, and `delivery_time` are client dates with order `created_at <= started_at <= delivery_time`. `delivery_address_id` is optional and, when set, must belong to `customer_id`. Each line stores `product_code` from its dimension, and inserts one `product_units` row per quantity. `total_amount` is the sum of active line amounts
 - Legacy create step checks (same permission, no writes): `POST /contracts/legacy/validate-contract` (customer, delivery address, date order, unique legacy numbers), `POST /contracts/legacy/validate-items` (dimensions exist; products not deleted), `POST /contracts/legacy/validate-units` (unit/quantity rules, serial uniqueness in payload and against `product_units`)
-- `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contracts
-- `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contracts
+- `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contract reviews
+- `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contract reviews
 - `contracts.delivery_address_id` — null means fulfillment at the factory. When set, must belong to `contracts.customer_id`
 - `contracts.discount_pct` — when `offer_id` set, must match `offers.discount_pct`; when null offer, set on create with role cap
 
@@ -240,7 +240,7 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Customer receptions
 
-- `customer_id` matches every unit's contract customer
+- `customer_id` matches every unit's contract review customer
 - When `delivery_id` / `installation_id` set, all items must be on that delivery/installation
 - Reject cancelling delivery/installation referenced by a reception
 
@@ -280,10 +280,10 @@ All sources live on the header — one source event per transaction; items only 
 
 ## Workflow guards
 
-### Inquiry → preview → offer → contract
+### Inquiry → preview → offer → contract review
 
-- Contract from offer only if `offers.status = 'accepted'`; cannot downgrade accepted offer while contract references it
-- Normal contract create requires `inquiry_id`. Legacy contracts omit `inquiry_id`, and then `preview_id` and `offer_id` must be null (DB-checked via `contracts_null_inquiry_no_preview_offer`)
+- Contract review from offer only if `offers.status = 'accepted'`; cannot downgrade accepted offer while a contract review references it
+- Normal contract review create requires `inquiry_id`. Legacy contract reviews omit `inquiry_id`, and then `preview_id` and `offer_id` must be null (DB-checked via `contracts_null_inquiry_no_preview_offer`)
 - Enforce inquiry/offer status transitions in service
 - `offer_negotiations` — append-only log; `offers.discount_pct` = currently agreed (updated on accept, not auto-synced from last row)
 - Company negotiation rows capped by role; reject rounds when offer is accepted/rejected/cancelled
@@ -306,7 +306,7 @@ Requests for quotation: `open` when `closed_at` and `cancelled_at` are null; `cl
 
 ---
 
-## Contract lifecycle
+## Contract review lifecycle
 
 Lines are **immutable** — amend via append, cancel, or replace; never hard-delete.
 
@@ -315,13 +315,13 @@ Lines are **immutable** — amend via append, cancel, or replace; never hard-del
 | New line                   | **Append** — insert item, create units, recalc total                                          |
 | Remove line                | **Cancel item** — cancel item + units + plan items, recalc total                              |
 | Qty/price/dimension change | **Replace** — new item with `previous_version_id`, cancel old, apply unit delta, recalc total |
-| Whole order                | **Cancel contract** — cancel header + cascade items/units/plans, recalc total                 |
+| Whole order                | **Cancel contract review** — cancel header + cascade items/units/plans, recalc total         |
 
 **Replace quantity delta:** ↑ create units on new item; ↓ cancel excess active units on old item; unchanged qty still gets fresh units on new item (old units stay on cancelled row for history).
 
-**Cascade audit:** `cancelled_by` / `cancellation_reason` on contract or direct item cancel only — not on cascaded units or plan items.
+**Cascade audit:** `cancelled_by` / `cancellation_reason` on contract review or direct item cancel only — not on cascaded units or plan items.
 
-**DTOs:** omit `previous_version_id`, `cancelled_at`, `cancelled_by`, `cancellation_reason`, `created_by` on contract item updates; omit contract cancel fields from generic updates.
+**DTOs:** omit `previous_version_id`, `cancelled_at`, `cancelled_by`, `cancellation_reason`, `created_by` on contract item updates; omit contract review cancel fields from generic updates.
 
 **Version chain:** walk `previous_version_id` forward for history; `WHERE previous_version_id = ?` for successors.
 
