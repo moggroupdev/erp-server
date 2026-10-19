@@ -40,7 +40,9 @@ When --with-suppliers / interactive yes is chosen, also:
   supplier_addresses
   suppliers
 
-Also restarts the MPO / MPR / IVT code sequences to 1.
+Always restarts the MPO / MPR / IVT code sequences to 1 after deletes
+(so the next insert is MPO-00000001 / MPR-00000001 / IVT-00000001).
+If target tables are already empty, the script still offers a sequences-only reset.
 With requisitions, also restarts material_purchase_requisitions_code_seq to 1.
 With suppliers, also restarts suppliers_code_seq to 1.
 
@@ -317,6 +319,7 @@ async function confirmDeletion(
 
     if (total === 0) {
       console.log('\nNothing to delete. All target tables are already empty.');
+      console.log('Code sequences can still be restarted so the next insert is …-00000001.');
       return false;
     }
 
@@ -335,6 +338,14 @@ async function confirmDeletion(
   }
 }
 
+async function restartCodeSequences(tx: SeedClient, sequences: readonly string[]) {
+  for (const sequence of sequences) {
+    // RESTART WITH 1 → next nextval() returns 1 (MPO-00000001 / MPR-… / IVT-…).
+    await tx.execute(sql.raw(`ALTER SEQUENCE ${sequence} RESTART WITH 1`));
+    console.log(`  restarted sequence ${sequence} → next code serial = 1`);
+  }
+}
+
 async function deleteAllRows(
   tx: SeedClient,
   tables: readonly TargetTable[],
@@ -346,9 +357,28 @@ async function deleteAllRows(
     console.log(`  deleted ${String(expected[target.name] ?? 0).padStart(8)}  ${target.name}`);
   }
 
-  for (const sequence of sequences) {
-    await tx.execute(sql.raw(`ALTER SEQUENCE ${sequence} RESTART WITH 1`));
-    console.log(`  restarted sequence ${sequence}`);
+  await restartCodeSequences(tx, sequences);
+}
+
+async function confirmSequenceOnlyReset(
+  databaseUrl: string,
+  withRequisitions: boolean,
+  withSuppliers: boolean,
+): Promise<boolean> {
+  const rl = readline.createInterface({ input, output });
+
+  try {
+    console.log('\n========== RESET CODE SEQUENCES ONLY ==========');
+    console.log('Target tables are already empty. No rows will be deleted.');
+    console.log('This will restart MPO / MPR / IVT code sequences to 1.');
+    if (withRequisitions) console.log('Also restarts material_purchase_requisitions_code_seq to 1.');
+    if (withSuppliers) console.log('Also restarts suppliers_code_seq to 1.');
+    console.log(`Database: ${maskConnectionString(databaseUrl)}`);
+    await promptExact(rl, '\nType "continue" to reset sequences: ', 'continue');
+    await promptExact(rl, `Type ${CONFIRM_PHRASE}: `, CONFIRM_PHRASE);
+    return true;
+  } finally {
+    rl.close();
   }
 }
 
@@ -405,7 +435,28 @@ async function main() {
       withSuppliers,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      // Tables empty: still allow resetting code sequences so the next seed
+      // gets MPO-00000001 / MPR-00000001 / IVT-00000001 (and optional extras).
+      if (total !== 0) return;
+
+      const resetSequences = await confirmSequenceOnlyReset(
+        databaseUrl,
+        withRequisitions,
+        withSuppliers,
+      );
+      if (!resetSequences) return;
+
+      console.log('\nRestarting code sequences in one database transaction...');
+      await db.transaction(async (tx) => {
+        transactionStarted = true;
+        await restartCodeSequences(tx, sequences);
+      });
+      console.log(
+        '\nSequence reset completed. Next inserts will use MPO-/MPR-/IVT-00000001 (and any optional seqs you included).',
+      );
+      return;
+    }
 
     console.log('\nDeleting in one database transaction...');
     await db.transaction(async (tx) => {
@@ -421,6 +472,7 @@ async function main() {
     });
 
     console.log(completionMessage(withRequisitions, withSuppliers));
+    console.log('Code sequences restarted: next MPO / MPR / IVT codes start at …-00000001.');
   } catch (e) {
     console.error(e instanceof Error ? e.message : e);
     if (transactionStarted) {
