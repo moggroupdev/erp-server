@@ -6,6 +6,7 @@ import {
   materialPurchaseOrders,
   materialPurchaseReceiptItems,
   materialPurchaseReceipts,
+  materials,
 } from 'src/database/schema';
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
@@ -58,6 +59,7 @@ export class MaterialPurchaseReceiptsService {
   }
 
   public async get(id: string) {
+    // Cap nested `with` at 2 levels — deeper paths exceed Postgres's 63-char alias limit.
     const receipt = await this.db.query.materialPurchaseReceipts.findFirst({
       where: eq(materialPurchaseReceipts.id, id),
       with: {
@@ -76,7 +78,6 @@ export class MaterialPurchaseReceiptsService {
                 quantityOrdered: true,
                 unitPrice: true,
               },
-              with: { material: { columns: MATERIAL_COLUMNS, extras: materialUnitConversionsExtra } },
             },
           },
         },
@@ -88,7 +89,21 @@ export class MaterialPurchaseReceiptsService {
         translate(`Material purchase receipt with ID ${id} does not exist.`, `لا يوجد إذن استلام مواد بالمعرف ${id}.`),
       );
 
-    return receipt;
+    const materialCodes = [
+      ...new Set(receipt.items.map((item) => item.materialPurchaseOrderItem.materialCode)),
+    ];
+    const materialByCode = await this.loadMaterialsByCode(materialCodes);
+
+    return {
+      ...receipt,
+      items: receipt.items.map((item) => ({
+        ...item,
+        materialPurchaseOrderItem: {
+          ...item.materialPurchaseOrderItem,
+          material: materialByCode.get(item.materialPurchaseOrderItem.materialCode)!,
+        },
+      })),
+    };
   }
 
   public async create(createDto: CreateMaterialPurchaseReceiptDto, user: User) {
@@ -241,10 +256,29 @@ export class MaterialPurchaseReceiptsService {
     }
   }
 
+  private async loadMaterialsByCode(materialCodes: string[]) {
+    if (materialCodes.length === 0) return new Map<string, { code: string }>();
+
+    const rows = await this.db.query.materials.findMany({
+      where: inArray(materials.code, materialCodes),
+      columns: MATERIAL_COLUMNS,
+      extras: materialUnitConversionsExtra,
+    });
+
+    return new Map(rows.map((row) => [row.code, row]));
+  }
+
   private async getPreviouslyReceivedBaseByOrderItemId(orderId: string) {
+    // Load order items + material at depth 2; receipt lines are a separate query (avoids 3-level `with`).
     const orderItems = await this.db.query.materialPurchaseOrderItems.findMany({
       where: eq(materialPurchaseOrderItems.materialPurchaseOrderId, orderId),
-      columns: { id: true },
+      columns: { id: true, materialCode: true },
+      with: {
+        material: {
+          columns: { unitOfMeasurement: true },
+          extras: materialUnitConversionsExtra,
+        },
+      },
     });
 
     const orderItemIds = orderItems.map((item) => item.id);
@@ -253,23 +287,23 @@ export class MaterialPurchaseReceiptsService {
 
     if (orderItemIds.length === 0) return totals;
 
+    const orderItemById = new Map(orderItems.map((item) => [item.id, item]));
+
     const existingReceiptItems = await this.db.query.materialPurchaseReceiptItems.findMany({
       where: inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, orderItemIds),
-      with: {
-        materialPurchaseOrderItem: {
-          columns: { id: true, materialCode: true, unitOfMeasurementSelected: true },
-          with: {
-            material: {
-              columns: { unitOfMeasurement: true },
-              extras: materialUnitConversionsExtra,
-            },
-          },
-        },
+      columns: {
+        materialPurchaseOrderItemId: true,
+        unitOfMeasurementSelected: true,
+        quantityReceived: true,
+        quantityRejected: true,
       },
     });
 
     for (const row of existingReceiptItems) {
-      const material = row.materialPurchaseOrderItem.material;
+      const orderItem = orderItemById.get(row.materialPurchaseOrderItemId);
+      if (!orderItem) continue;
+
+      const material = orderItem.material;
       const conversions = material.unitConversions ?? [];
       const factor = resolveConversionFactor(row.unitOfMeasurementSelected, material.unitOfMeasurement, conversions);
       const baseQty =

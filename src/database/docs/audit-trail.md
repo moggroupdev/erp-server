@@ -270,6 +270,6 @@ Scripts using a raw `pg` client outside the wrapped pool must set GUCs themselve
 
 - No audit calls in services/controllers.
 - No changes to existing `insert` / `update` / `delete` patterns.
-- No UI in erp-app for audit (API only in this phase).
+- erp-app exposes audit logs under Organization → Audit Logs (`read_audit_logs`).
 
 Coverage is automatic once migrations + `db:triggers` have run and the app uses the wrapped Drizzle pool.

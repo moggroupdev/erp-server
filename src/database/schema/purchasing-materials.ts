@@ -174,7 +174,7 @@ export const materialPurchaseOrderItems = pgTable(
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantityOrdered: numeric('quantity_ordered').notNull(),
     unitPrice: numeric('unit_price').notNull(),
-    supplierQuotationItemId: uuid('supplier_quotation_item_id'), // @APP_CHECKED - When set, quotation must be submitted and its supplier must match the order
+    supplierQuotationItemId: uuid('supplier_quotation_item_id'), // @APP_CHECKED - When set, RFQ must not be cancelled; quotation supplier must match the order
     notes: text('notes'),
   },
   (table) => [
@@ -197,7 +197,7 @@ export const materialPurchaseOrderItems = pgTable(
   ],
 );
 
-// Contractual payment slices. Percentages are of total_amount. Coverage of 100% is @APP_CHECKED.
+// Contractual payment slices. Percentages are of the VAT-inclusive grand total. Coverage of 100% is @APP_CHECKED.
 export const materialPurchaseOrderPaymentTerms = pgTable(
   'material_purchase_order_payment_terms',
   {
@@ -207,7 +207,7 @@ export const materialPurchaseOrderPaymentTerms = pgTable(
     event: mpoPaymentEventEnum('event').notNull(),
     offsetDays: integer('offset_days'), // Null for advance and on_receipt; days after receipt or invoice otherwise
     valueKind: mpoPaymentValueKindEnum('value_kind').notNull(),
-    value: numeric('value'), // Null only for remainder; percentage of total_amount, or a fixed amount
+    value: numeric('value'), // Null only for remainder; percentage of VAT-inclusive grand total, or a fixed amount
   },
   (table) => [
     foreignKey({

@@ -893,6 +893,7 @@ BEGIN
         'users', 'customers', 'suppliers', 'products', 'materials',
         'inquiries', 'contracts', 'trips', 'customer_receptions',
         'material_purchase_requisitions', 'material_purchase_orders',
+        'request_for_quotations',
         'product_purchase_orders', 'outsourcing_orders',
         'supplier_quotation_emails', 'service_agreements', 'maintenance_orders',
         'production_plans', 'legacy_issue_permits'

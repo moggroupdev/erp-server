@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -6,6 +6,7 @@ import {
   inventoryTransactionItems,
   inventoryTransactions,
   materialPurchaseReceipts,
+  materials,
 } from 'src/database/schema';
 import { INVENTORY_TRANSACTION_TYPES } from 'src/utils/constants';
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
@@ -106,6 +107,7 @@ export class InventoryTransactionsService {
     dto: CreateInventoryTransactionFromMaterialPurchaseReceiptDto,
     user: User,
   ) {
+    // Cap nested `with` at 2 levels — deeper paths exceed Postgres's 63-char alias limit.
     const receipt = await this.db.query.materialPurchaseReceipts.findFirst({
       where: eq(materialPurchaseReceipts.id, receiptId),
       with: {
@@ -118,12 +120,6 @@ export class InventoryTransactionsService {
                 materialCode: true,
                 unitOfMeasurementSelected: true,
                 unitPrice: true,
-              },
-              with: {
-                material: {
-                  columns: { code: true, unitOfMeasurement: true },
-                  extras: materialUnitConversionsExtra,
-                },
               },
             },
           },
@@ -156,6 +152,14 @@ export class InventoryTransactionsService {
       );
     }
 
+    const materialCodes = [...new Set(acceptedItems.map((item) => item.materialPurchaseOrderItem.materialCode))];
+    const materialRows = await this.db.query.materials.findMany({
+      where: inArray(materials.code, materialCodes),
+      columns: { code: true, unitOfMeasurement: true },
+      extras: materialUnitConversionsExtra,
+    });
+    const materialByCode = new Map(materialRows.map((row) => [row.code, row]));
+
     return await this.db.transaction(async (tx) => {
       const [transaction] = await tx
         .insert(inventoryTransactions)
@@ -172,7 +176,8 @@ export class InventoryTransactionsService {
       await tx.insert(inventoryTransactionItems).values(
         acceptedItems.map((item) => {
           const orderItem = item.materialPurchaseOrderItem;
-          const conversions = (orderItem.material.unitConversions ?? []) as UnitConversion[];
+          const material = materialByCode.get(orderItem.materialCode)!;
+          const conversions = (material.unitConversions ?? []) as UnitConversion[];
 
           return {
             transactionId: transaction.id,
@@ -183,7 +188,7 @@ export class InventoryTransactionsService {
               Number(orderItem.unitPrice),
               orderItem.unitOfMeasurementSelected,
               item.unitOfMeasurementSelected,
-              orderItem.material.unitOfMeasurement,
+              material.unitOfMeasurement,
               conversions,
             ),
           };
