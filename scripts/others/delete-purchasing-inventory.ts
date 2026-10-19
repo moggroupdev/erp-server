@@ -27,6 +27,7 @@ Tables deleted (child rows first):
   supplier_invoices
   material_purchase_order_item_requisition_items   (required FK child)
   material_purchase_order_items
+  material_purchase_order_payment_terms            (required FK child)
   material_purchase_orders
 
 When --with-requisitions / interactive yes is chosen, also:
@@ -60,6 +61,7 @@ const PURCHASING_INVENTORY_TABLES = [
   { name: 'supplier_invoices', table: schema.supplierInvoices },
   { name: 'material_purchase_order_item_requisition_items', table: schema.materialPurchaseOrderItemRequisitionItems },
   { name: 'material_purchase_order_items', table: schema.materialPurchaseOrderItems },
+  { name: 'material_purchase_order_payment_terms', table: schema.materialPurchaseOrderPaymentTerms },
   { name: 'material_purchase_orders', table: schema.materialPurchaseOrders },
 ] as const;
 
