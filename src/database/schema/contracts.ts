@@ -18,7 +18,7 @@ export const contracts = pgTable(
   'contracts',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    code: text('code').unique().notNull(), // Format: CTR-00000001
+    code: text('code').unique().notNull(), // Format: CR-00000001
     legacyNumber: text('legacy_number').unique(), // @APP_CHECKED - Paper contract review number; null on ERP-native contract reviews
     legacyWorkOrderNumber: text('legacy_work_order_number').unique(), // @APP_CHECKED - Paper work order number; null on ERP-native contract reviews
     inquiryId: uuid('inquiry_id') // Nullable for legacy contract reviews only; required on normal create in the service

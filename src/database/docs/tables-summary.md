@@ -6,9 +6,9 @@ Overview of all schema tables: primary key type, soft-delete / cancellation beha
 
 Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/triggers.sql)).
 
-**Format:** `{PREFIX}-{8-digit sequence}` — e.g. `CTR-00000042`, `USR-00000001`
+**Format:** `{PREFIX}-{8-digit sequence}` — e.g. `CR-00000042`, `USR-00000001`
 
-- Prefix is **3 characters** (uppercase).
+- Prefix is a short uppercase token.
 - Sequence is zero-padded to 8 digits per table.
 - `code` is unique and immutable after creation — omit from create DTOs; never include in update DTOs.
 
@@ -53,7 +53,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | offers                                            | uuid        | —     | cancelled status            | YES       | YES (NOT NULL) |
 | offer_items                                       | uuid        | —     | NO                          | NO        | NO             |
 | offer_negotiations                                | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
-| contracts                                         | uuid        | CTR   | cancelledAt field           | YES       | YES (NOT NULL) |
+| contracts                                         | uuid        | CR    | cancelledAt field           | YES       | YES (NOT NULL) |
 | contract_items                                    | uuid        | —     | NO                          | NO        | NO             |
 | material_purchase_requisitions                    | uuid        | MPReq | derived (any gate rejected) | YES       | YES (NOT NULL) |
 | material_purchase_requisition_items               | uuid        | —     | NO                          | NO        | NO             |
