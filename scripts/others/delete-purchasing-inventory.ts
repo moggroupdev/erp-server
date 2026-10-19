@@ -14,8 +14,9 @@ const USAGE = `Usage: npm run delete:purchasing-inventory -- [options]
 Permanently deletes ALL rows from the material purchasing and inventory
 transaction tables. Optionally also deletes all material purchase
 requisitions (and their items), and/or all suppliers (and their
-addresses / quotation emails). All writes run in one database transaction.
-If any delete or post-delete check fails, the entire run is rolled back.
+addresses, contacts, quotation emails, and RFQ quotations). All writes
+run in one database transaction. If any delete or post-delete check fails,
+the entire run is rolled back.
 
 This script requires interactive confirmations. There is no --force flag.
 
@@ -36,7 +37,10 @@ When --with-requisitions / interactive yes is chosen, also:
   material_purchase_requisitions
 
 When --with-suppliers / interactive yes is chosen, also:
+  supplier_quotation_items                         (required FK child)
+  supplier_quotations
   supplier_quotation_emails
+  supplier_contact_persons
   supplier_addresses
   suppliers
 
@@ -49,7 +53,7 @@ With suppliers, also restarts suppliers_code_seq to 1.
 Options:
   --with-requisitions  Also delete all material purchase requisitions (+ items)
   --no-requisitions    Keep requisitions (skip the interactive prompt)
-  --with-suppliers     Also delete all suppliers (+ addresses, quotation emails)
+  --with-suppliers     Also delete all suppliers (+ contacts, addresses, quotations)
   --no-suppliers       Keep suppliers (skip the interactive prompt)
   -h, --help           Show this help`;
 
@@ -74,7 +78,10 @@ const REQUISITION_TABLES = [
 ] as const;
 
 const SUPPLIER_TABLES = [
+  { name: 'supplier_quotation_items', table: schema.supplierQuotationItems },
+  { name: 'supplier_quotations', table: schema.supplierQuotations },
   { name: 'supplier_quotation_emails', table: schema.supplierQuotationEmails },
+  { name: 'supplier_contact_persons', table: schema.supplierContactPersons },
   { name: 'supplier_addresses', table: schema.supplierAddresses },
   { name: 'suppliers', table: schema.suppliers },
 ] as const;
@@ -254,8 +261,9 @@ async function resolveWithRequisitions(cliChoice: boolean | undefined): Promise<
 async function resolveWithSuppliers(cliChoice: boolean | undefined): Promise<boolean> {
   return resolveYesNo(cliChoice, {
     intro: [
-      'Also delete ALL suppliers (plus addresses and quotation emails)?',
+      'Also delete ALL suppliers (plus contacts, addresses, quotation emails, and RFQ quotations)?',
       'Type "yes" to include suppliers, or "no" to keep them.',
+      'Note: request_for_quotations headers are kept; only supplier-linked quotation rows are cleared.',
     ],
     prompt: 'Delete suppliers? [yes/no]: ',
   });
@@ -306,7 +314,9 @@ async function confirmDeletion(
       console.log('Material purchase requisitions are NOT included (kept intact; MPO allocations cleared).');
     }
     if (withSuppliers) {
-      console.log('Suppliers ARE included: supplier_quotation_emails, supplier_addresses, suppliers.');
+      console.log(
+        'Suppliers ARE included: supplier_quotation_items, supplier_quotations, supplier_quotation_emails, supplier_contact_persons, supplier_addresses, suppliers.',
+      );
       console.log('suppliers_code_seq will also restart at 1.');
     } else {
       console.log('Suppliers are NOT included (kept intact).');
