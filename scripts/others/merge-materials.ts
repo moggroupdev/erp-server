@@ -10,11 +10,13 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const USAGE = `Usage: npm run merge:materials -- --keep <code> --remove <code> [--dry-run]
+const USAGE = `Usage: npm run merge:materials [-- [--keep <code>] [--remove <code>] [--dry-run]]
 
-Repoints every reference from --remove to --keep, merges cached quantity/price
-fields on the kept material (converting when base units differ), then hard-deletes
+Repoints every reference from the removed material to the kept one, merges cached
+quantity/price fields (converting when base units differ), then hard-deletes
 the removed material.
+
+If --keep / --remove are omitted, the script prompts for the two codes.
 
 Guards:
   - Both materials must exist and be different codes
@@ -31,14 +33,14 @@ This script requires interactive confirmation unless --dry-run is set.
 There is no --force flag.
 
 Options:
-      --keep <code>     Material to keep (required)
-      --remove <code>   Material to merge into the kept one, then delete (required)
+      --keep <code>     Material to keep (prompted if omitted)
+      --remove <code>   Material to merge into the kept one, then delete (prompted if omitted)
       --dry-run         Print the plan and exit without writing
   -h, --help            Show this help
 
 Examples:
-  npm run merge:materials -- --keep 452282 --remove 569005 --dry-run
-  npm run merge:materials -- --keep 452282 --remove 569005`;
+  npm run merge:materials
+  npm run merge:materials -- --keep 452282 --remove 569005 --dry-run`;
 
 const CONFIRM_PHRASE = 'MERGE MATERIALS';
 const ID_PRINT_LIMIT = 20;
@@ -47,8 +49,8 @@ type Db = ReturnType<typeof drizzle<typeof schema>>;
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 type CliArgs = {
-  keep: string;
-  remove: string;
+  keep?: string;
+  remove?: string;
   dryRun: boolean;
 };
 
@@ -144,13 +146,11 @@ function parseCliArgs(): CliArgs {
       process.exit(0);
     }
 
-    const keep = values.keep?.trim() ?? '';
-    const remove = values.remove?.trim() ?? '';
-    if (!keep || !remove) {
-      throw new Error('Both --keep and --remove are required.');
-    }
-
-    return { keep, remove, dryRun: Boolean(values['dry-run']) };
+    return {
+      keep: values.keep?.trim() || undefined,
+      remove: values.remove?.trim() || undefined,
+      dryRun: Boolean(values['dry-run']),
+    };
   } catch (e) {
     if (e instanceof Error && e.message.startsWith('--')) {
       console.error(e.message);
@@ -875,6 +875,24 @@ async function runMerge(
   }
 }
 
+async function promptForCodes(partial: { keep?: string; remove?: string }): Promise<{ keep: string; remove: string }> {
+  if (partial.keep && partial.remove) return { keep: partial.keep, remove: partial.remove };
+
+  const rl = readline.createInterface({ input, output });
+  try {
+    console.log('\nEnter the two material codes to merge.');
+    const keep = partial.keep ?? (await rl.question('Code to keep: ')).trim();
+    if (!keep) throw new Error('Kept material code is required.');
+
+    const remove = partial.remove ?? (await rl.question('Code to remove (merged into the kept one, then deleted): ')).trim();
+    if (!remove) throw new Error('Removed material code is required.');
+
+    return { keep, remove };
+  } finally {
+    rl.close();
+  }
+}
+
 async function confirmMerge(remove: string): Promise<void> {
   const rl = readline.createInterface({ input, output });
   try {
@@ -891,9 +909,10 @@ async function confirmMerge(remove: string): Promise<void> {
 
 async function main() {
   const args = parseCliArgs();
-  const { keep, remove, dryRun } = args;
+  const { keep, remove } = await promptForCodes(args);
+  const dryRun = args.dryRun;
 
-  if (keep === remove) throw new Error('--keep and --remove must be different codes.');
+  if (keep === remove) throw new Error('Keep and remove must be different codes.');
 
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is not defined in .env');
