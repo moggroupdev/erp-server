@@ -103,7 +103,6 @@ type PriceOutlierSourceRow = {
   itemId: string;
   materialCode: string;
   materialTitle: string;
-  unitOfMeasurement: MaterialUnit;
   orderId: string;
   orderCode: string;
   orderDate: Date;
@@ -153,7 +152,6 @@ function toMissingConversionFlag(row: PriceOutlierSourceRow) {
     itemId: row.itemId,
     materialCode: row.materialCode,
     materialTitle: row.materialTitle,
-    unitOfMeasurement: row.unitOfMeasurement,
     orderId: row.orderId,
     orderCode: row.orderCode,
     orderDate: row.orderDate,
@@ -161,7 +159,6 @@ function toMissingConversionFlag(row: PriceOutlierSourceRow) {
     supplierName: row.supplierName,
     enteredUnit: row.enteredUnit,
     enteredUnitPrice: Number(row.enteredUnitPrice),
-    unitPrice: null,
     referenceMedian: null,
     ratio: null,
     cause: PRICE_OUTLIER_CAUSES.MISSING_CONVERSION,
@@ -264,7 +261,6 @@ export class PurchasingMaterialsReportsService {
         itemId: materialPurchaseOrderItems.id,
         materialCode: materialPurchaseOrderItems.materialCode,
         materialTitle: materials.title,
-        unitOfMeasurement: materials.unitOfMeasurement,
         orderId: materialPurchaseOrders.id,
         orderCode: materialPurchaseOrders.code,
         orderDate: materialPurchaseOrders.createdAt,
@@ -289,7 +285,6 @@ export class PurchasingMaterialsReportsService {
       itemId: string;
       materialCode: string;
       materialTitle: string;
-      unitOfMeasurement: MaterialUnit;
       orderId: string;
       orderCode: string;
       orderDate: Date;
@@ -297,7 +292,6 @@ export class PurchasingMaterialsReportsService {
       supplierName: string;
       enteredUnit: MaterialUnit;
       enteredUnitPrice: number;
-      unitPrice: number | null;
       referenceMedian: number | null;
       ratio: number | null;
       cause: PriceOutlierCause;
@@ -344,20 +338,22 @@ export class PurchasingMaterialsReportsService {
         if (!Number.isFinite(ratio) || ratio <= 0) continue;
         if (ratio < threshold && ratio > 1 / threshold) continue;
 
+        const enteredUnitPrice = toFinitePositiveNumber(row.enteredUnitPrice);
+        if (enteredUnitPrice == null) continue;
+
         flagged.push({
           itemId: row.itemId,
           materialCode: row.materialCode,
           materialTitle: row.materialTitle,
-          unitOfMeasurement: row.unitOfMeasurement,
           orderId: row.orderId,
           orderCode: row.orderCode,
           orderDate: row.orderDate,
           supplierId: row.supplierId,
           supplierName: row.supplierName,
           enteredUnit: row.enteredUnit,
-          enteredUnitPrice: Number(row.enteredUnitPrice),
-          unitPrice: price,
-          referenceMedian,
+          enteredUnitPrice,
+          // Median is computed in base units, then expressed in this line's entered unit.
+          referenceMedian: referenceMedian * (enteredUnitPrice / price),
           ratio,
           cause: classifyPriceOutlierCause(ratio, conversionFactors),
           severity: Math.abs(Math.log10(ratio)),
