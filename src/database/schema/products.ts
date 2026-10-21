@@ -25,7 +25,7 @@ export const products = pgTable(
   'products',
   {
     code: text('code').primaryKey(),
-    title: text('title').notNull(),
+    title: text('title').notNull().unique(),
     description: text('description'),
     subCategoryId: uuid('sub_category_id')
       .notNull()
@@ -40,7 +40,6 @@ export const products = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('products_title_idx').on(table.title),
     index('products_sub_category_id_idx').on(table.subCategoryId),
     check(
       'products_estimated_production_time_positive',

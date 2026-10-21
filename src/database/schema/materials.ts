@@ -22,7 +22,7 @@ export const materials = pgTable(
   {
     code: text('code').primaryKey(),
     legacyCode: text('legacy_code').unique(),
-    title: text('title').notNull(),
+    title: text('title').notNull().unique(),
     description: text('description'),
     subCategoryId: uuid('sub_category_id')
       .notNull()
@@ -44,7 +44,6 @@ export const materials = pgTable(
       .references(() => users.id),
   },
   (table) => [
-    index('materials_title_idx').on(table.title),
     index('materials_sub_category_id_idx').on(table.subCategoryId),
     nonNegativeQuantityCheck('materials_unit_price_non_negative', table.unitPrice),
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),

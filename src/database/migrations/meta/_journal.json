@@ -526,6 +526,13 @@
       "when": 1792318579554,
       "tag": "0074_old_rick_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1792567355943,
+      "tag": "0075_strong_sentinels",
+      "breakpoints": true
     }
   ]
 }
