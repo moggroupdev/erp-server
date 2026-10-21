@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'read_material_purchasing_price_outliers_report' BEFORE 'read_material_purchasing_requisition_follow_up_report';
