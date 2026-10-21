@@ -108,10 +108,15 @@ type PriceOutlierSourceRow = {
   orderDate: Date;
   supplierId: string;
   supplierName: string;
+  invoiceNumbers: (string | null)[] | null;
   enteredUnit: MaterialUnit;
   enteredUnitPrice: unknown;
   unitPriceInBase: unknown;
 };
+
+function toInvoiceNumbers(value: (string | null)[] | null | undefined): string[] {
+  return (value ?? []).filter((n): n is string => n != null);
+}
 
 function toFinitePositiveNumber(value: unknown): number | null {
   if (value == null || value === '') return null;
@@ -157,6 +162,7 @@ function toMissingConversionFlag(row: PriceOutlierSourceRow) {
     orderDate: row.orderDate,
     supplierId: row.supplierId,
     supplierName: row.supplierName,
+    invoiceNumbers: toInvoiceNumbers(row.invoiceNumbers),
     enteredUnit: row.enteredUnit,
     enteredUnitPrice: Number(row.enteredUnitPrice),
     referenceMedian: null,
@@ -266,6 +272,7 @@ export class PurchasingMaterialsReportsService {
         orderDate: materialPurchaseOrders.createdAt,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
+        invoiceNumbers: orderInvoiceNumbers,
         enteredUnit: materialPurchaseOrderItems.unitOfMeasurementSelected,
         enteredUnitPrice: materialPurchaseOrderItems.unitPrice,
         unitPriceInBase,
@@ -290,6 +297,7 @@ export class PurchasingMaterialsReportsService {
       orderDate: Date;
       supplierId: string;
       supplierName: string;
+      invoiceNumbers: string[];
       enteredUnit: MaterialUnit;
       enteredUnitPrice: number;
       referenceMedian: number | null;
@@ -350,6 +358,7 @@ export class PurchasingMaterialsReportsService {
           orderDate: row.orderDate,
           supplierId: row.supplierId,
           supplierName: row.supplierName,
+          invoiceNumbers: toInvoiceNumbers(row.invoiceNumbers),
           enteredUnit: row.enteredUnit,
           enteredUnitPrice,
           // Median is computed in base units, then expressed in this line's entered unit.
