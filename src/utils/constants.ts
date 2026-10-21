@@ -64,6 +64,7 @@ export const PERMISSION_VALUES = [
   'read_material_purchasing_subcategory_stats_report',
   'read_material_purchasing_supplier_stats_report',
   'read_material_purchasing_total_amount_mismatches_report',
+  'read_material_purchasing_price_outliers_report',
   'read_material_purchasing_requisition_follow_up_report',
   'add_product',
   'read_products',
@@ -103,6 +104,17 @@ export const PERMISSIONS = Object.fromEntries(
   PERMISSION_VALUES.map((permission) => [permission.toUpperCase(), permission]),
 ) as {
   [K in Uppercase<(typeof PERMISSION_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== PRICE_OUTLIER_CAUSES ====================
+// Derived (not a DB enum): labels computed by the price-outliers report.
+
+export const PRICE_OUTLIER_CAUSE_VALUES = ['decimal_typo', 'unit_mismatch', 'spike', 'missing_conversion'] as const;
+
+export const PRICE_OUTLIER_CAUSES = Object.fromEntries(
+  PRICE_OUTLIER_CAUSE_VALUES.map((cause) => [cause.toUpperCase(), cause]),
+) as {
+  [K in Uppercase<(typeof PRICE_OUTLIER_CAUSE_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== APPROVAL_DECISIONS ====================

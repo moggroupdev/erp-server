@@ -16,11 +16,11 @@ import {
   materialUnitConversions,
   suppliers,
 } from 'src/database/schema';
-import { APPROVAL_DECISIONS, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import { APPROVAL_DECISIONS, PRICE_OUTLIER_CAUSES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
 import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
 import { convertUnitPrice, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import { translate } from 'src/utils/i18n/translate';
-import type { MaterialUnit, ProductionSubDepartment } from 'src/utils/types';
+import type { MaterialUnit, PriceOutlierCause, ProductionSubDepartment } from 'src/utils/types';
 
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
 type GroupBy = (typeof VALID_GROUP_BY)[number];
@@ -28,6 +28,13 @@ type GroupBy = (typeof VALID_GROUP_BY)[number];
 const TOP_SUPPLIERS_LIMIT = 10;
 const TOP_MATERIALS_LIMIT = 10;
 const TOP_ORDERS_LIMIT = 10;
+
+const PRICE_OUTLIER_NEIGHBOUR_WINDOW = 3;
+const PRICE_OUTLIER_MIN_PRICED_LINES = 3;
+const PRICE_OUTLIER_DEFAULT_THRESHOLD = 2;
+const PRICE_OUTLIER_MIN_THRESHOLD = 1.5;
+const PRICE_OUTLIER_RATIO_TOLERANCE = 0.1;
+const PRICE_OUTLIER_DECIMAL_TYPO_FACTORS = [10, 100, 1000];
 
 const invoiceTotalPurchases = sql`(
   select coalesce(sum(si.total_purchases), 0)
@@ -91,6 +98,76 @@ const unitPriceInBase = sql`${materialPurchaseOrderItems.unitPrice} / nullif(
   ),
   0
 )`;
+
+type PriceOutlierSourceRow = {
+  itemId: string;
+  materialCode: string;
+  materialTitle: string;
+  unitOfMeasurement: MaterialUnit;
+  orderId: string;
+  orderCode: string;
+  orderDate: Date;
+  supplierId: string;
+  supplierName: string;
+  enteredUnit: MaterialUnit;
+  enteredUnitPrice: unknown;
+  unitPriceInBase: unknown;
+};
+
+function toFinitePositiveNumber(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function ratioMatchesExpected(ratio: number, expected: number, tolerance = PRICE_OUTLIER_RATIO_TOLERANCE): boolean {
+  if (!(expected > 0) || !(ratio > 0)) return false;
+  return Math.abs(ratio - expected) / expected <= tolerance;
+}
+
+function classifyPriceOutlierCause(ratio: number, conversionFactors: number[]): PriceOutlierCause {
+  for (const factor of PRICE_OUTLIER_DECIMAL_TYPO_FACTORS) {
+    if (ratioMatchesExpected(ratio, factor) || ratioMatchesExpected(ratio, 1 / factor)) {
+      return PRICE_OUTLIER_CAUSES.DECIMAL_TYPO;
+    }
+  }
+
+  for (const factor of conversionFactors) {
+    if (ratioMatchesExpected(ratio, factor) || ratioMatchesExpected(ratio, 1 / factor)) {
+      return PRICE_OUTLIER_CAUSES.UNIT_MISMATCH;
+    }
+  }
+
+  return PRICE_OUTLIER_CAUSES.SPIKE;
+}
+
+function toMissingConversionFlag(row: PriceOutlierSourceRow) {
+  return {
+    itemId: row.itemId,
+    materialCode: row.materialCode,
+    materialTitle: row.materialTitle,
+    unitOfMeasurement: row.unitOfMeasurement,
+    orderId: row.orderId,
+    orderCode: row.orderCode,
+    orderDate: row.orderDate,
+    supplierId: row.supplierId,
+    supplierName: row.supplierName,
+    enteredUnit: row.enteredUnit,
+    enteredUnitPrice: Number(row.enteredUnitPrice),
+    unitPrice: null,
+    referenceMedian: null,
+    ratio: null,
+    cause: PRICE_OUTLIER_CAUSES.MISSING_CONVERSION,
+    severity: Number.POSITIVE_INFINITY,
+  };
+}
 
 @Injectable()
 export class PurchasingMaterialsReportsService {
@@ -175,6 +252,146 @@ export class PurchasingMaterialsReportsService {
       },
       entries,
       summary: { minPrice, maxPrice, avgPrice, changePercentage },
+    };
+  }
+
+  public async getPriceOutliers(params: { from?: string; to?: string; threshold?: string }) {
+    const threshold = this.parsePriceOutlierThreshold(params.threshold);
+    const dateRange = this.buildDateRange(params.from, params.to);
+
+    const rows = await this.db
+      .select({
+        itemId: materialPurchaseOrderItems.id,
+        materialCode: materialPurchaseOrderItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        orderId: materialPurchaseOrders.id,
+        orderCode: materialPurchaseOrders.code,
+        orderDate: materialPurchaseOrders.createdAt,
+        supplierId: suppliers.id,
+        supplierName: suppliers.name,
+        enteredUnit: materialPurchaseOrderItems.unitOfMeasurementSelected,
+        enteredUnitPrice: materialPurchaseOrderItems.unitPrice,
+        unitPriceInBase,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .where(isNull(materialPurchaseOrders.cancelledAt))
+      .orderBy(asc(materialPurchaseOrderItems.materialCode), asc(materialPurchaseOrders.createdAt));
+
+    const conversionsByCode = await this.loadConversionFactorsByMaterial(
+      rows.map((row) => row.materialCode),
+    );
+
+    type FlaggedRow = {
+      itemId: string;
+      materialCode: string;
+      materialTitle: string;
+      unitOfMeasurement: MaterialUnit;
+      orderId: string;
+      orderCode: string;
+      orderDate: Date;
+      supplierId: string;
+      supplierName: string;
+      enteredUnit: MaterialUnit;
+      enteredUnitPrice: number;
+      unitPrice: number | null;
+      referenceMedian: number | null;
+      ratio: number | null;
+      cause: PriceOutlierCause;
+      severity: number;
+    };
+
+    const flagged: FlaggedRow[] = [];
+    let index = 0;
+
+    while (index < rows.length) {
+      const materialCode = rows[index].materialCode;
+      const groupStart = index;
+      while (index < rows.length && rows[index].materialCode === materialCode) index += 1;
+      const group = rows.slice(groupStart, index);
+
+      const priced: { row: (typeof rows)[number]; price: number }[] = [];
+
+      for (const row of group) {
+        const price = toFinitePositiveNumber(row.unitPriceInBase);
+        if (price == null) {
+          flagged.push(toMissingConversionFlag(row));
+          continue;
+        }
+        priced.push({ row, price });
+      }
+
+      if (priced.length < PRICE_OUTLIER_MIN_PRICED_LINES) continue;
+
+      const conversionFactors = conversionsByCode.get(materialCode) ?? [];
+
+      for (let i = 0; i < priced.length; i += 1) {
+        const neighbours = priced
+          .slice(Math.max(0, i - PRICE_OUTLIER_NEIGHBOUR_WINDOW), i)
+          .concat(priced.slice(i + 1, i + 1 + PRICE_OUTLIER_NEIGHBOUR_WINDOW))
+          .map((item) => item.price);
+
+        if (neighbours.length === 0) continue;
+
+        const referenceMedian = median(neighbours);
+        if (referenceMedian == null || referenceMedian <= 0) continue;
+
+        const { row, price } = priced[i];
+        const ratio = price / referenceMedian;
+        if (!Number.isFinite(ratio) || ratio <= 0) continue;
+        if (ratio < threshold && ratio > 1 / threshold) continue;
+
+        flagged.push({
+          itemId: row.itemId,
+          materialCode: row.materialCode,
+          materialTitle: row.materialTitle,
+          unitOfMeasurement: row.unitOfMeasurement,
+          orderId: row.orderId,
+          orderCode: row.orderCode,
+          orderDate: row.orderDate,
+          supplierId: row.supplierId,
+          supplierName: row.supplierName,
+          enteredUnit: row.enteredUnit,
+          enteredUnitPrice: Number(row.enteredUnitPrice),
+          unitPrice: price,
+          referenceMedian,
+          ratio,
+          cause: classifyPriceOutlierCause(ratio, conversionFactors),
+          severity: Math.abs(Math.log10(ratio)),
+        });
+      }
+    }
+
+    const inRange = flagged.filter((row) => {
+      if (dateRange.from && row.orderDate < dateRange.from) return false;
+      if (dateRange.to && row.orderDate > dateRange.to) return false;
+      return true;
+    });
+
+    inRange.sort((a, b) => b.severity - a.severity || b.orderDate.getTime() - a.orderDate.getTime());
+
+    const byCause: Record<PriceOutlierCause, number> = {
+      decimal_typo: 0,
+      unit_mismatch: 0,
+      spike: 0,
+      missing_conversion: 0,
+    };
+    const materialsAffected = new Set<string>();
+    for (const row of inRange) {
+      byCause[row.cause] += 1;
+      materialsAffected.add(row.materialCode);
+    }
+
+    return {
+      summary: {
+        flaggedCount: inRange.length,
+        materialsAffected: materialsAffected.size,
+        byCause,
+      },
+      rows: inRange.map(({ severity: _severity, ...row }) => row),
     };
   }
 
@@ -690,6 +907,20 @@ export class PurchasingMaterialsReportsService {
   private parseGroupBy(value?: string): GroupBy {
     if (value && (VALID_GROUP_BY as readonly string[]).includes(value)) return value as GroupBy;
     return 'month';
+  }
+
+  private parsePriceOutlierThreshold(value?: string): number {
+    if (value == null || value === '') return PRICE_OUTLIER_DEFAULT_THRESHOLD;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < PRICE_OUTLIER_MIN_THRESHOLD) {
+      throw new BadRequestException(
+        translate(
+          `Threshold must be a number of at least ${PRICE_OUTLIER_MIN_THRESHOLD}.`,
+          `يجب أن يكون حد الحساسية رقما لا يقل عن ${PRICE_OUTLIER_MIN_THRESHOLD}.`,
+        ),
+      );
+    }
+    return n;
   }
 
   private buildDateRange(from?: string, to?: string): { from?: Date; to?: Date } {
@@ -1223,6 +1454,30 @@ export class PurchasingMaterialsReportsService {
     }));
 
     return this.attachUnitConversions(mapped);
+  }
+
+  private async loadConversionFactorsByMaterial(materialCodes: string[]): Promise<Map<string, number[]>> {
+    const codes = [...new Set(materialCodes.filter(Boolean))];
+    const byCode = new Map<string, number[]>();
+    if (codes.length === 0) return byCode;
+
+    const conversions = await this.db
+      .select({
+        materialCode: materialUnitConversions.materialCode,
+        conversionFactorToBase: materialUnitConversions.conversionFactorToBase,
+      })
+      .from(materialUnitConversions)
+      .where(inArray(materialUnitConversions.materialCode, codes));
+
+    for (const conversion of conversions) {
+      const factor = toFinitePositiveNumber(conversion.conversionFactorToBase);
+      if (factor == null || Math.abs(factor - 1) < 0.001) continue;
+      const list = byCode.get(conversion.materialCode) ?? [];
+      list.push(factor);
+      byCode.set(conversion.materialCode, list);
+    }
+
+    return byCode;
   }
 
   private async attachUnitConversions<T extends { materialCode: string }>(

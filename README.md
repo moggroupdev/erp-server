@@ -133,3 +133,5 @@ Once equipment is in the field, the company services it under three arrangements
 ## Current Scope
 
 The data model covers the full project lifecycle described above — from customer inquiry through contract review, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Contract review list and detail reads are available, and legacy contract reviews can be created. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
+
+Purchasing reports currently cover spending summary, material price history, purchasing by category / subcategory / supplier, invoice total variance, purchase requisition follow-up, and price outliers (purchase-order lines whose unit price diverges sharply from nearby purchases of the same material).
