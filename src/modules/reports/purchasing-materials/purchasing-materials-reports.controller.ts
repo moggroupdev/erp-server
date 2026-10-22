@@ -70,6 +70,14 @@ export class PurchasingMaterialsReportsController {
     return this.service.getTotalAmountMismatches({ from, to });
   }
 
+  @Get('price-outliers')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_PRICE_OUTLIERS_REPORT)
+  @ApiBearerAuth()
+  getPriceOutliers(@Query('from') from?: string, @Query('to') to?: string, @Query('threshold') threshold?: string) {
+    return this.service.getPriceOutliers({ from, to, threshold });
+  }
+
   @Get('requisition-follow-up')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REQUISITION_FOLLOW_UP_REPORT)

@@ -45,6 +45,23 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - After a mutation, avoid a second `get()` just to build the response. Prefer Drizzle `.returning()` on the same `insert`/`update`, or compose `{ ...entity, updatedField }` from data already in hand when the client revalidates anyway. Spotlight: fewer DB round-trips.
 - Replacing a child set: load the existing rows and write the diff. Delete removed keys, insert new keys, and update a kept row only when a mutable column changed. Leave unchanged rows in place so they are not rewritten or re-audited.
 
+### Material merge script (required with schema changes)
+
+`scripts/others/merge-materials.ts` hardcodes every table and column that references `materials.code` (and `manufactured_material_code`). It does **not** discover FKs from Postgres. A merge can leave the removed code behind, or fail on delete, if a new reference is missing from the script.
+
+**Update that script in the same change** when you:
+
+- Add a table/column that references `materials.code` or `manufactured_material_code`
+- Add or change a unique constraint that includes a material code (e.g. one material per parent)
+- Add or change a composite FK in the RFQ → quotation → purchase-order chain
+- Rename or drop any table/column the script already updates
+- Change `materials` fields it merges (`quantity`, `unit_price`, `opening_*`, `minimum_stock`, market price, `unit_of_measurement`, `material_type`, `deleted_at`)
+- Change how unit conversions work (`material_unit_conversions`, or the meaning of `unit_of_measurement_selected`)
+
+**Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
+
+After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with `MATERIAL_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
+
 ---
 
 ## Docs & triggers
@@ -71,6 +88,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | Change type                                                                  | Update                                                                           |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | New/changed table                                                            | `tables-summary.md`                                                              |
+| New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script)         |
 | New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |
 | `@RFP_APP_CHECKED` redundant column, or `@CACHING_APP_SYNCED` derived column | `db-duplications.md` and `application-logic.md`                                  |
 | `@HISTORICAL_SNAPSHOT column`                                                | `db-duplications.md`                                                             |

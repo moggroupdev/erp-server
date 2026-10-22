@@ -1,9 +1,9 @@
 /**
- * Shared constants for purchasing / inventory seed and cleanup scripts.
+ * Shared constants for purchasing / inventory / materials seed and cleanup scripts.
  * Keep SEED_IMPORT_NOTE identical across scripts that create or target seeded rows.
  */
 
-/** Notes stamped on MPOs / MPRs / IVTs created by seed:inventory-receipts. */
+/** Note stamped on seeded MPOs / MPRs / IVTs / customers, and on seeded material descriptions. */
 export const SEED_IMPORT_NOTE = 'تم إدخال هذه البيانات آلياً من ملفات النظام القديم.';
 
 /**
