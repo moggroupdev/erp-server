@@ -16,11 +16,23 @@ import {
   materialUnitConversions,
   suppliers,
 } from 'src/database/schema';
-import { APPROVAL_DECISIONS, PRICE_OUTLIER_CAUSES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
+import {
+  APPROVAL_DECISIONS,
+  AVERAGE_PRICE_GAP_CAUSES,
+  AVERAGE_PRICE_GAP_DIRECTIONS,
+  PRICE_OUTLIER_CAUSES,
+  PRODUCTION_SUB_DEPARTMENT_VALUES,
+} from 'src/utils/constants';
 import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
 import { convertUnitPrice, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import { translate } from 'src/utils/i18n/translate';
-import type { MaterialUnit, PriceOutlierCause, ProductionSubDepartment } from 'src/utils/types';
+import type {
+  AveragePriceGapCause,
+  AveragePriceGapDirection,
+  MaterialUnit,
+  PriceOutlierCause,
+  ProductionSubDepartment,
+} from 'src/utils/types';
 
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
 type GroupBy = (typeof VALID_GROUP_BY)[number];
@@ -32,7 +44,7 @@ const TOP_ORDERS_LIMIT = 10;
 const PRICE_OUTLIER_NEIGHBOUR_WINDOW = 3;
 const PRICE_OUTLIER_MIN_PRICED_LINES = 3;
 const PRICE_OUTLIER_DEFAULT_THRESHOLD = 2;
-const PRICE_OUTLIER_MIN_THRESHOLD = 1.5;
+const PRICE_OUTLIER_MIN_THRESHOLD = 1.05;
 const PRICE_OUTLIER_RATIO_TOLERANCE = 0.1;
 const PRICE_OUTLIER_DECIMAL_TYPO_FACTORS = [10, 100, 1000];
 
@@ -136,7 +148,8 @@ function ratioMatchesExpected(ratio: number, expected: number, tolerance = PRICE
   return Math.abs(ratio - expected) / expected <= tolerance;
 }
 
-function classifyPriceOutlierCause(ratio: number, conversionFactors: number[]): PriceOutlierCause {
+/** Shared ratio matching: decimal typo (10/100/1000) or a unit conversion factor. */
+function classifySharedPriceRatioCause(ratio: number, conversionFactors: number[]): 'decimal_typo' | 'unit_mismatch' | null {
   for (const factor of PRICE_OUTLIER_DECIMAL_TYPO_FACTORS) {
     if (ratioMatchesExpected(ratio, factor) || ratioMatchesExpected(ratio, 1 / factor)) {
       return PRICE_OUTLIER_CAUSES.DECIMAL_TYPO;
@@ -149,7 +162,15 @@ function classifyPriceOutlierCause(ratio: number, conversionFactors: number[]): 
     }
   }
 
-  return PRICE_OUTLIER_CAUSES.SPIKE;
+  return null;
+}
+
+function classifyPriceOutlierCause(ratio: number, conversionFactors: number[]): PriceOutlierCause {
+  return classifySharedPriceRatioCause(ratio, conversionFactors) ?? PRICE_OUTLIER_CAUSES.SPIKE;
+}
+
+function classifyAveragePriceGapCause(ratio: number, conversionFactors: number[]): AveragePriceGapCause {
+  return classifySharedPriceRatioCause(ratio, conversionFactors) ?? AVERAGE_PRICE_GAP_CAUSES.DRIFT;
 }
 
 function toMissingConversionFlag(row: PriceOutlierSourceRow) {
@@ -397,6 +418,88 @@ export class PurchasingMaterialsReportsService {
         byCause,
       },
       rows: inRange.map(({ severity: _severity, ...row }) => row),
+    };
+  }
+
+  public async getAveragePriceGaps(params: { from?: string; to?: string; threshold?: string }) {
+    const threshold = this.parsePriceOutlierThreshold(params.threshold);
+    const dateRange = this.buildDateRange(params.from, params.to);
+
+    const pricedConvertibleLine = sql`${unitPriceInBase} is not null
+      and ${quantityOrderedInBase} is not null
+      and ${quantityOrderedInBase} > 0
+      and ${unitPriceInBase} > 0`;
+    const totalQtySql = sql`coalesce(sum(${quantityOrderedInBase}) filter (where ${pricedConvertibleLine}), 0)`;
+    const totalSpendSql = sql`coalesce(sum(${quantityOrderedInBase} * ${unitPriceInBase}) filter (where ${pricedConvertibleLine}), 0)`;
+    const weightedAvgSql = sql`${totalSpendSql} / nullif(${totalQtySql}, 0)`;
+    const lineCountSql = sql`count(*) filter (where ${pricedConvertibleLine})`;
+    const gapRatioSql = sql`greatest(
+      ${materials.unitPrice} / nullif(${weightedAvgSql}, 0),
+      ${weightedAvgSql} / nullif(${materials.unitPrice}, 0)
+    )`;
+
+    const aggregated = await this.db
+      .select({
+        materialCode: materials.code,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        unitPrice: materials.unitPrice,
+        weightedAveragePurchasePrice: weightedAvgSql,
+        lineCount: lineCountSql,
+        totalQuantityPurchased: totalQtySql,
+        ratio: gapRatioSql,
+      })
+      .from(materials)
+      .innerJoin(materialPurchaseOrderItems, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .where(and(isNull(materials.deletedAt), sql`${materials.unitPrice} > 0`, this.notCancelledWithDateRange(dateRange)))
+      .groupBy(materials.code, materials.title, materials.unitOfMeasurement, materials.unitPrice)
+      .having(and(sql`${lineCountSql} > 0`, sql`${weightedAvgSql} > 0`, sql`${gapRatioSql} >= ${threshold}`))
+      .orderBy(desc(gapRatioSql));
+
+    const conversionsByCode = await this.loadConversionFactorsByMaterial(aggregated.map((row) => row.materialCode));
+
+    const byCause: Record<AveragePriceGapCause, number> = {
+      decimal_typo: 0,
+      unit_mismatch: 0,
+      drift: 0,
+    };
+    let aboveCount = 0;
+    let belowCount = 0;
+
+    const rows = aggregated.map((row) => {
+      const unitPrice = Number(row.unitPrice);
+      const weightedAveragePurchasePrice = Number(row.weightedAveragePurchasePrice);
+      const ratio = Number(row.ratio);
+      const direction: AveragePriceGapDirection =
+        unitPrice >= weightedAveragePurchasePrice ? AVERAGE_PRICE_GAP_DIRECTIONS.ABOVE : AVERAGE_PRICE_GAP_DIRECTIONS.BELOW;
+      const cause = classifyAveragePriceGapCause(ratio, conversionsByCode.get(row.materialCode) ?? []);
+
+      byCause[cause] += 1;
+      if (direction === AVERAGE_PRICE_GAP_DIRECTIONS.ABOVE) aboveCount += 1;
+      else belowCount += 1;
+
+      return {
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurement: row.unitOfMeasurement,
+        unitPrice,
+        weightedAveragePurchasePrice,
+        ratio,
+        lineCount: Number(row.lineCount),
+        totalQuantityPurchased: Number(row.totalQuantityPurchased),
+        cause,
+      };
+    });
+
+    return {
+      summary: {
+        flaggedCount: rows.length,
+        aboveCount,
+        belowCount,
+        byCause,
+      },
+      rows,
     };
   }
 

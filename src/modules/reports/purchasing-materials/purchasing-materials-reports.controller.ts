@@ -78,6 +78,14 @@ export class PurchasingMaterialsReportsController {
     return this.service.getPriceOutliers({ from, to, threshold });
   }
 
+  @Get('average-price-gaps')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_AVERAGE_PRICE_GAPS_REPORT)
+  @ApiBearerAuth()
+  getAveragePriceGaps(@Query('from') from?: string, @Query('to') to?: string, @Query('threshold') threshold?: string) {
+    return this.service.getAveragePriceGaps({ from, to, threshold });
+  }
+
   @Get('requisition-follow-up')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REQUISITION_FOLLOW_UP_REPORT)

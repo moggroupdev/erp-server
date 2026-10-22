@@ -65,6 +65,7 @@ export const PERMISSION_VALUES = [
   'read_material_purchasing_supplier_stats_report',
   'read_material_purchasing_total_amount_mismatches_report',
   'read_material_purchasing_price_outliers_report',
+  'read_material_purchasing_average_price_gaps_report',
   'read_material_purchasing_requisition_follow_up_report',
   'add_product',
   'read_products',
@@ -115,6 +116,25 @@ export const PRICE_OUTLIER_CAUSES = Object.fromEntries(
   PRICE_OUTLIER_CAUSE_VALUES.map((cause) => [cause.toUpperCase(), cause]),
 ) as {
   [K in Uppercase<(typeof PRICE_OUTLIER_CAUSE_VALUES)[number]>]: Lowercase<K>;
+};
+
+// ==================== AVERAGE_PRICE_GAP_CAUSES ====================
+// Derived (not a DB enum): labels computed by the average-price-gaps report.
+
+export const AVERAGE_PRICE_GAP_CAUSE_VALUES = ['decimal_typo', 'unit_mismatch', 'drift'] as const;
+
+export const AVERAGE_PRICE_GAP_CAUSES = Object.fromEntries(
+  AVERAGE_PRICE_GAP_CAUSE_VALUES.map((cause) => [cause.toUpperCase(), cause]),
+) as {
+  [K in Uppercase<(typeof AVERAGE_PRICE_GAP_CAUSE_VALUES)[number]>]: Lowercase<K>;
+};
+
+export const AVERAGE_PRICE_GAP_DIRECTION_VALUES = ['above', 'below'] as const;
+
+export const AVERAGE_PRICE_GAP_DIRECTIONS = Object.fromEntries(
+  AVERAGE_PRICE_GAP_DIRECTION_VALUES.map((direction) => [direction.toUpperCase(), direction]),
+) as {
+  [K in Uppercase<(typeof AVERAGE_PRICE_GAP_DIRECTION_VALUES)[number]>]: Lowercase<K>;
 };
 
 // ==================== APPROVAL_DECISIONS ====================
