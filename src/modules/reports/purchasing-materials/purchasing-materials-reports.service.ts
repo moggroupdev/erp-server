@@ -239,6 +239,7 @@ export class PurchasingMaterialsReportsService {
         orderDate: materialPurchaseOrders.createdAt,
         supplierId: suppliers.id,
         supplierName: suppliers.name,
+        invoiceNumbers: orderInvoiceNumbers,
         unitPrice: unitPriceInBase,
         quantityOrdered: quantityOrderedInBase,
       })
@@ -254,6 +255,7 @@ export class PurchasingMaterialsReportsService {
       orderDate: r.orderDate,
       supplierId: r.supplierId,
       supplierName: r.supplierName,
+      invoiceNumbers: toInvoiceNumbers(r.invoiceNumbers),
       unitPrice: Number(r.unitPrice),
       quantityOrdered: Number(r.quantityOrdered),
     }));
