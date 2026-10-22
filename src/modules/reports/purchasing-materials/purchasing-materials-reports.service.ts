@@ -433,8 +433,6 @@ export class PurchasingMaterialsReportsService {
     const totalSpendSql = sql`coalesce(sum(${quantityOrderedInBase} * ${unitPriceInBase}) filter (where ${pricedConvertibleLine}), 0)`;
     const weightedAvgSql = sql`${totalSpendSql} / nullif(${totalQtySql}, 0)`;
     const lineCountSql = sql`count(*) filter (where ${pricedConvertibleLine})`;
-    const excludedLineCountSql = sql`count(*) filter (where not (${pricedConvertibleLine}))`;
-    const lastPurchaseDateSql = sql`max(${materialPurchaseOrders.createdAt}) filter (where ${pricedConvertibleLine})`;
     const gapRatioSql = sql`greatest(
       ${materials.unitPrice} / nullif(${weightedAvgSql}, 0),
       ${weightedAvgSql} / nullif(${materials.unitPrice}, 0)
@@ -448,9 +446,7 @@ export class PurchasingMaterialsReportsService {
         unitPrice: materials.unitPrice,
         weightedAveragePurchasePrice: weightedAvgSql,
         lineCount: lineCountSql,
-        excludedLineCount: excludedLineCountSql,
         totalQuantityPurchased: totalQtySql,
-        lastPurchaseDate: lastPurchaseDateSql,
         ratio: gapRatioSql,
       })
       .from(materials)
@@ -490,11 +486,8 @@ export class PurchasingMaterialsReportsService {
         unitPrice,
         weightedAveragePurchasePrice,
         ratio,
-        direction,
         lineCount: Number(row.lineCount),
-        excludedLineCount: Number(row.excludedLineCount),
         totalQuantityPurchased: Number(row.totalQuantityPurchased),
-        lastPurchaseDate: row.lastPurchaseDate,
         cause,
       };
     });
