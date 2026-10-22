@@ -66,7 +66,7 @@ Recalculate inside a transaction when source rows change.
 
 **Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land.
 
-`**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`).
+`**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`). The average-price-gaps report audits this not-yet-synced cache against the quantity-weighted average of non-cancelled `material_purchase_order_items` (converted to the material's base unit).
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 

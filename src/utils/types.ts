@@ -13,6 +13,8 @@ import {
   INQUIRY_STATUS_VALUES,
   PERMISSION_VALUES,
   PRICE_OUTLIER_CAUSE_VALUES,
+  AVERAGE_PRICE_GAP_CAUSE_VALUES,
+  AVERAGE_PRICE_GAP_DIRECTION_VALUES,
   APPROVAL_DECISION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
   LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
@@ -49,6 +51,10 @@ export type JwtPayload = { id: string; type: TokenType };
 export type Permission = (typeof PERMISSION_VALUES)[number];
 
 export type PriceOutlierCause = (typeof PRICE_OUTLIER_CAUSE_VALUES)[number];
+
+export type AveragePriceGapCause = (typeof AVERAGE_PRICE_GAP_CAUSE_VALUES)[number];
+
+export type AveragePriceGapDirection = (typeof AVERAGE_PRICE_GAP_DIRECTION_VALUES)[number];
 
 export type ApprovalDecision = (typeof APPROVAL_DECISION_VALUES)[number];
 
