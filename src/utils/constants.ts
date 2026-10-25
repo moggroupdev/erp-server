@@ -167,6 +167,9 @@ export const MATERIAL_UNIT_VALUES = [
   'square_meter',
   'cubic_meter',
   'liter',
+  'packet',
+  'box',
+  'roll',
 ] as const;
 
 export const MATERIAL_UNITS = Object.fromEntries(
