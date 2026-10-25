@@ -68,6 +68,9 @@ type MaterialRow = {
   marketUnitPrice: number | null;
   marketUnitPriceSetAt: Date | null;
   marketUnitPriceSetBy: string | null;
+  marketManufacturingCost: number | null;
+  marketManufacturingCostSetAt: Date | null;
+  marketManufacturingCostSetBy: string | null;
   deletedAt: Date | null;
   createdBy: string;
 };
@@ -234,6 +237,9 @@ async function loadMaterial(db: Db, code: string): Promise<MaterialRow | undefin
       marketUnitPrice: schema.materials.marketUnitPrice,
       marketUnitPriceSetAt: schema.materials.marketUnitPriceSetAt,
       marketUnitPriceSetBy: schema.materials.marketUnitPriceSetBy,
+      marketManufacturingCost: schema.materials.marketManufacturingCost,
+      marketManufacturingCostSetAt: schema.materials.marketManufacturingCostSetAt,
+      marketManufacturingCostSetBy: schema.materials.marketManufacturingCostSetBy,
       deletedAt: schema.materials.deletedAt,
       createdBy: schema.materials.createdBy,
     })
@@ -567,6 +573,7 @@ function printMaterial(label: string, material: MaterialRow, conversions: Conver
   console.log(`  quantity=${material.quantity}  unitPrice=${material.unitPrice}`);
   console.log(`  openingQuantity=${material.openingQuantity ?? '(null)'}  openingUnitPrice=${material.openingUnitPrice ?? '(null)'}`);
   console.log(`  minimumStock=${material.minimumStock ?? '(null)'}  marketUnitPrice=${material.marketUnitPrice ?? '(null)'}`);
+  console.log(`  marketManufacturingCost=${material.marketManufacturingCost ?? '(null)'}`);
   if (conversions.length === 0) {
     console.log('  conversions: (none)');
     return;
@@ -618,6 +625,19 @@ function mergedMaterialFields(kept: MaterialRow, removed: MaterialRow, factor: n
   const marketUnitPriceSetAt = keepMarket ? kept.marketUnitPriceSetAt : removed.marketUnitPriceSetAt;
   const marketUnitPriceSetBy = keepMarket ? kept.marketUnitPriceSetBy : removed.marketUnitPriceSetBy;
 
+  const keepMarketMfg = kept.marketManufacturingCost != null;
+  const marketManufacturingCost = keepMarketMfg
+    ? kept.marketManufacturingCost
+    : removed.marketManufacturingCost != null
+      ? round6(removed.marketManufacturingCost / factor)
+      : null;
+  const marketManufacturingCostSetAt = keepMarketMfg
+    ? kept.marketManufacturingCostSetAt
+    : removed.marketManufacturingCostSetAt;
+  const marketManufacturingCostSetBy = keepMarketMfg
+    ? kept.marketManufacturingCostSetBy
+    : removed.marketManufacturingCostSetBy;
+
   return {
     quantity: stock.quantity,
     unitPrice: stock.unitPrice,
@@ -627,6 +647,9 @@ function mergedMaterialFields(kept: MaterialRow, removed: MaterialRow, factor: n
     marketUnitPrice,
     marketUnitPriceSetAt,
     marketUnitPriceSetBy,
+    marketManufacturingCost,
+    marketManufacturingCostSetAt,
+    marketManufacturingCostSetBy,
   };
 }
 
@@ -854,6 +877,9 @@ async function runMerge(
       marketUnitPrice: merged.marketUnitPrice,
       marketUnitPriceSetAt: merged.marketUnitPriceSetAt,
       marketUnitPriceSetBy: merged.marketUnitPriceSetBy,
+      marketManufacturingCost: merged.marketManufacturingCost,
+      marketManufacturingCostSetAt: merged.marketManufacturingCostSetAt,
+      marketManufacturingCostSetBy: merged.marketManufacturingCostSetBy,
     })
     .where(eq(schema.materials.code, keep))
     .returning({ code: schema.materials.code });
@@ -984,6 +1010,9 @@ async function main() {
     console.log(`  openingUnitPrice ${kept.openingUnitPrice ?? '(null)'} -> ${merged.openingUnitPrice ?? '(null)'}`);
     console.log(`  minimumStock ${kept.minimumStock ?? '(null)'} -> ${merged.minimumStock ?? '(null)'}`);
     console.log(`  marketUnitPrice ${kept.marketUnitPrice ?? '(null)'} -> ${merged.marketUnitPrice ?? '(null)'}`);
+    console.log(
+      `  marketManufacturingCost ${kept.marketManufacturingCost ?? '(null)'} -> ${merged.marketManufacturingCost ?? '(null)'}`,
+    );
 
     if (scan.unrecognizedUnits.length > 0) {
       throw new Error(

@@ -11,6 +11,7 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
+import { SetMaterialMarketManufacturingCostDto } from './dto/set-material-market-manufacturing-cost.dto';
 import { SetMaterialTypeDto } from './dto/set-material-type.dto';
 import { MaterialTypeChangePreviewQueryDto } from './dto/material-type-change-preview-query.dto';
 
@@ -57,6 +58,18 @@ export class MaterialsController {
   @ApiBearerAuth()
   setMarketPrice(@Param('code') code: string, @Body() dto: SetMaterialMarketPriceDto, @RequestUser() user: User) {
     return this.materialsService.setMarketPrice(code, dto, user);
+  }
+
+  @Patch(':code/market-manufacturing-cost')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.SET_MATERIAL_MARKET_PRICE)
+  @ApiBearerAuth()
+  setMarketManufacturingCost(
+    @Param('code') code: string,
+    @Body() dto: SetMaterialMarketManufacturingCostDto,
+    @RequestUser() user: User,
+  ) {
+    return this.materialsService.setMarketManufacturingCost(code, dto, user);
   }
 
   @Get(':code/material-type/impact')

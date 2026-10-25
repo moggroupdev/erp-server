@@ -17,7 +17,7 @@ import {
   MATERIAL_UNIT_VALUES,
 } from '../../src/utils/constants';
 import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
-import { SEED_IMPORT_NOTE } from '../_utils/seed-constants';
+import { resolveMaterialUnit, SEED_IMPORT_NOTE } from '../_utils/seed-constants';
 
 dotenv.config();
 
@@ -83,36 +83,6 @@ type MaterialRef = {
   code: string;
   unitOfMeasurement: (typeof MATERIAL_UNIT_VALUES)[number];
 };
-
-const UNIT_AR_LABELS: Record<(typeof MATERIAL_UNIT_VALUES)[number], string> = {
-  count: 'عدد',
-  kg: 'كيلوجرام',
-  gram: 'جرام',
-  ton: 'طن',
-  meter: 'متر',
-  cm: 'سنتيمتر',
-  square_meter: 'متر²',
-  cubic_meter: 'متر³',
-  liter: 'لتر',
-};
-
-const UNIT_AR_ALIASES: Partial<Record<(typeof MATERIAL_UNIT_VALUES)[number], string[]>> = {
-  kg: ['كيلو', 'كجم'],
-  square_meter: ['متر 2', 'م2', 'م²'],
-  cubic_meter: ['متر 3', 'م3', 'م³'],
-};
-
-const ARABIC_TO_UNIT_KEY: Map<string, (typeof MATERIAL_UNIT_VALUES)[number]> = (() => {
-  const map = new Map<string, (typeof MATERIAL_UNIT_VALUES)[number]>();
-  for (const unit of MATERIAL_UNIT_VALUES) {
-    map.set(unit, unit);
-    map.set(UNIT_AR_LABELS[unit], unit);
-    for (const alias of UNIT_AR_ALIASES[unit] ?? []) {
-      map.set(alias, unit);
-    }
-  }
-  return map;
-})();
 
 type WorkbookRow = {
   sourceFile: string;
@@ -200,12 +170,6 @@ type Summary = {
 
 type UserIdentifier = { email?: string; id?: string };
 type DbClient = ReturnType<typeof drizzle<typeof schema>>;
-
-function resolveMaterialUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] | null {
-  const normalized = raw.trim();
-  if (!normalized || normalized === '(فارغ)') return null;
-  return ARABIC_TO_UNIT_KEY.get(normalized) ?? null;
-}
 
 async function loadConversionFactors(db: DbClient) {
   const rows = await db

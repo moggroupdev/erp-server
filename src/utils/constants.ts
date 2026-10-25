@@ -167,6 +167,9 @@ export const MATERIAL_UNIT_VALUES = [
   'square_meter',
   'cubic_meter',
   'liter',
+  'packet',
+  'box',
+  'roll',
 ] as const;
 
 export const MATERIAL_UNITS = Object.fromEntries(
@@ -328,6 +331,7 @@ export const PRODUCTION_SUB_DEPARTMENT_VALUES = [
   'kitchens',
   'paints',
   'blacksmithing',
+  'turning',
 ] as const;
 
 export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(

@@ -32,7 +32,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Manufacturing
 
 - Production plans scheduling work over a date range
-- Per-product production routing: each manufactured product defines an ordered sequence of production departments (cutting, bending, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, kitchens, punch, paints, and others) with completion-percentage weights that sum to 100%
+- Per-product production routing: each manufactured product defines an ordered sequence of production departments (cutting, bending, turning, refrigeration, electricity, gas, injection, sheet metal, blacksmithing, kitchens, punch, paints, and others) with completion-percentage weights that sum to 100%
 - Production department managers and deputy managers assigned per work-center (enum-identified; labels are a frontend concern)
 - Work broken down per product unit and production department step, with sequential completion gating
 - Progress notes and completion tracking per production department step
@@ -41,6 +41,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 - Raw materials, spare parts, and manufactured materials with stock levels and minimum thresholds
 - Manufactured materials have their own bill of materials (BOM) listing the component materials required to produce them; components may themselves be manufactured materials
+- Manufactured materials can store a manually set market manufacturing cost (outsourcing fee in the material's base unit), used on product BOM costing as a fallback when no last outsourcing order cost exists for an externally manufactured line
 - Inventory movements: receipts from purchase inspection or outsourcing returns, issues to production, maintenance, or outsourcing suppliers, and returns
 - Material issues linked to the production work, maintenance order material lines, or outsourcing order lines consuming them
 
@@ -110,7 +111,7 @@ Production then builds a plan that schedules each unit across the product's conf
 
 Before and during production, the Warehouse checks whether the required raw materials and manufactured materials are in stock. When stock is short, warehouse staff raise a material purchase requisition for the relevant production department. Planning, the purchasing manager, and the manager approve in parallel. Once fully approved, Purchasing may raise one or more material purchase orders with approved suppliers, allocating ordered quantities from the requisition line(s) — leftover quantity stays open until covered. An order can record where and when the goods are delivered, and payment slices — a percentage of the order, a fixed amount, or a single remainder — that together cover the full amount. Upon arrival, materials are inspected; accepted quantities are received into inventory, while rejected quantities are recorded separately.
 
-When a manufactured material is manufactured externally, Purchasing (or Operations) raises an outsourcing order with a supplier. Component materials are issued from stock to the supplier based on the manufactured material's BOM (quantities suggested from the BOM, adjustable before confirm). When the supplier returns the finished manufactured material, it is inspected and accepted quantities are received into inventory; the manufacturing fee is tracked on the outsourcing order.
+When a manufactured material is manufactured externally, Purchasing (or Operations) raises an outsourcing order with a supplier. Component materials are issued from stock to the supplier based on the manufactured material's BOM (quantities suggested from the BOM, adjustable before confirm). When the supplier returns the finished manufactured material, it is inspected and accepted quantities are received into inventory; the manufacturing fee is tracked on the outsourcing order. Product BOM costing uses that last outsourcing fee, and can fall back to a manually set market manufacturing cost when no outsourcing history exists.
 
 Materials are then issued from the warehouse to the production floor, linked to the specific production work consuming them.
 

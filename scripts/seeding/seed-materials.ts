@@ -7,6 +7,7 @@ import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import * as schema from '../../src/database/schema';
 import { MATERIAL_TYPES, MATERIAL_TYPE_VALUES, MATERIAL_UNIT_VALUES } from '../../src/utils/constants';
+import { resolveMaterialUnit } from '../_utils/seed-constants';
 import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
@@ -112,36 +113,6 @@ const MATERIAL_SOURCES: MaterialSource[] = [
 const BATCH_SIZE = 100;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const UNIT_AR_LABELS: Record<(typeof MATERIAL_UNIT_VALUES)[number], string> = {
-  count: 'عدد',
-  kg: 'كيلوجرام',
-  gram: 'جرام',
-  ton: 'طن',
-  meter: 'متر',
-  cm: 'سنتيمتر',
-  square_meter: 'متر²',
-  cubic_meter: 'متر³',
-  liter: 'لتر',
-};
-
-const UNIT_AR_ALIASES: Partial<Record<(typeof MATERIAL_UNIT_VALUES)[number], string[]>> = {
-  kg: ['كيلو', 'كجم'],
-  square_meter: ['متر 2', 'م2', 'م²'],
-  cubic_meter: ['متر 3', 'م3', 'م³'],
-};
-
-const ARABIC_TO_UNIT_KEY: Map<string, (typeof MATERIAL_UNIT_VALUES)[number]> = (() => {
-  const map = new Map<string, (typeof MATERIAL_UNIT_VALUES)[number]>();
-  for (const unit of MATERIAL_UNIT_VALUES) {
-    map.set(unit, unit);
-    map.set(UNIT_AR_LABELS[unit], unit);
-    for (const alias of UNIT_AR_ALIASES[unit] ?? []) {
-      map.set(alias, unit);
-    }
-  }
-  return map;
-})();
-
 function parseCliArgs(): { email?: string; id?: string } {
   try {
     const { values } = parseArgs({
@@ -233,12 +204,6 @@ function generateUniqueCode(existing: Set<string>): string {
     }
   }
   throw new Error('Failed to generate a unique 6-digit material code after 1000 attempts.');
-}
-
-function resolveMaterialUnit(raw: string): (typeof MATERIAL_UNIT_VALUES)[number] | null {
-  const normalized = raw.trim();
-  if (!normalized || normalized === '(فارغ)') return null;
-  return ARABIC_TO_UNIT_KEY.get(normalized) ?? null;
 }
 
 async function loadConversionFactors(db: ReturnType<typeof drizzle<typeof schema>>) {

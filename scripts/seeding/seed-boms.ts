@@ -7,6 +7,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import * as XLSX from 'xlsx';
 import * as schema from '../../src/database/schema';
 import { MATERIAL_UNIT_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from '../../src/utils/constants';
+import { resolveMaterialUnit } from '../_utils/seed-constants';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -99,37 +100,6 @@ const FUZZY_MATCH_THRESHOLD = 0.5;
 const DATA_DIR = path.join(__dirname, '../../data/boms');
 const SKIP_DETAIL_CAP = 50;
 
-const UNIT_AR_LABELS: Record<MaterialUnit, string> = {
-  count: 'عدد',
-  kg: 'كيلوجرام',
-  gram: 'جرام',
-  ton: 'طن',
-  meter: 'متر',
-  cm: 'سنتيمتر',
-  square_meter: 'متر²',
-  cubic_meter: 'متر³',
-  liter: 'لتر',
-};
-
-const UNIT_AR_ALIASES: Partial<Record<MaterialUnit, string[]>> = {
-  count: ['لوح', 'عبوة'],
-  kg: ['كيلو', 'كجم'],
-  square_meter: ['متر 2', 'م2', 'م²'],
-  cubic_meter: ['متر 3', 'م3', 'م³'],
-};
-
-const ARABIC_TO_UNIT_KEY: Map<string, MaterialUnit> = (() => {
-  const map = new Map<string, MaterialUnit>();
-  for (const unit of MATERIAL_UNIT_VALUES) {
-    map.set(unit, unit);
-    map.set(UNIT_AR_LABELS[unit], unit);
-    for (const alias of UNIT_AR_ALIASES[unit] ?? []) {
-      map.set(alias, unit);
-    }
-  }
-  return map;
-})();
-
 function parseCliArgs(): { email?: string; id?: string } {
   try {
     const { values } = parseArgs({
@@ -205,12 +175,6 @@ function normalizeTitle(value: string): string {
     .toLowerCase();
 }
 
-function resolveMaterialUnit(raw: string): MaterialUnit | null {
-  const normalized = raw.trim();
-  if (!normalized || normalized === '(فارغ)') return null;
-  return ARABIC_TO_UNIT_KEY.get(normalized) ?? null;
-}
-
 /** Strip Arabic tatweel/kashida (ـ) and collapse whitespace so elongated headers still match. */
 function normalizeSectionText(headerText: string): string {
   return headerText
@@ -246,6 +210,7 @@ function mapSectionToDepartment(headerText: string, productName = ''): Productio
   if (text.includes('كهرباء')) return 'electricity';
   if (text.includes('غاز')) return 'gas';
   if (text.includes('حدادة')) return 'blacksmithing';
+  if (text.includes('خراطة') || text.includes('خراطه')) return 'turning';
   if (text.includes('قطع')) return 'cutting';
   if (text.includes('ثني')) return 'bending';
   if (text.includes('بنش')) return 'punch';

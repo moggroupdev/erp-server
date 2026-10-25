@@ -4,6 +4,7 @@ import { parse } from 'csv-parse/sync';
 import * as xlsx from 'xlsx';
 import ExcelJS from 'exceljs';
 import * as schema from '../../src/database/schema';
+import { resolveMaterialUnit, UNIT_AR_LABELS } from '../_utils/seed-constants';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,42 +15,6 @@ function norm(value: unknown): string {
   if (value == null) return '';
   return String(value).replace(/\s+/g, ' ').trim();
 }
-
-/** Primary Arabic labels mirrored from erp-app material-units.ts. */
-const UNIT_AR_LABELS: Record<string, string> = {
-  count: 'عدد',
-  kg: 'كيلوجرام',
-  gram: 'جرام',
-  ton: 'طن',
-  meter: 'متر',
-  cm: 'سنتيمتر',
-  square_meter: 'متر²',
-  cubic_meter: 'متر³',
-  liter: 'لتر',
-};
-
-/**
- * Extra invoice spellings for the same enum unit. Transaction files often write
- * kg as "كيلو" / "كيلوجرام" and square_meter as "متر 2".
- */
-const UNIT_AR_ALIASES: Record<string, string[]> = {
-  kg: ['كيلو', 'كجم'],
-  square_meter: ['متر 2', 'م2', 'م²'],
-  cubic_meter: ['متر 3', 'م3', 'م³'],
-};
-
-/** Normalized Arabic (or English enum key) -> material_unit enum value. */
-const ARABIC_TO_UNIT_KEY: Map<string, string> = (() => {
-  const map = new Map<string, string>();
-  for (const [key, label] of Object.entries(UNIT_AR_LABELS)) {
-    map.set(norm(label), key);
-    map.set(norm(key), key);
-    for (const alias of UNIT_AR_ALIASES[key] ?? []) {
-      map.set(norm(alias), key);
-    }
-  }
-  return map;
-})();
 
 const TRANSACTIONS_DIR = path.join(__dirname, '../../data/transactions');
 const TRANSACTIONS_SOURCE_FILE = 'all.xlsx';
@@ -121,13 +86,6 @@ type UnitUsage = {
   fileNames: Set<string>;
 };
 
-/** Resolve a raw unit string to a material_unit enum key, if known. */
-function resolveUnitKey(raw: string): string | null {
-  const n = norm(raw);
-  if (!n || n === '(فارغ)') return null;
-  return ARABIC_TO_UNIT_KEY.get(n) ?? null;
-}
-
 /** Base unit plus alternate conversion units for a material. */
 function acceptedUnitKeys(material: MaterialRow): Set<string> {
   return new Set([material.unitOfMeasurement, ...material.alternateUnits]);
@@ -136,18 +94,18 @@ function acceptedUnitKeys(material: MaterialRow): Set<string> {
 /** Arabic display of accepted DB units (base first, then alternates). */
 function formatDbUnitsArabic(material: MaterialRow): string {
   const units = [material.unitOfMeasurement, ...material.alternateUnits];
-  return units.map((u) => UNIT_AR_LABELS[u] ?? u).join('، ');
+  return units.map((u) => UNIT_AR_LABELS[u as keyof typeof UNIT_AR_LABELS] ?? u).join('، ');
 }
 
 /** Arabic label for a single unit string (enum key or known alias). */
 function formatUnitArabic(raw: string): string {
-  const key = resolveUnitKey(raw);
+  const key = resolveMaterialUnit(raw);
   if (key) return UNIT_AR_LABELS[key] ?? raw;
   return raw;
 }
 
 function isUnitAccepted(material: MaterialRow, rawUnit: string): boolean {
-  const sourceKey = resolveUnitKey(rawUnit);
+  const sourceKey = resolveMaterialUnit(rawUnit);
   if (!sourceKey) return false;
   return acceptedUnitKeys(material).has(sourceKey);
 }
