@@ -210,6 +210,7 @@ function mapSectionToDepartment(headerText: string, productName = ''): Productio
   if (text.includes('كهرباء')) return 'electricity';
   if (text.includes('غاز')) return 'gas';
   if (text.includes('حدادة')) return 'blacksmithing';
+  if (text.includes('خراطة') || text.includes('خراطه')) return 'turning';
   if (text.includes('قطع')) return 'cutting';
   if (text.includes('ثني')) return 'bending';
   if (text.includes('بنش')) return 'punch';

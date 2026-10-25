@@ -331,6 +331,7 @@ export const PRODUCTION_SUB_DEPARTMENT_VALUES = [
   'kitchens',
   'paints',
   'blacksmithing',
+  'turning',
 ] as const;
 
 export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
