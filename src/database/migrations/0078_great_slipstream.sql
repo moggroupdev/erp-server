@@ -1,0 +1,6 @@
+ALTER TABLE "materials" ADD COLUMN "market_manufacturing_cost" numeric(18, 6);--> statement-breakpoint
+ALTER TABLE "materials" ADD COLUMN "market_manufacturing_cost_set_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "materials" ADD COLUMN "market_manufacturing_cost_set_by" uuid;--> statement-breakpoint
+ALTER TABLE "materials" ADD CONSTRAINT "materials_market_manufacturing_cost_set_by_users_id_fk" FOREIGN KEY ("market_manufacturing_cost_set_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "materials" ADD CONSTRAINT "materials_market_manufacturing_cost_non_negative" CHECK ("materials"."market_manufacturing_cost" IS NULL OR "materials"."market_manufacturing_cost" >= 0);--> statement-breakpoint
+ALTER TABLE "materials" ADD CONSTRAINT "materials_market_manufacturing_cost_pair" CHECK (("materials"."market_manufacturing_cost" IS NULL) = ("materials"."market_manufacturing_cost_set_at" IS NULL) AND ("materials"."market_manufacturing_cost_set_at" IS NULL) = ("materials"."market_manufacturing_cost_set_by" IS NULL));

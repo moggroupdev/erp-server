@@ -37,6 +37,9 @@ export const materials = pgTable(
     marketUnitPrice: numeric('market_unit_price'), // Manually entered market price (سعر السوق)
     marketUnitPriceSetAt: timestamp('market_unit_price_set_at', { withTimezone: true }),
     marketUnitPriceSetBy: uuid('market_unit_price_set_by').references(() => users.id),
+    marketManufacturingCost: numeric('market_manufacturing_cost'), // @APP_CHECKED - only for material_type = 'manufactured_material'; manually entered outsourcing fee (تكلفة التصنيع السوقية)
+    marketManufacturingCostSetAt: timestamp('market_manufacturing_cost_set_at', { withTimezone: true }),
+    marketManufacturingCostSetBy: uuid('market_manufacturing_cost_set_by').references(() => users.id),
     deletedAt,
     createdAt,
     createdBy: uuid('created_by')
@@ -51,9 +54,14 @@ export const materials = pgTable(
     nonNegativeNullableQuantityCheck('materials_opening_quantity_non_negative', table.openingQuantity),
     nonNegativeNullableQuantityCheck('materials_minimum_stock_non_negative', table.minimumStock),
     nonNegativeNullableQuantityCheck('materials_market_unit_price_non_negative', table.marketUnitPrice),
+    nonNegativeNullableQuantityCheck('materials_market_manufacturing_cost_non_negative', table.marketManufacturingCost),
     check(
       'materials_market_unit_price_pair',
       sql`(${table.marketUnitPrice} IS NULL) = (${table.marketUnitPriceSetAt} IS NULL) AND (${table.marketUnitPriceSetAt} IS NULL) = (${table.marketUnitPriceSetBy} IS NULL)`,
+    ),
+    check(
+      'materials_market_manufacturing_cost_pair',
+      sql`(${table.marketManufacturingCost} IS NULL) = (${table.marketManufacturingCostSetAt} IS NULL) AND (${table.marketManufacturingCostSetAt} IS NULL) = (${table.marketManufacturingCostSetBy} IS NULL)`,
     ),
   ],
 );
@@ -128,6 +136,11 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
     fields: [materials.marketUnitPriceSetBy],
     references: [users.id],
     relationName: 'materialMarketUnitPriceSetBy',
+  }),
+  marketManufacturingCostSetBy: one(users, {
+    fields: [materials.marketManufacturingCostSetBy],
+    references: [users.id],
+    relationName: 'materialMarketManufacturingCostSetBy',
   }),
   subCategory: one(materialCategorySubs, {
     fields: [materials.subCategoryId],

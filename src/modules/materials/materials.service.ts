@@ -20,6 +20,7 @@ import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
 import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
+import { SetMaterialMarketManufacturingCostDto } from './dto/set-material-market-manufacturing-cost.dto';
 import { SetMaterialTypeDto } from './dto/set-material-type.dto';
 
 @Injectable()
@@ -65,6 +66,7 @@ export class MaterialsService {
       with: {
         createdBy: { columns: { id: true, name: true } },
         marketUnitPriceSetBy: { columns: { id: true, name: true } },
+        marketManufacturingCostSetBy: { columns: { id: true, name: true } },
       },
       extras: materialUnitConversionsExtra,
     });
@@ -91,6 +93,37 @@ export class MaterialsService {
         marketUnitPrice: dto.marketUnitPrice,
         marketUnitPriceSetAt: new Date(),
         marketUnitPriceSetBy: user.id,
+      })
+      .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
+      .returning();
+    if (!updatedMaterial)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+    return updatedMaterial;
+  }
+
+  public async setMarketManufacturingCost(code: string, dto: SetMaterialMarketManufacturingCostDto, user: User) {
+    const material = await this.db.query.materials.findFirst({
+      where: and(eq(materials.code, code), isNull(materials.deletedAt)),
+      columns: { code: true, materialType: true },
+    });
+    if (!material)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+    if (material.materialType !== MATERIAL_TYPES.MANUFACTURED_MATERIAL) {
+      throw new BadRequestException(
+        translate(
+          'Market manufacturing cost can only be set on manufactured materials.',
+          'تكلفة التصنيع السوقية يمكن تعيينها للمواد المصنعة فقط.',
+        ),
+      );
+    }
+
+    const [updatedMaterial] = await this.db
+      .update(materials)
+      .set({
+        marketManufacturingCost: dto.marketManufacturingCost,
+        marketManufacturingCostSetAt: new Date(),
+        marketManufacturingCostSetBy: user.id,
       })
       .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
       .returning();
@@ -202,7 +235,16 @@ export class MaterialsService {
     return await this.db.transaction(async (tx) => {
       const [updatedMaterial] = await tx
         .update(materials)
-        .set({ materialType: dto.materialType })
+        .set({
+          materialType: dto.materialType,
+          ...(leavingManufactured
+            ? {
+                marketManufacturingCost: null,
+                marketManufacturingCostSetAt: null,
+                marketManufacturingCostSetBy: null,
+              }
+            : {}),
+        })
         .where(and(eq(materials.code, code), isNull(materials.deletedAt)))
         .returning();
 
