@@ -273,7 +273,7 @@ All sources live on the header — one source event per transaction; items only 
   - Entering `manufactured_material`: blocked if the material is a component in any `manufactured_material_boms`; caller must supply `defaultMmSourcingType`; on success sets `product_standard_boms.mm_sourcing_type` for all lines with this `material_code`
   - Leaving `manufactured_material`: blocked if the material has its own MM BOM components (user must delete them first); if used in product standard BOMs, requires `confirmed: true` and clears those lines' `mm_sourcing_type` to null; also clears `market_manufacturing_cost` / `set_at` / `set_by`
   - Between `raw_materials` / `spare_parts`: plain type update
-- `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`
+- `material_unit_conversions.unit` — must differ from the material's base `unit_of_measurement` (`@APP_CHECKED`); unique per `(material_code, unit)`; immutable after create (`POST /materials/:code/units`, `add_material_unit_conversion`). `conversion_factor_to_base` is updated via `PATCH /materials/:code/units/:id` (`update_material_unit_conversion`); a factor change applies immediately to live base-unit calculations on existing entered-unit lines
 - Quantity-entry line items (BOMs, requisitions, legacy issue permits, material purchase order/receipt items, inventory transaction items, maintenance order materials, outsourcing order/receipt items) store `quantity` in `unit_of_measurement_selected` as entered by the user; conversion to base unit happens only at calculation/display time (costing, aggregation, inventory sync, order-vs-receipt quantity caps)
 
 ### Supplier addresses

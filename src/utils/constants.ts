@@ -53,6 +53,8 @@ export const PERMISSION_VALUES = [
   'print_materials_list',
   'add_material_category',
   'update_material_category',
+  'add_material_unit_conversion',
+  'update_material_unit_conversion',
   'use_unit_conversion_tool',
   'add_manufactured_material_bom',
   'read_manufactured_material_boms',
