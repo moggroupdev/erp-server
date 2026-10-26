@@ -250,6 +250,13 @@ All sources live on the header — one source event per transaction; items only 
 - `maintenance_order_materials` — one row per material per order (DB unique); repeated use of the same material accumulates into that row's `quantity`
 - `maintenance_order_materials.unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity` / `unit_price` are in this unit
 
+### Categories
+
+- `material_category_mains.legacy_code` / `product_category_mains.legacy_code` — unique across mains of that domain (`@APP_CHECKED`; also DB-unique)
+- `material_category_subs.legacy_code` / `product_category_subs.legacy_code` — unique within the parent main (`@APP_CHECKED`; also DB unique on `(main_category_id, legacy_code)`)
+- Sub `main_category_id` must exist in the matching mains table on create/update; a sub may move to another main when the new `(main, legacy_code)` pair is free. Materials and products store only `sub_category_id`, so a move does not rewrite those rows
+- Category rows are not deleted through the API; unused categories stay in the tree
+
 ### Catalog pricing
 
 - `products.pricing_factor` — nullable; omit from create/update DTOs; set only via dedicated endpoint with `set_product_pricing_factor`; omit from product/BOM API responses unless the caller is admin or has `read_product_pricing_factor` / `set_product_pricing_factor`
