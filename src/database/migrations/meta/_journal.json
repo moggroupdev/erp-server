@@ -561,6 +561,13 @@
       "when": 1792915792880,
       "tag": "0079_charming_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1793018560135,
+      "tag": "0080_slippery_killraven",
+      "breakpoints": true
     }
   ]
 }
