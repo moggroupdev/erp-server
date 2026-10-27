@@ -1,8 +1,8 @@
-import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
+import { IsDateString, IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsUuidString, Trim } from 'src/utils/decorators';
 
-/** Step 1: contract header fields (customer, numbers, dates, delivery). */
+/** Step 1: contract header fields (customer, numbers, dates). */
 export class ValidateLegacyContractDto {
   @IsUuidString()
   @IsNotEmpty()
@@ -32,10 +32,4 @@ export class ValidateLegacyContractDto {
   @IsDateString()
   @ApiProperty()
   deliveryTime: string;
-
-  @TrimToNull()
-  @IsUuidString()
-  @IsOptional()
-  @ApiPropertyOptional({ nullable: true })
-  deliveryAddressId: string | null;
 }

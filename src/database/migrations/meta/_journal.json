@@ -568,6 +568,13 @@
       "when": 1793018560135,
       "tag": "0080_slippery_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1793087345171,
+      "tag": "0081_lumpy_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

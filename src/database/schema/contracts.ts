@@ -1,6 +1,13 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgTable, uuid, text, timestamp, integer, index, check, type AnyPgColumn } from 'drizzle-orm/pg-core';
-import { numeric, createdAt, percentage, nonNegativeQuantityCheck, positiveQuantityCheck } from './common';
+import {
+  numeric,
+  createdAt,
+  percentage,
+  nonNegativeNullableQuantityCheck,
+  positiveQuantityCheck,
+  positiveNullableQuantityCheck,
+} from './common';
 import { customers, customerAddresses } from './customers';
 import { products, productDimensions } from './products';
 import { inquiries } from './inquiries';
@@ -32,10 +39,10 @@ export const contracts = pgTable(
     offerId: uuid('offer_id') // Nullable — some contract reviews are not from offers
       .unique()
       .references(() => offers.id),
-    deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Null means factory fulfillment. When set, must belong to contracts.customer_id
+    deliveryAddressId: uuid('delivery_address_id') // @APP_CHECKED - Null means factory fulfillment on ERP-native contract reviews; not recorded on legacy (legacy_number IS NOT NULL). When set, must belong to contracts.customer_id
       .references(() => customerAddresses.id),
     deliveryTime: timestamp('delivery_time', { withTimezone: true }), // Estimated delivery time
-    totalAmount: numeric('total_amount').notNull(), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL
+    totalAmount: numeric('total_amount'), // @CACHING_APP_SYNCED - SUM(quantity * unit_price) from contract_items where cancelled_at IS NULL; null when any active line has no unit_price
     discountPct: percentage('discount_pct'), // @APP_CHECKED - When offer_id is set, must match offers.discount_pct; when no offer, set directly on contract review creation
     // Contract review status can be deduced from these dates:
     startedAt: timestamp('started_at', { withTimezone: true }), // Work order start date (تاريخ بداية أمر الشغل)
@@ -68,7 +75,7 @@ export const contracts = pgTable(
       'contracts_cancelled_after_started',
       sql`${table.cancelledAt} IS NULL OR ${table.startedAt} IS NULL OR ${table.cancelledAt} >= ${table.startedAt}`,
     ),
-    nonNegativeQuantityCheck('contracts_total_amount_non_negative', table.totalAmount),
+    nonNegativeNullableQuantityCheck('contracts_total_amount_non_negative', table.totalAmount),
     check(
       'contracts_discount_pct_check',
       sql`${table.discountPct} IS NULL OR (${table.discountPct} >= 0 AND ${table.discountPct} <= 100)`,
@@ -103,7 +110,7 @@ export const contractItems = pgTable(
       .references(() => products.code), // @RFP_APP_CHECKED - Must match product_dimensions.product_code for product_dimension_id
     title: text('title'),
     notes: text('notes'),
-    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Pre-discount quoted price; changes via cancel-and-replace only
+    unitPrice: numeric('unit_price'), // @HISTORICAL_SNAPSHOT - Pre-discount quoted price; changes via cancel-and-replace only. @APP_CHECKED - Required on ERP-native contract reviews; nullable on legacy
     quantity: integer('quantity').notNull().default(1),
     createdBy: uuid('created_by')
       .notNull()
@@ -121,7 +128,7 @@ export const contractItems = pgTable(
     index('contract_items_cancelled_at_idx').on(table.cancelledAt),
     index('contract_items_previous_version_id_idx').on(table.previousVersionId),
     positiveQuantityCheck('contract_items_quantity_positive', table.quantity),
-    positiveQuantityCheck('contract_items_unit_price_positive', table.unitPrice),
+    positiveNullableQuantityCheck('contract_items_unit_price_positive', table.unitPrice),
   ],
 );
 

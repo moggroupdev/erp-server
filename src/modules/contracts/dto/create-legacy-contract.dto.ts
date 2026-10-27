@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsDateString, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
+import { ArrayMinSize, IsArray, IsDateString, IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsUuidString, Trim } from 'src/utils/decorators';
 import { CreateLegacyContractItemDto } from './create-legacy-contract-item.dto';
 
 export class CreateLegacyContractDto {
@@ -33,12 +33,6 @@ export class CreateLegacyContractDto {
   @IsDateString()
   @ApiProperty()
   deliveryTime: string;
-
-  @TrimToNull()
-  @IsUuidString()
-  @IsOptional()
-  @ApiPropertyOptional({ nullable: true })
-  deliveryAddressId: string | null;
 
   @IsArray()
   @ArrayMinSize(1)

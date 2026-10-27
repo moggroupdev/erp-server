@@ -57,7 +57,7 @@ Recalculate inside a transaction when source rows change.
 | Column                                  | Formula                                                   |
 | --------------------------------------- | --------------------------------------------------------- |
 | `offers.total_amount`                   | `SUM(quantity × unit_price)`                              |
-| `contracts.total_amount`                | `SUM(quantity × unit_price)` where `cancelled_at IS NULL` |
+| `contracts.total_amount`                | `SUM(quantity × unit_price)` where `cancelled_at IS NULL`; null when any active line has no `unit_price` (temporary; legacy paper backfill only — see Contract reviews) |
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_price)`                      |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_price)`                      |
 | `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)`         |
@@ -225,18 +225,21 @@ All sources live on the header — one source event per transaction; items only 
 
 ### Contract reviews
 
+**Important (temporary):** Legacy create currently allows missing per-line `unit_price` (and a null `total_amount` when any active line is unpriced) and never records `delivery_address_id`. That is a paper-backfill concession so incomplete historical contract reviews can still be entered. It is **not** the long-term model: ERP-native create must require `unit_price` (`@APP_CHECKED`), and reporting/invoicing that sums `contracts.total_amount` must treat null as "not priced", not zero. Revisit once legacy capture is done or prices/addresses are backfilled — do not copy these relaxations onto ERP-native flows.
+
 - Contract review reads: `GET /contracts` and `GET /contracts/:id` require `read_contracts`. List keyword search covers code, legacy number, legacy work order number, and notes. `status` is `open` (no `completed_at` and no `cancelled_at`), `completed`, or `cancelled`
-- Legacy create: `POST /contracts/legacy` requires `add_legacy_contract`. It omits `inquiry_id`, `preview_id`, `offer_id`, and `discount_pct`. `legacy_number` and `legacy_work_order_number` are required and unique. `created_at`, `started_at`, and `delivery_time` are client dates with order `created_at <= started_at <= delivery_time`. `delivery_address_id` is optional and, when set, must belong to `customer_id`. Each line stores `product_code` from its dimension, and inserts one `product_units` row per quantity. `total_amount` is the sum of active line amounts
-- Legacy create step checks (same permission, no writes): `POST /contracts/legacy/validate-contract` (customer, delivery address, date order, unique legacy numbers), `POST /contracts/legacy/validate-items` (dimensions exist; products not deleted), `POST /contracts/legacy/validate-units` (unit/quantity rules, serial uniqueness in payload and against `product_units`)
+- Legacy create: `POST /contracts/legacy` requires `add_legacy_contract`. It omits `inquiry_id`, `preview_id`, `offer_id`, `discount_pct`, and `delivery_address_id` (always stored null; not recorded). `legacy_number` and `legacy_work_order_number` are required and unique. `created_at`, `started_at`, and `delivery_time` are client dates with order `created_at <= started_at <= delivery_time`. Each line stores `product_code` from its dimension, and inserts one `product_units` row per quantity. `unit_price` is optional per line (temporary; see note above). `total_amount` is the sum of active line amounts, or null when any active line has no `unit_price`
+- Legacy create step checks (same permission, no writes): `POST /contracts/legacy/validate-contract` (customer, date order, unique legacy numbers), `POST /contracts/legacy/validate-items` (dimensions exist; products not deleted), `POST /contracts/legacy/validate-units` (unit/quantity rules, serial uniqueness in payload and against `product_units`)
 - `contracts.inquiry_id` — required on normal create once the contracts service exists. Null only for legacy contract reviews
 - `contracts.legacy_number` / `contracts.legacy_work_order_number` — optional paper identifiers; unique when present; null or non-blank (DB-checked). Null on ERP-native contract reviews
-- `contracts.delivery_address_id` — null means fulfillment at the factory. When set, must belong to `contracts.customer_id`
+- `contracts.delivery_address_id` — when set, must belong to `contracts.customer_id`. Null means fulfillment at the factory on ERP-native contract reviews; on legacy (`legacy_number` set) it is never recorded
+- `contract_items.unit_price` (`@APP_CHECKED`) — required on ERP-native contract reviews; nullable on legacy
 - `contracts.discount_pct` — when `offer_id` set, must match `offers.discount_pct`; when null offer, set on create with role cap
 
 ### Deliveries & installations
 
 - `delivery_items.product_unit_id` / `installation_items.product_unit_id` — unit must belong to parent `contract_id`
-- Site address from `contracts.delivery_address_id` when set (not stored on delivery/installation). Null means fulfillment at the factory
+- Site address from `contracts.delivery_address_id` when set (not stored on delivery/installation). Null means fulfillment at the factory on ERP-native contract reviews; on legacy it is not recorded
 
 ### Customer receptions
 

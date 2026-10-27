@@ -46,7 +46,7 @@ Not performance caches. The writer sets them from the parent row on insert. Comp
 | Column                                  | Source                                                                                      |
 | --------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `offers.total_amount`                   | `SUM(quantity × unit_price)` from `offer_items`                                             |
-| `contracts.total_amount`                | `SUM(quantity × unit_price)` from `contract_items` where `cancelled_at IS NULL`             |
+| `contracts.total_amount`                | `SUM(quantity × unit_price)` from `contract_items` where `cancelled_at IS NULL`; null when any active line has no `unit_price`. **Temporary** legacy paper-backfill only — not the ERP-native model |
 | `material_purchase_orders.total_amount` | `SUM(quantity_ordered × unit_price)` from `material_purchase_order_items`                   |
 | `product_purchase_orders.total_amount`  | `SUM(quantity_ordered × unit_price)` from `product_purchase_order_items`                    |
 | `outsourcing_orders.total_amount`       | `SUM(quantity_ordered × unit_manufacturing_cost)` from `outsourcing_order_items`            |
@@ -71,7 +71,7 @@ Not performance caches. The writer sets them from the parent row on insert. Comp
 | Column                                                         | Set on insert from                                                                                          |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `offer_items.unit_price`                                       | Quoted price (e.g. catalog BOM × `pricing_factor`)                                                          |
-| `contract_items.unit_price`                                    | Pre-discount quoted price; changes via cancel-and-replace only                                              |
+| `contract_items.unit_price`                                    | Pre-discount quoted price; changes via cancel-and-replace only. **Temporary:** nullable on legacy lines for paper backfill; required on ERP-native |
 | `inventory_transaction_items.unit_price`                       | User-provided actual price at transaction time                                                              |
 | `maintenance_order_materials.unit_price`                       | Selling price at time of use                                                                                |
 | `material_purchase_requisitions.production_sub_department_manager_id` | `production_sub_department_managers.manager_id` for the requisition's `production_sub_department` |

@@ -1,15 +1,7 @@
 import { and, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import {
-  contractItems,
-  contracts,
-  customerAddresses,
-  customers,
-  productDimensions,
-  productUnits,
-  products,
-} from 'src/database/schema';
+import { contractItems, contracts, customers, productDimensions, productUnits, products } from 'src/database/schema';
 import { PRODUCT_SOURCE_TYPES } from 'src/utils/constants';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -117,11 +109,11 @@ export class ContractsService {
 
     return {
       ...contract,
-      totalAmount: toNumber(contract.totalAmount),
+      totalAmount: toNullableNumber(contract.totalAmount),
       discountPct: toNullableNumber(contract.discountPct),
       items: contract.items.map((item) => ({
         ...item,
-        unitPrice: toNumber(item.unitPrice),
+        unitPrice: toNullableNumber(item.unitPrice),
         productDimension: {
           ...item.productDimension,
           length: toNullableNumber(item.productDimension.length),
@@ -154,7 +146,10 @@ export class ContractsService {
     const { dimensionById, productByCode, serials, supplierSerials } = await this.assertLegacyContractItems(dto.items);
     await this.assertSerialsAvailable(serials, supplierSerials);
 
-    const totalAmount = dto.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const totalAmount = dto.items.reduce<number | null>((sum, item) => {
+      if (sum == null || item.unitPrice == null) return null;
+      return sum + item.quantity * item.unitPrice;
+    }, 0);
 
     return await this.db.transaction(async (tx) => {
       const [contract] = await tx
@@ -164,7 +159,7 @@ export class ContractsService {
           customerId: dto.customerId,
           legacyNumber: dto.legacyNumber,
           legacyWorkOrderNumber: dto.legacyWorkOrderNumber,
-          deliveryAddressId: dto.deliveryAddressId ?? null,
+          deliveryAddressId: null,
           deliveryTime: new Date(dto.deliveryTime),
           startedAt: new Date(dto.startedAt),
           createdAt: new Date(dto.createdAt),
@@ -194,7 +189,7 @@ export class ContractsService {
             productCode: dimension.productCode,
             title: item.title ?? null,
             notes: item.notes ?? null,
-            unitPrice: item.unitPrice,
+            unitPrice: item.unitPrice ?? null,
             quantity: item.quantity,
             createdBy: user.id,
           })
@@ -224,18 +219,6 @@ export class ContractsService {
       throw new NotFoundException(
         translate(`Customer with ID ${dto.customerId} does not exist.`, `لا يوجد عميل بالمعرف ${dto.customerId}.`),
       );
-    }
-
-    if (dto.deliveryAddressId) {
-      const address = await this.db.query.customerAddresses.findFirst({
-        where: and(eq(customerAddresses.id, dto.deliveryAddressId), eq(customerAddresses.customerId, dto.customerId)),
-        columns: { id: true },
-      });
-      if (!address) {
-        throw new BadRequestException(
-          translate('Delivery address must belong to the selected customer.', 'يجب أن يتبع عنوان التسليم العميل المحدد.'),
-        );
-      }
     }
 
     const createdAt = new Date(dto.createdAt);
