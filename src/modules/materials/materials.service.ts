@@ -19,6 +19,7 @@ import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { CreateMaterialUnitConversionDto } from './dto/create-material-unit-conversion.dto';
+import { UpdateMaterialUnitConversionDto } from './dto/update-material-unit-conversion.dto';
 import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
 import { SetMaterialMarketManufacturingCostDto } from './dto/set-material-market-manufacturing-cost.dto';
 import { SetMaterialTypeDto } from './dto/set-material-type.dto';
@@ -297,6 +298,24 @@ export class MaterialsService {
         createdBy: user.id,
       })
       .returning();
+
+    return row;
+  }
+
+  public async updateUnitConversion(materialCode: string, id: string, dto: UpdateMaterialUnitConversionDto) {
+    const [row] = await this.db
+      .update(materialUnitConversions)
+      .set({ conversionFactorToBase: dto.conversionFactorToBase })
+      .where(and(eq(materialUnitConversions.id, id), eq(materialUnitConversions.materialCode, materialCode)))
+      .returning();
+
+    if (!row)
+      throw new NotFoundException(
+        translate(
+          `Unit conversion ${id} does not exist for material ${materialCode}.`,
+          `تحويل الوحدة ${id} غير موجود للمادة ${materialCode}.`,
+        ),
+      );
 
     return row;
   }

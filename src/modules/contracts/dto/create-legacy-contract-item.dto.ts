@@ -28,8 +28,9 @@ export class CreateLegacyContractItemDto {
 
   @IsNumber()
   @IsPositive()
-  @ApiProperty()
-  unitPrice: number;
+  @IsOptional()
+  @ApiPropertyOptional({ nullable: true })
+  unitPrice: number | null;
 
   @IsInt()
   @IsPositive()

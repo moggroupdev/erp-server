@@ -25,6 +25,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Products & Engineering
 
 - Product catalog organized by category; each product is either manufactured in-house or imported from a supplier
+- Product category trees (main and sub) can be created, updated, and deleted in the app
 - Multiple dimension variants per product (either length & depth, or diameter, plus height - always in cm), with one marked as default; estimated production time and a pricing factor (multiplier on standard BOM cost) are set at the product level
 - Customer-specific sizes are added as new rows in `product_dimensions` and get their own standard material recipe prepared when needed by the Technical Office
 - Individual product units created for each contract review line, each with its own serial number
@@ -40,6 +41,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 ### Inventory & Warehouse
 
 - Raw materials, spare parts, and manufactured materials with stock levels and minimum thresholds
+- Material category trees (main and sub) can be created, updated, and deleted in the app
 - Manufactured materials have their own bill of materials (BOM) listing the component materials required to produce them; components may themselves be manufactured materials
 - Manufactured materials can store a manually set market manufacturing cost (outsourcing fee in the material's base unit), used on product BOM costing as a fallback when no last outsourcing order cost exists for an externally manufactured line
 - Inventory movements: receipts from purchase inspection or outsourcing returns, issues to production, maintenance, or outsourcing suppliers, and returns
@@ -64,7 +66,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Delivery & Installation
 
-- Each delivery and installation belongs to one contract review; the site address is the contract review's `delivery_address_id` when set (not stored on the task). A null address means fulfillment at the factory
+- Each delivery and installation belongs to one contract review; the site address is the contract review's `delivery_address_id` when set (not stored on the task). A null address means fulfillment at the factory on ERP-native contract reviews; legacy contract reviews never record a delivery location
 - Trips group deliveries, installations, and maintenance orders that travel together on the same vehicle across multiple addresses
 - Installation scheduling and assignment for on-site commissioning
 - Customer receptions: formal handover when the customer receives product units (factory pickup, after delivery, or after installation); starts the 1-year warranty period per unit
@@ -133,6 +135,6 @@ Once equipment is in the field, the company services it under three arrangements
 
 ## Current Scope
 
-The data model covers the full project lifecycle described above — from customer inquiry through contract review, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Contract review list and detail reads are available, and legacy contract reviews can be created. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
+The data model covers the full project lifecycle described above — from customer inquiry through contract review, manufacturing or import, delivery, installation, completion, and after-sales maintenance. Contract review list and detail reads are available, and legacy contract reviews can be created. **Temporary:** legacy create currently allows missing line prices (null contract total) and does not record a delivery location, so incomplete paper contract reviews can be entered; this is not the ERP-native model. Material and product category trees can be maintained in the app. Application APIs and user-facing workflows are still being built on top of this foundation; not every step is yet available in the software.
 
 Purchasing reports currently cover spending summary, material price history, purchasing by category / subcategory / supplier, invoice total variance, purchase requisition follow-up, price outliers (purchase-order lines whose unit price diverges sharply from nearby purchases of the same material), and average price gaps (stored `materials.unit_price` vs quantity-weighted purchase price).
