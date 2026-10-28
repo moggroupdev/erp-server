@@ -338,6 +338,8 @@ export const PRODUCTION_SUB_DEPARTMENT_VALUES = [
   'paints',
   'blacksmithing',
   'turning',
+  'finishing',
+  'external_installations',
 ] as const;
 
 export const PRODUCTION_SUB_DEPARTMENTS = Object.fromEntries(
