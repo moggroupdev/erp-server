@@ -1,0 +1,292 @@
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { eq, sql } from 'drizzle-orm';
+import { parseArgs } from 'node:util';
+import * as readline from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
+import * as schema from '../../src/database/schema';
+import { PRODUCT_SOURCE_TYPE_VALUES } from '../../src/utils/constants';
+import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
+
+dotenv.config();
+
+const USAGE = `Usage: npm run seed:products-to-add [-- --email <email> | --id <uuid>]
+
+Seeds products from products/products-to-add.json.
+
+Requires:
+  - npm run seed:product-category-tree (so the target product categories exist)
+
+If --email / --id are omitted, you will be prompted for an email or user ID.
+The user must be an active admin.
+
+Options:
+  -e, --email <email>  Existing user email stamped as createdBy
+  -i, --id <uuid>      Existing user ID stamped as createdBy
+  -h, --help           Show this help
+
+Examples:
+  npm run seed:products-to-add
+  npm run seed:products-to-add -- --email admin@example.com
+  npm run seed:products-to-add -- --id 00000000-0000-0000-0000-000000000001`;
+
+type ProductToAdd = {
+  title: string;
+  sourceType: string;
+  mainLegacyCode: string;
+  subLegacyCode: string;
+};
+
+type ProductsToAddFile = {
+  products: ProductToAdd[];
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BATCH_SIZE = 100;
+const SOURCE_TYPE_SET = new Set<string>(PRODUCT_SOURCE_TYPE_VALUES);
+
+function parseCliArgs(): { email?: string; id?: string } {
+  try {
+    const { values } = parseArgs({
+      options: {
+        email: { type: 'string', short: 'e' },
+        id: { type: 'string', short: 'i' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: false,
+    });
+
+    if (values.help) {
+      console.log(USAGE);
+      process.exit(0);
+    }
+
+    return {
+      email: values.email?.trim() || undefined,
+      id: values.id?.trim() || undefined,
+    };
+  } catch {
+    console.error(USAGE);
+    process.exit(1);
+  }
+}
+
+async function promptForUserIdentifier(partial: { email?: string; id?: string }): Promise<{ email?: string; id?: string }> {
+  if (partial.email || partial.id) return partial;
+
+  const rl = readline.createInterface({ input, output });
+  try {
+    console.log('\nEnter the user to stamp as createdBy (email or user ID).');
+    const answer = (await rl.question('Email or user ID: ')).trim();
+    if (!answer) throw new Error('Email or user ID is required.');
+
+    if (UUID_RE.test(answer)) return { id: answer };
+    return { email: answer };
+  } finally {
+    rl.close();
+  }
+}
+
+async function resolveUser(db: ReturnType<typeof drizzle<typeof schema>>, identifier: { email?: string; id?: string }) {
+  const user = identifier.id
+    ? await db.query.users.findFirst({
+        where: eq(schema.users.id, identifier.id),
+        columns: { id: true, email: true, name: true, deletedAt: true, isAdmin: true },
+      })
+    : await db.query.users.findFirst({
+        where: eq(schema.users.email, identifier.email!),
+        columns: { id: true, email: true, name: true, deletedAt: true, isAdmin: true },
+      });
+
+  if (!user || user.deletedAt) {
+    const label = identifier.email ? `email "${identifier.email}"` : `id "${identifier.id}"`;
+    throw new Error(`No active user found with ${label}.`);
+  }
+
+  if (!user.isAdmin) {
+    const label = user.email ? `${user.name} <${user.email}>` : `${user.name} (${user.id})`;
+    throw new Error(`User ${label} is not an admin. Only admins can seed products.`);
+  }
+
+  return user;
+}
+
+function normalizeTitle(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function generateUniqueCode(existing: Set<string>): string {
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const code = String(crypto.randomInt(100_000, 1_000_000));
+    if (!existing.has(code)) {
+      existing.add(code);
+      return code;
+    }
+  }
+  throw new Error('Failed to generate a unique 6-digit product code after 1000 attempts.');
+}
+
+function readProductsToAdd(filePath: string): ProductToAdd[] {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Products JSON not found: ${filePath}`);
+  }
+
+  const file = JSON.parse(fs.readFileSync(filePath, 'utf-8').replace(/^\uFEFF/, '')) as ProductsToAddFile;
+  if (!Array.isArray(file.products)) {
+    throw new Error(`Products JSON is missing a products array: ${filePath}`);
+  }
+
+  return file.products;
+}
+
+function assertNoDuplicateTitles(products: ProductToAdd[]) {
+  const seen = new Map<string, string>();
+
+  for (const product of products) {
+    const key = normalizeTitle(product.title);
+    const previous = seen.get(key);
+    if (previous) {
+      throw new Error(`Duplicate title in JSON: "${product.title}" (already listed as "${previous}")`);
+    }
+    seen.set(key, product.title);
+  }
+}
+
+async function main() {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not defined in .env');
+
+  const cli = parseCliArgs();
+  const identifier = await promptForUserIdentifier(cli);
+
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const db = drizzle(pool, { schema });
+
+  try {
+    const user = await resolveUser(db, identifier);
+    console.log(`Using createdBy: ${user.name} <${user.email ?? 'no email'}> (${user.id})`);
+
+    const productsPath = path.join(__dirname, '../../../../products/products-to-add.json');
+    const products = readProductsToAdd(productsPath);
+    assertNoDuplicateTitles(products);
+    console.log(`Loaded ${products.length} products from ${productsPath}`);
+
+    const categoryRows = await db
+      .select({
+        subId: schema.productCategorySubs.id,
+        subLegacyCode: schema.productCategorySubs.legacyCode,
+        mainLegacyCode: schema.productCategoryMains.legacyCode,
+      })
+      .from(schema.productCategorySubs)
+      .innerJoin(schema.productCategoryMains, eq(schema.productCategorySubs.mainCategoryId, schema.productCategoryMains.id));
+
+    const categoryMap = new Map<string, string>();
+    for (const row of categoryRows) {
+      categoryMap.set(`${row.mainLegacyCode}:${row.subLegacyCode}`, row.subId);
+    }
+    console.log(`Loaded ${categoryMap.size} product subcategory mappings`);
+
+    const existingProducts = await db
+      .select({
+        code: schema.products.code,
+        title: schema.products.title,
+      })
+      .from(schema.products);
+
+    const existingTitles = new Set<string>();
+    const usedCodes = new Set<string>();
+    for (const row of existingProducts) {
+      existingTitles.add(normalizeTitle(row.title));
+      usedCodes.add(row.code);
+    }
+    console.log(`Existing products in DB: ${existingProducts.length}`);
+
+    const productsToInsert: (typeof schema.products.$inferInsert)[] = [];
+    const missingCategories: string[] = [];
+    const invalidSourceTypes: string[] = [];
+    let skippedExisting = 0;
+
+    for (const product of products) {
+      if (!SOURCE_TYPE_SET.has(product.sourceType)) {
+        invalidSourceTypes.push(`${product.title} (${product.sourceType})`);
+        continue;
+      }
+
+      const categoryKey = `${product.mainLegacyCode}:${product.subLegacyCode}`;
+      const subCategoryId = categoryMap.get(categoryKey);
+      if (!subCategoryId) {
+        missingCategories.push(`${product.title} (${categoryKey})`);
+        continue;
+      }
+
+      if (existingTitles.has(normalizeTitle(product.title))) {
+        skippedExisting++;
+        continue;
+      }
+
+      productsToInsert.push({
+        code: generateUniqueCode(usedCodes),
+        title: product.title,
+        subCategoryId,
+        sourceType: product.sourceType as (typeof PRODUCT_SOURCE_TYPE_VALUES)[number],
+        createdBy: user.id,
+      });
+      existingTitles.add(normalizeTitle(product.title));
+    }
+
+    if (invalidSourceTypes.length > 0) {
+      throw new Error(`Invalid sourceType values:\n  ${invalidSourceTypes.join('\n  ')}`);
+    }
+
+    if (missingCategories.length > 0) {
+      throw new Error(
+        `Missing product subcategories. Run npm run seed:product-category-tree first.\n  ${missingCategories.join('\n  ')}`,
+      );
+    }
+
+    console.log(`\nPrepared ${productsToInsert.length} new products (${skippedExisting} already exist)`);
+
+    if (productsToInsert.length === 0) {
+      console.log('No new products to insert.');
+      return;
+    }
+
+    console.log('Writing all inserts in one database transaction. A failure rolls back the entire run.');
+
+    const insertedCodes: string[] = [];
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SET LOCAL statement_timeout = 0`);
+      await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = 0`);
+
+      for (let i = 0; i < productsToInsert.length; i += BATCH_SIZE) {
+        const batch = productsToInsert.slice(i, i + BATCH_SIZE);
+        const result = await tx.insert(schema.products).values(batch).returning({ code: schema.products.code });
+        for (const row of result) insertedCodes.push(row.code);
+        process.stdout.write(
+          `\rInserted ${Math.min(i + BATCH_SIZE, productsToInsert.length)} / ${productsToInsert.length} products`,
+        );
+      }
+      console.log();
+    });
+
+    console.log('\n========== PRODUCTS TO ADD SEED STATS ==========');
+    console.log(`JSON products loaded:            ${products.length}`);
+    console.log(`Inserted (new products):         ${insertedCodes.length}`);
+    console.log(`Skipped (already exist):         ${skippedExisting}`);
+    console.log('================================================\n');
+    console.log('Products-to-add seed completed successfully.');
+  } catch (e) {
+    const err = e as Error & { cause?: { message?: string; code?: string; detail?: string } };
+    console.error(err.message);
+    if (err.cause?.message) console.error(`Cause: ${err.cause.message}`);
+    if (err.cause?.detail) console.error(`Detail: ${err.cause.detail}`);
+    console.error('Seed failed; all database changes from this run were rolled back.');
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
+  }
+}
+
+void main();
