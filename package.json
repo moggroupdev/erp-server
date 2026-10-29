@@ -25,6 +25,8 @@
     "seed:inventory-receipts": "ts-node -r tsconfig-paths/register scripts/seeding/seed-inventory-receipts.ts",
     "seed:invoice-totals": "ts-node -r tsconfig-paths/register scripts/seeding/seed-invoice-totals.ts",
     "seed:products": "ts-node -r tsconfig-paths/register scripts/seeding/seed-products.ts",
+    "seed:product-category-tree": "ts-node -r tsconfig-paths/register scripts/seeding/seed-product-category-tree.ts",
+    "seed:products-to-add": "ts-node -r tsconfig-paths/register scripts/seeding/seed-products-to-add.ts",
     "seed:boms": "ts-node -r tsconfig-paths/register scripts/seeding/seed-boms.ts",
     "seed:customers": "ts-node -r tsconfig-paths/register scripts/seeding/seed-customers.ts",
     "create:first-admin": "ts-node -r tsconfig-paths/register scripts/others/create-first-admin.ts",
