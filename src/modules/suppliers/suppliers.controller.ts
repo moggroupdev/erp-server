@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Delete, Param, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -47,6 +47,22 @@ export class SuppliersController {
   @ApiBearerAuth()
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateSupplierDto: UpdateSupplierDto) {
     return this.suppliersService.update(id, updateSupplierDto);
+  }
+
+  @Put(':id/blacklist')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
+  @ApiBearerAuth()
+  addToBlacklist(@Param('id', ParseUUIDPipe) id: string, @RequestUser() user: User) {
+    return this.suppliersService.addToBlacklist(id, user);
+  }
+
+  @Delete(':id/blacklist')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_SUPPLIER)
+  @ApiBearerAuth()
+  removeFromBlacklist(@Param('id', ParseUUIDPipe) id: string) {
+    return this.suppliersService.removeFromBlacklist(id);
   }
 
   // ========================= Addresses =========================

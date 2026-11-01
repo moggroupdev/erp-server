@@ -1,5 +1,5 @@
-import { and, desc, eq, exists, isNull, sql } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, exists, isNotNull, isNull, sql } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   materialCategorySubs,
@@ -34,8 +34,8 @@ export class SuppliersService {
   }
 
   public async list(queryParams: QueryParams) {
-    const { mainCategoryId, ...listParams } = queryParams;
-    const additionalConditions = [isNull(suppliers.blacklistedAt)];
+    const { mainCategoryId, blacklisted, ...listParams } = queryParams;
+    const additionalConditions = [blacklisted === 'true' ? isNotNull(suppliers.blacklistedAt) : isNull(suppliers.blacklistedAt)];
 
     // Suppliers who have a non-cancelled purchase order for a material in this main category.
     if (typeof mainCategoryId === 'string' && mainCategoryId.length > 0) {
@@ -98,9 +98,44 @@ export class SuppliersService {
     return updatedSupplier;
   }
 
+  public async addToBlacklist(id: string, user: User) {
+    const [updatedSupplier] = await this.db
+      .update(suppliers)
+      .set({ blacklistedAt: new Date(), addedToBlacklistBy: user.id })
+      .where(and(eq(suppliers.id, id), isNull(suppliers.blacklistedAt)))
+      .returning();
+
+    if (!updatedSupplier) {
+      const supplier = await this.db.query.suppliers.findFirst({ where: eq(suppliers.id, id), columns: { id: true } });
+      if (!supplier)
+        throw new NotFoundException(translate(`Supplier with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
+      throw new ConflictException(translate('This supplier is already blacklisted.', 'هذا المورد مدرج في القائمة السوداء بالفعل.'));
+    }
+
+    return updatedSupplier;
+  }
+
+  public async removeFromBlacklist(id: string) {
+    const [updatedSupplier] = await this.db
+      .update(suppliers)
+      .set({ blacklistedAt: null, addedToBlacklistBy: null })
+      .where(and(eq(suppliers.id, id), isNotNull(suppliers.blacklistedAt)))
+      .returning();
+
+    if (!updatedSupplier) {
+      const supplier = await this.db.query.suppliers.findFirst({ where: eq(suppliers.id, id), columns: { id: true } });
+      if (!supplier)
+        throw new NotFoundException(translate(`Supplier with ID ${id} does not exist.`, `لا يوجد مورد بالمعرف ${id}.`));
+      throw new ConflictException(translate('This supplier is not blacklisted.', 'هذا المورد غير مدرج في القائمة السوداء.'));
+    }
+
+    return updatedSupplier;
+  }
+
   // ========================= Addresses =========================
 
   public async addAddress(supplierId: string, createSupplierAddressDto: CreateAddressDto) {
+    await this.assertActiveSupplier(supplierId);
     const { isDefault, ...addressData } = createSupplierAddressDto;
 
     return await this.db.transaction(async (tx) => {
@@ -128,6 +163,7 @@ export class SuppliersService {
   }
 
   public async setDefaultAddress(supplierId: string, addressId: string) {
+    await this.assertActiveSupplier(supplierId);
     const address = await this.db.query.supplierAddresses.findFirst({
       where: and(eq(supplierAddresses.id, addressId), eq(supplierAddresses.supplierId, supplierId)),
     });
@@ -161,6 +197,7 @@ export class SuppliersService {
   // ========================= Contact persons =========================
 
   public async addContactPerson(supplierId: string, createContactPersonDto: CreateContactPersonDto) {
+    await this.assertActiveSupplier(supplierId);
     const { isPrimary, ...contactData } = createContactPersonDto;
 
     return await this.db.transaction(async (tx) => {
@@ -188,6 +225,7 @@ export class SuppliersService {
   }
 
   public async setPrimaryContactPerson(supplierId: string, contactPersonId: string) {
+    await this.assertActiveSupplier(supplierId);
     const contactPerson = await this.db.query.supplierContactPersons.findFirst({
       where: and(eq(supplierContactPersons.id, contactPersonId), eq(supplierContactPersons.supplierId, supplierId)),
     });
@@ -216,5 +254,20 @@ export class SuppliersService {
 
       return updatedContactPerson;
     });
+  }
+
+  private async assertActiveSupplier(supplierId: string) {
+    const supplier = await this.db.query.suppliers.findFirst({
+      where: eq(suppliers.id, supplierId),
+      columns: { id: true, blacklistedAt: true },
+    });
+    if (!supplier)
+      throw new NotFoundException(
+        translate(`Supplier with ID ${supplierId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierId}.`),
+      );
+    if (supplier.blacklistedAt)
+      throw new ConflictException(
+        translate('This supplier is blacklisted and cannot be edited.', 'هذا المورد مدرج في القائمة السوداء ولا يمكن تعديله.'),
+      );
   }
 }

@@ -84,6 +84,16 @@ Recalculate inside a transaction when source rows change.
 
 Skip when DB already enforces (checks, partial unique indexes, deferred triggers).
 
+### Customers and suppliers (blacklist)
+
+`blacklisted_at` and `added_to_blacklist_by` are a pair (DB check). Set both together on blacklist; clear both on remove. No reason column.
+
+- List excludes blacklisted rows unless `blacklisted=true` (exact value). Pickers and the suppliers print list stay on the active set.
+- `GET /customers/:id` and `GET /suppliers/:id` still return a blacklisted record.
+- While blacklisted: reject header update, address writes (add / set default), and contact-person writes (add / set primary). Reads stay allowed.
+- Existing contracts, orders, and invoices stay as they are. Creating a new document with an already-known id is not extra-blocked.
+- `PUT /customers/:id/blacklist` and `DELETE /customers/:id/blacklist` (same for suppliers). Permission: `update_customer` / `update_supplier`.
+
 ### Inventory (`inventory_transactions` / `inventory_transaction_items`)
 
 All sources live on the header — one source event per transaction; items only carry material, selected unit, quantity, and price. Source exclusivity and source-vs-`transaction_type` matching are DB checks (`inv_tx_source_non_conflicting`, `inv_tx_receipt_source_type_match`, `inv_tx_issue_source_type_match`), so `return` transactions can carry no source at all.

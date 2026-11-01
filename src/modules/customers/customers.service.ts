@@ -1,5 +1,5 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { customerAddresses, customerContactPersons, customers } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
@@ -26,13 +26,16 @@ export class CustomersService {
   }
 
   public async list(queryParams: QueryParams) {
-    return await this.queryBuilderService.execute(customers, queryParams, {
+    const { blacklisted, ...listParams } = queryParams;
+    const showBlacklisted = blacklisted === 'true';
+
+    return await this.queryBuilderService.execute(customers, listParams, {
       filtering: true,
       searchableFields: ['name', 'code', 'email', 'phone', 'website', 'taxNumber', 'commercialRegistrationNumber'],
       fieldLimiting: true,
       sorting: true,
       pagination: true,
-      additionalConditions: [isNull(customers.blacklistedAt)],
+      additionalConditions: [showBlacklisted ? isNotNull(customers.blacklistedAt) : isNull(customers.blacklistedAt)],
     });
   }
 
@@ -61,9 +64,44 @@ export class CustomersService {
     return updatedCustomer;
   }
 
+  public async addToBlacklist(id: string, user: User) {
+    const [updatedCustomer] = await this.db
+      .update(customers)
+      .set({ blacklistedAt: new Date(), addedToBlacklistBy: user.id })
+      .where(and(eq(customers.id, id), isNull(customers.blacklistedAt)))
+      .returning();
+
+    if (!updatedCustomer) {
+      const customer = await this.db.query.customers.findFirst({ where: eq(customers.id, id), columns: { id: true } });
+      if (!customer)
+        throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد عميل بالمعرف ${id}.`));
+      throw new ConflictException(translate('This customer is already blacklisted.', 'هذا العميل مدرج في القائمة السوداء بالفعل.'));
+    }
+
+    return updatedCustomer;
+  }
+
+  public async removeFromBlacklist(id: string) {
+    const [updatedCustomer] = await this.db
+      .update(customers)
+      .set({ blacklistedAt: null, addedToBlacklistBy: null })
+      .where(and(eq(customers.id, id), isNotNull(customers.blacklistedAt)))
+      .returning();
+
+    if (!updatedCustomer) {
+      const customer = await this.db.query.customers.findFirst({ where: eq(customers.id, id), columns: { id: true } });
+      if (!customer)
+        throw new NotFoundException(translate(`Customer with ID ${id} does not exist.`, `لا يوجد عميل بالمعرف ${id}.`));
+      throw new ConflictException(translate('This customer is not blacklisted.', 'هذا العميل غير مدرج في القائمة السوداء.'));
+    }
+
+    return updatedCustomer;
+  }
+
   // ========================= Addresses =========================
 
   public async addAddress(customerId: string, createCustomerAddressDto: CreateAddressDto) {
+    await this.assertActiveCustomer(customerId);
     const { isDefault, ...addressData } = createCustomerAddressDto;
 
     return await this.db.transaction(async (tx) => {
@@ -91,6 +129,7 @@ export class CustomersService {
   }
 
   public async setDefaultAddress(customerId: string, addressId: string) {
+    await this.assertActiveCustomer(customerId);
     const address = await this.db.query.customerAddresses.findFirst({
       where: and(eq(customerAddresses.id, addressId), eq(customerAddresses.customerId, customerId)),
     });
@@ -124,6 +163,7 @@ export class CustomersService {
   // ========================= Contact persons =========================
 
   public async addContactPerson(customerId: string, createContactPersonDto: CreateContactPersonDto) {
+    await this.assertActiveCustomer(customerId);
     const { isPrimary, ...contactData } = createContactPersonDto;
 
     return await this.db.transaction(async (tx) => {
@@ -151,6 +191,7 @@ export class CustomersService {
   }
 
   public async setPrimaryContactPerson(customerId: string, contactPersonId: string) {
+    await this.assertActiveCustomer(customerId);
     const contactPerson = await this.db.query.customerContactPersons.findFirst({
       where: and(eq(customerContactPersons.id, contactPersonId), eq(customerContactPersons.customerId, customerId)),
     });
@@ -179,5 +220,20 @@ export class CustomersService {
 
       return updatedContactPerson;
     });
+  }
+
+  private async assertActiveCustomer(customerId: string) {
+    const customer = await this.db.query.customers.findFirst({
+      where: eq(customers.id, customerId),
+      columns: { id: true, blacklistedAt: true },
+    });
+    if (!customer)
+      throw new NotFoundException(
+        translate(`Customer with ID ${customerId} does not exist.`, `لا يوجد عميل بالمعرف ${customerId}.`),
+      );
+    if (customer.blacklistedAt)
+      throw new ConflictException(
+        translate('This customer is blacklisted and cannot be edited.', 'هذا العميل مدرج في القائمة السوداء ولا يمكن تعديله.'),
+      );
   }
 }
