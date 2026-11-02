@@ -77,6 +77,18 @@ After a materials-related schema change: search schema for `materials.code` / `m
 
 After a product-category-tree schema change: search schema for those FKs and compare with the deletes and related-document listing in the script. If a new match is missing, update the script before the next run.
 
+### Purchasing inventory wipe scripts (required with schema changes)
+
+`scripts/others/delete-purchasing-inventory.ts` hardcodes the material purchasing / inventory wipe (optional requisitions and suppliers) plus `SUPPLIER_BLOCKING_TABLES` (tables that reference suppliers and are **not** cleared). `scripts/others/delete-seeded-purchasing-before-cutoff.ts` hardcodes the same MPO child tree for a filtered subset. Neither discovers FKs from Postgres. A missing child usually fails the delete (`ON DELETE NO ACTION`) and rolls back the run.
+
+**Update those scripts in the same change** when you:
+
+- Add a table/column under material purchase orders, receipts, inventory transactions, requisitions, supplier invoices, or suppliers (including RFQ quotations and supplier contacts/addresses)
+- Add a table that references `suppliers` and is **not** wiped: add it to `SUPPLIER_BLOCKING_TABLES` (or include it in the wipe)
+- Rename or drop any table/column or code sequence those scripts already delete or restart
+
+**Skip it** for unrelated tables (products, contracts, …), indexes, checks, or labels.
+
 ---
 
 ## Docs & triggers
@@ -105,6 +117,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | New/changed table                                                            | `tables-summary.md`                                                              |
 | New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script)         |
 | New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
+| New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |
 | New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |
 | `@RFP_APP_CHECKED` redundant column, or `@CACHING_APP_SYNCED` derived column | `db-duplications.md` and `application-logic.md`                                  |
 | `@HISTORICAL_SNAPSHOT column`                                                | `db-duplications.md`                                                             |
