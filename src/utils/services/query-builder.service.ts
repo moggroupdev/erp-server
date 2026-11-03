@@ -18,7 +18,7 @@ import {
   inArray,
   type SQLWrapper,
 } from 'drizzle-orm';
-import { PgTable, PgColumn } from 'drizzle-orm/pg-core';
+import { PgTable, PgColumn, getTableConfig } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { PaginatedData, Pagination, QueryParams } from '../types';
 
@@ -216,17 +216,10 @@ export class QueryBuilderService {
     // Apply where clause
     if (whereClause) query.where(whereClause);
 
-    // 4. Sorting
+    // 4. Sorting (primary-key tie-breaker keeps LIMIT/OFFSET pages stable when sort values collide)
     if (sorting) {
-      const sortBy = (queryParams.sortBy as string) || '-createdAt';
-      const isDesc = sortBy.startsWith('-');
-      const fieldName = isDesc ? sortBy.slice(1) : sortBy;
-      if (tableColumns[fieldName]) {
-        query.orderBy(isDesc ? desc(tableColumns[fieldName]) : asc(tableColumns[fieldName]));
-      } else if (tableColumns['createdAt']) {
-        // Fallback or verify if default exists
-        query.orderBy(desc(tableColumns['createdAt']));
-      }
+      const sorts = buildStableOrderBy(table, tableColumns, queryParams.sortBy as string | undefined);
+      if (sorts.length > 0) query.orderBy(...sorts);
     }
 
     // 5. Pagination
@@ -294,18 +287,10 @@ export class QueryBuilderService {
       totalRecords = Number(countResult[0]?.count ?? 0);
     }
 
-    // Build order by clause
-    let orderByClause: SQL | undefined;
-    if (sorting) {
-      const sortBy = (queryParams.sortBy as string) || '-createdAt';
-      const isDesc = sortBy.startsWith('-');
-      const fieldName = isDesc ? sortBy.slice(1) : sortBy;
-      if (tableColumns[fieldName]) {
-        orderByClause = isDesc ? desc(tableColumns[fieldName]) : asc(tableColumns[fieldName]);
-      } else if (tableColumns['createdAt']) {
-        orderByClause = desc(tableColumns['createdAt']);
-      }
-    }
+    // Build order by clause (primary-key tie-breaker; findMany accepts an array)
+    const orderByClause = sorting
+      ? buildStableOrderBy(table, tableColumns, queryParams.sortBy as string | undefined)
+      : [];
 
     // Pagination
     let page = 1;
@@ -325,7 +310,7 @@ export class QueryBuilderService {
       columns?: Record<string, boolean>;
       with?: RelationConfig;
       extras?: QueryBuilderOptionsBase['extras'];
-      orderBy?: SQL;
+      orderBy?: SQL | SQL[];
       limit?: number;
       offset?: number;
     }
@@ -337,7 +322,7 @@ export class QueryBuilderService {
     if (withRelations) queryOptions.with = withRelations;
     if (extras) queryOptions.extras = extras;
     if (columns) queryOptions.columns = columns;
-    if (orderByClause) queryOptions.orderBy = orderByClause;
+    if (orderByClause.length > 0) queryOptions.orderBy = orderByClause;
 
     if (pagination && !isUnlimited) {
       queryOptions.limit = limit;
@@ -432,4 +417,57 @@ function parseValue(column: PgColumn, value: unknown): number | boolean | Date |
     default:
       return String(value);
   }
+}
+
+/**
+ * Builds a total order for pagination: requested sort column, then primary-key columns
+ * ascending so rows that share the same sort value never swap across LIMIT/OFFSET pages.
+ *
+ * Inline `.primaryKey()` columns expose `column.primary`; composite keys live in
+ * `getTableConfig(table).primaryKeys`.
+ */
+function buildStableOrderBy(
+  table: PgTable,
+  tableColumns: Record<string, PgColumn>,
+  sortByParam: string | undefined,
+): SQL[] {
+  const sortBy = sortByParam || '-createdAt';
+  const isDesc = sortBy.startsWith('-');
+  const fieldName = isDesc ? sortBy.slice(1) : sortBy;
+
+  let primarySortColumn: PgColumn | undefined;
+  let primarySortDesc = false;
+
+  if (tableColumns[fieldName]) {
+    primarySortColumn = tableColumns[fieldName];
+    primarySortDesc = isDesc;
+  } else if (tableColumns['createdAt']) {
+    primarySortColumn = tableColumns['createdAt'];
+    primarySortDesc = true;
+  }
+
+  if (!primarySortColumn) return [];
+
+  const sorts: SQL[] = [primarySortDesc ? desc(primarySortColumn) : asc(primarySortColumn)];
+  const usedNames = new Set<string>([primarySortColumn.name]);
+
+  const pkColumns: PgColumn[] = [];
+  for (const column of Object.values(tableColumns)) {
+    if ((column as PgColumn & { primary?: boolean }).primary) pkColumns.push(column);
+  }
+  for (const primaryKey of getTableConfig(table).primaryKeys) {
+    for (const column of primaryKey.columns) {
+      if (!pkColumns.some((existing) => existing.name === column.name)) {
+        pkColumns.push(column as PgColumn);
+      }
+    }
+  }
+
+  for (const pkColumn of pkColumns) {
+    if (usedNames.has(pkColumn.name)) continue;
+    usedNames.add(pkColumn.name);
+    sorts.push(asc(pkColumn));
+  }
+
+  return sorts;
 }
