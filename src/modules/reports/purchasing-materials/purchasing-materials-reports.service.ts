@@ -48,31 +48,34 @@ const PRICE_OUTLIER_MIN_THRESHOLD = 1.05;
 const PRICE_OUTLIER_RATIO_TOLERANCE = 0.1;
 const PRICE_OUTLIER_DECIMAL_TYPO_FACTORS = [10, 100, 1000];
 
+// Qualify MPO id explicitly. In single-table selects Drizzle emits bare "id", which
+// resolves to supplier_invoices.id / items.id inside these correlated subqueries.
+const materialPurchaseOrderIdRef = sql.raw('"material_purchase_orders"."id"');
 const invoiceTotalPurchases = sql`(
   select coalesce(sum(si.total_purchases), 0)
   from supplier_invoices si
-  where si.material_purchase_order_id = ${materialPurchaseOrders.id}
+  where si.material_purchase_order_id = ${materialPurchaseOrderIdRef}
 )`;
 const orderInvoiceNumbers = sql<(string | null)[]>`(
   select coalesce(array_agg(si.invoice_number order by si.issued_at desc nulls last, si.created_at desc), '{}')
   from supplier_invoices si
-  where si.material_purchase_order_id = ${materialPurchaseOrders.id}
+  where si.material_purchase_order_id = ${materialPurchaseOrderIdRef}
 )`;
 const orderLatestInvoiceIssuedAt = sql<Date | null>`(
   select max(si.issued_at)
   from supplier_invoices si
-  where si.material_purchase_order_id = ${materialPurchaseOrders.id}
+  where si.material_purchase_order_id = ${materialPurchaseOrderIdRef}
 )`;
 const orderHasInvoiceTotals = sql`exists (
   select 1
   from supplier_invoices si
-  where si.material_purchase_order_id = ${materialPurchaseOrders.id}
+  where si.material_purchase_order_id = ${materialPurchaseOrderIdRef}
     and si.total_purchases is not null
 )`;
 const orderLinesTotal = sql`(
   select coalesce(sum(i.quantity_ordered * i.unit_price), 0)
   from material_purchase_order_items i
-  where i.material_purchase_order_id = ${materialPurchaseOrders.id}
+  where i.material_purchase_order_id = ${materialPurchaseOrderIdRef}
 )`;
 const allocatedInvoiceSpend = sql`${invoiceTotalPurchases} * (${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}) / nullif(${orderLinesTotal}, 0)`;
 
