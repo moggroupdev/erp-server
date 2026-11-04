@@ -805,8 +805,6 @@ export class PurchasingMaterialsReportsService {
       unitOfMeasurement: string;
       quantity: number;
       avgUnitPrice: number;
-      minUnitPrice: number;
-      maxUnitPrice: number;
       orderCount: number;
       lastUnitPrice: number | null;
       lastPurchasedAt: Date | null;
@@ -822,8 +820,6 @@ export class PurchasingMaterialsReportsService {
         unitOfMeasurement: row.unitOfMeasurement,
         quantity,
         avgUnitPrice: quantity > 0 ? lineValue / quantity : 0,
-        minUnitPrice: Number(row.minUnitPrice),
-        maxUnitPrice: Number(row.maxUnitPrice),
         orderCount: Number(row.orderCount),
         lastUnitPrice: null,
         lastPurchasedAt: null,
@@ -869,8 +865,6 @@ export class PurchasingMaterialsReportsService {
         a: {
           quantity: a.quantity,
           avgUnitPrice: avgA,
-          minUnitPrice: a.minUnitPrice,
-          maxUnitPrice: a.maxUnitPrice,
           lastUnitPrice: a.lastUnitPrice,
           lastPurchasedAt: a.lastPurchasedAt,
           orderCount: a.orderCount,
@@ -878,8 +872,6 @@ export class PurchasingMaterialsReportsService {
         b: {
           quantity: b.quantity,
           avgUnitPrice: avgB,
-          minUnitPrice: b.minUnitPrice,
-          maxUnitPrice: b.maxUnitPrice,
           lastUnitPrice: b.lastUnitPrice,
           lastPurchasedAt: b.lastPurchasedAt,
           orderCount: b.orderCount,
@@ -1634,8 +1626,6 @@ export class PurchasingMaterialsReportsService {
         unitOfMeasurement: materials.unitOfMeasurement,
         quantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
         lineValue: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
-        minUnitPrice: sql<number>`min(${unitPriceInBase})`,
-        maxUnitPrice: sql<number>`max(${unitPriceInBase})`,
         orderCount: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
       })
       .from(materialPurchaseOrderItems)
