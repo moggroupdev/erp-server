@@ -890,7 +890,7 @@ export class PurchasingMaterialsReportsService {
       };
     });
 
-    mutualItemsRaw.sort((left, right) => right.potentialSavings - left.potentialSavings);
+    mutualItemsRaw.sort((left, right) => right.priceGapPercent - left.priceGapPercent);
 
     const mutualItems = await this.attachUnitConversions(mutualItemsRaw);
     const totalPotentialSavings = mutualItems.reduce((sum, row) => sum + row.potentialSavings, 0);
