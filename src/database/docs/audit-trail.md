@@ -192,6 +192,7 @@ Module: [`src/modules/audit-logs/`](../../modules/audit-logs/).
 | Endpoint | Permission | Behavior |
 | -------- | ---------- | -------- |
 | `GET /audit-logs` | `read_audit_logs` | Paginated list; filters/sort via `QueryBuilderService`; **excludes** `oldRow` / `newRow` |
+| `GET /audit-logs/materials/:code/timeline` | `read_audit_logs` | Curated material change history (see below); **excludes** raw snapshots |
 | `GET /audit-logs/:id` | `read_audit_logs` | Full row including snapshots; includes `actorUser` relation |
 
 ### Useful list filters
@@ -207,6 +208,44 @@ Module: [`src/modules/audit-logs/`](../../modules/audit-logs/).
 | `rootTableName` + `rootRecordId` | Whole document tree |
 | `createdAt[gte]` / `createdAt[lte]` | Time window |
 | `sortBy` | Default `-createdAt` |
+
+### Material timeline (`GET /audit-logs/materials/:code/timeline`)
+
+Readable history for erp-app’s material detail page. Paginated (`page`, `limit`, default limit 20), newest first.
+
+**Included rows**
+
+| Source | Match |
+| ------ | ----- |
+| Material profile | `table_name = materials` and `record_id = :code` |
+| Alternate units | `parent_table_name = materials` and `parent_record_id = :code` and `table_name = material_unit_conversions` |
+| Manufactured BOM lines | same parent pair and `table_name = manufactured_material_boms` |
+
+**Excluded**
+
+- Material `update` rows whose `changed_columns` are only `quantity` and/or `unit_price` (cached stock / cost from inventory sync).
+- Within returned events, those two columns are also stripped when mixed with real edits.
+
+**Hidden from change text** (actor + timestamp already cover identity / bookkeeping)
+
+| Table | Hidden columns |
+| ----- | -------------- |
+| `materials` | `code`, `created_at`, `created_by`, `quantity`, `unit_price`, market price/cost `*_set_at` / `*_set_by` |
+| `material_unit_conversions` | `id`, `created_at`, `created_by`, `material_code` |
+| `manufactured_material_boms` | `id`, `created_at`, `created_by`, `manufactured_material_code` |
+
+**Response item shape** (no `old_row` / `new_row` / IP / user agent)
+
+| Field | Notes |
+| ----- | ----- |
+| `id` | Audit log id (link to forensic detail) |
+| `createdAt` / `action` | Same as list |
+| `source` | `material` \| `unit_conversion` \| `manufactured_bom` |
+| `actorUserId` / `actorName` | Historical actor |
+| `subject` | Child label: conversion `unit`, or BOM component `material_code`; null for material |
+| `changes[]` | `{ field, oldValue, newValue }` with camelCase `field` keys |
+
+erp-app Organization → Audit Logs remains the forensic viewer; this endpoint is the human-readable material view.
 
 ---
 
