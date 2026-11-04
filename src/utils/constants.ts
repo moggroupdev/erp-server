@@ -68,6 +68,7 @@ export const PERMISSION_VALUES = [
   'read_material_purchasing_category_stats_report',
   'read_material_purchasing_subcategory_stats_report',
   'read_material_purchasing_supplier_stats_report',
+  'read_material_purchasing_supplier_comparison_report',
   'read_material_purchasing_total_amount_mismatches_report',
   'read_material_purchasing_price_outliers_report',
   'read_material_purchasing_average_price_gaps_report',

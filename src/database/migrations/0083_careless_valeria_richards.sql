@@ -1,0 +1,2 @@
+ALTER TYPE "public"."permission" ADD VALUE 'update_legacy_contract' BEFORE 'add_material';--> statement-breakpoint
+ALTER TYPE "public"."permission" ADD VALUE 'read_material_purchasing_supplier_comparison_report' BEFORE 'read_material_purchasing_total_amount_mismatches_report';
