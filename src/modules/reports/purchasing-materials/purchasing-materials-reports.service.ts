@@ -731,6 +731,194 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getSupplierComparison(params: {
+    supplierAId: string;
+    supplierBId: string;
+    from?: string;
+    to?: string;
+  }) {
+    const supplierAId = params.supplierAId?.trim();
+    const supplierBId = params.supplierBId?.trim();
+
+    if (!supplierAId || !supplierBId) {
+      throw new BadRequestException(
+        translate('Both suppliers are required for comparison.', 'يلزم اختيار موردين للمقارنة.'),
+      );
+    }
+
+    if (supplierAId === supplierBId) {
+      throw new BadRequestException(
+        translate('Select two different suppliers to compare.', 'اختر موردين مختلفين للمقارنة.'),
+      );
+    }
+
+    const supplierRows = await this.db
+      .select({ id: suppliers.id, code: suppliers.code, name: suppliers.name })
+      .from(suppliers)
+      .where(inArray(suppliers.id, [supplierAId, supplierBId]));
+
+    const supplierA = supplierRows.find((row) => row.id === supplierAId);
+    const supplierB = supplierRows.find((row) => row.id === supplierBId);
+
+    if (!supplierA) {
+      throw new NotFoundException(
+        translate(`Supplier with ID ${supplierAId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierAId}.`),
+      );
+    }
+    if (!supplierB) {
+      throw new NotFoundException(
+        translate(`Supplier with ID ${supplierBId} does not exist.`, `لا يوجد مورد بالمعرف ${supplierBId}.`),
+      );
+    }
+
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const scopedWhere = and(
+      this.notCancelledWithDateRange(dateRange),
+      inArray(materialPurchaseOrders.supplierId, [supplierAId, supplierBId]),
+    )!;
+    // Skip lines with no base-unit conversion so price/qty aggregates stay undistorted.
+    const convertibleLine = sql`${unitPriceInBase} is not null
+      and ${quantityOrderedInBase} is not null
+      and ${quantityOrderedInBase} > 0
+      and ${unitPriceInBase} > 0`;
+    const convertibleWhere = and(scopedWhere, convertibleLine)!;
+
+    const [overviewBySupplier, materialRows, lastPriceRows] = await Promise.all([
+      this.getComparisonOverviewBySupplier(scopedWhere),
+      this.getComparisonMaterialsBySupplier(convertibleWhere),
+      this.getLastPurchasePriceBySupplierAndMaterial(convertibleWhere),
+    ]);
+
+    const lastPriceByKey = new Map(
+      lastPriceRows.map((row) => [
+        `${row.supplierId}:${row.materialCode}`,
+        {
+          lastUnitPrice: Number(row.lastUnitPrice),
+          lastPurchasedAt: row.lastPurchasedAt,
+        },
+      ]),
+    );
+
+    type SideAgg = {
+      materialCode: string;
+      materialTitle: string;
+      unitOfMeasurement: string;
+      quantity: number;
+      avgUnitPrice: number;
+      orderCount: number;
+      lastUnitPrice: number | null;
+      lastPurchasedAt: Date | null;
+    };
+
+    const bySupplier = new Map<string, Map<string, SideAgg>>();
+    for (const row of materialRows) {
+      const quantity = Number(row.quantity);
+      const lineValue = Number(row.lineValue);
+      const side: SideAgg = {
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurement: row.unitOfMeasurement,
+        quantity,
+        avgUnitPrice: quantity > 0 ? lineValue / quantity : 0,
+        orderCount: Number(row.orderCount),
+        lastUnitPrice: null,
+        lastPurchasedAt: null,
+      };
+      const last = lastPriceByKey.get(`${row.supplierId}:${row.materialCode}`);
+      if (last) {
+        side.lastUnitPrice = last.lastUnitPrice;
+        side.lastPurchasedAt = last.lastPurchasedAt;
+      }
+
+      const supplierMap = bySupplier.get(row.supplierId) ?? new Map<string, SideAgg>();
+      supplierMap.set(row.materialCode, side);
+      bySupplier.set(row.supplierId, supplierMap);
+    }
+
+    const materialsA = bySupplier.get(supplierAId) ?? new Map<string, SideAgg>();
+    const materialsB = bySupplier.get(supplierBId) ?? new Map<string, SideAgg>();
+
+    const codesA = new Set(materialsA.keys());
+    const codesB = new Set(materialsB.keys());
+    const mutualCodes = [...codesA].filter((code) => codesB.has(code));
+
+    const mutualItemsRaw = mutualCodes.map((materialCode) => {
+      const a = materialsA.get(materialCode)!;
+      const b = materialsB.get(materialCode)!;
+      const avgA = a.avgUnitPrice;
+      const avgB = b.avgUnitPrice;
+      const equal = Math.abs(avgA - avgB) < 1e-9;
+      const cheaper: 'a' | 'b' | 'equal' = equal ? 'equal' : avgA < avgB ? 'a' : 'b';
+      const lower = Math.min(avgA, avgB);
+      const higher = Math.max(avgA, avgB);
+      const priceGapPercent = equal || lower === 0 ? 0 : ((higher - lower) / lower) * 100;
+      const potentialSavings = equal
+        ? 0
+        : cheaper === 'a'
+          ? b.quantity * (avgB - avgA)
+          : a.quantity * (avgA - avgB);
+
+      return {
+        materialCode,
+        materialTitle: a.materialTitle,
+        unitOfMeasurement: a.unitOfMeasurement,
+        a: {
+          quantity: a.quantity,
+          avgUnitPrice: avgA,
+          lastUnitPrice: a.lastUnitPrice,
+          lastPurchasedAt: a.lastPurchasedAt,
+          orderCount: a.orderCount,
+        },
+        b: {
+          quantity: b.quantity,
+          avgUnitPrice: avgB,
+          lastUnitPrice: b.lastUnitPrice,
+          lastPurchasedAt: b.lastPurchasedAt,
+          orderCount: b.orderCount,
+        },
+        cheaper,
+        priceGapPercent,
+        potentialSavings,
+      };
+    });
+
+    mutualItemsRaw.sort((left, right) => right.priceGapPercent - left.priceGapPercent);
+
+    const mutualItems = await this.attachUnitConversions(mutualItemsRaw);
+    const totalPotentialSavings = mutualItems.reduce((sum, row) => sum + row.potentialSavings, 0);
+
+    const overviewA = overviewBySupplier.get(supplierAId) ?? { totalSpend: 0, orderCount: 0 };
+    const overviewB = overviewBySupplier.get(supplierBId) ?? { totalSpend: 0, orderCount: 0 };
+
+    return {
+      suppliers: {
+        a: {
+          id: supplierA.id,
+          code: supplierA.code,
+          name: supplierA.name,
+          totalSpend: overviewA.totalSpend,
+          orderCount: overviewA.orderCount,
+          materialCount: materialsA.size,
+        },
+        b: {
+          id: supplierB.id,
+          code: supplierB.code,
+          name: supplierB.name,
+          totalSpend: overviewB.totalSpend,
+          orderCount: overviewB.orderCount,
+          materialCount: materialsB.size,
+        },
+      },
+      counts: {
+        mutual: mutualItems.length,
+        onlyA: [...codesA].filter((code) => !codesB.has(code)).length,
+        onlyB: [...codesB].filter((code) => !codesA.has(code)).length,
+      },
+      totalPotentialSavings,
+      mutualItems,
+    };
+  }
+
   public async getRequisitionFollowUp(params: {
     productionSubDepartment: string;
     from?: string;
@@ -1405,6 +1593,69 @@ export class PurchasingMaterialsReportsService {
     }));
 
     return this.attachUnitConversions(mapped);
+  }
+
+  private async getComparisonOverviewBySupplier(where: SQL) {
+    const rows = await this.db
+      .select({
+        supplierId: materialPurchaseOrders.supplierId,
+        totalSpend: sql<number>`coalesce(sum(${invoiceTotalPurchases}), 0)`,
+        orderCount: count(),
+      })
+      .from(materialPurchaseOrders)
+      .where(where)
+      .groupBy(materialPurchaseOrders.supplierId);
+
+    return new Map(
+      rows.map((row) => [
+        row.supplierId,
+        {
+          totalSpend: Number(row.totalSpend),
+          orderCount: Number(row.orderCount),
+        },
+      ]),
+    );
+  }
+
+  private async getComparisonMaterialsBySupplier(where: SQL) {
+    return this.db
+      .select({
+        supplierId: materialPurchaseOrders.supplierId,
+        materialCode: materialPurchaseOrderItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        quantity: sql<number>`coalesce(sum(${quantityOrderedInBase}), 0)`,
+        lineValue: sql<number>`coalesce(sum(${materialPurchaseOrderItems.quantityOrdered} * ${materialPurchaseOrderItems.unitPrice}), 0)`,
+        orderCount: sql<number>`count(distinct ${materialPurchaseOrders.id})`,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(materials, eq(materialPurchaseOrderItems.materialCode, materials.code))
+      .where(where)
+      .groupBy(
+        materialPurchaseOrders.supplierId,
+        materialPurchaseOrderItems.materialCode,
+        materials.title,
+        materials.unitOfMeasurement,
+      );
+  }
+
+  private async getLastPurchasePriceBySupplierAndMaterial(where: SQL) {
+    return this.db
+      .selectDistinctOn([materialPurchaseOrders.supplierId, materialPurchaseOrderItems.materialCode], {
+        supplierId: materialPurchaseOrders.supplierId,
+        materialCode: materialPurchaseOrderItems.materialCode,
+        lastUnitPrice: unitPriceInBase,
+        lastPurchasedAt: materialPurchaseOrders.createdAt,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .where(where)
+      .orderBy(
+        materialPurchaseOrders.supplierId,
+        materialPurchaseOrderItems.materialCode,
+        desc(materialPurchaseOrders.createdAt),
+      );
   }
 
   private async getSupplierOverview(where: SQL) {

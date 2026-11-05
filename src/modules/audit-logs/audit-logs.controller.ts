@@ -20,6 +20,17 @@ export class AuditLogsController {
     return this.auditLogsService.list(query);
   }
 
+  @Get('materials/:code/timeline')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_AUDIT_LOGS)
+  @ApiBearerAuth()
+  materialTimeline(
+    @Param('code') code: string,
+    @Query() query: { page?: string; limit?: string },
+  ) {
+    return this.auditLogsService.materialTimeline(code, query);
+  }
+
   @Get(':id')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_AUDIT_LOGS)

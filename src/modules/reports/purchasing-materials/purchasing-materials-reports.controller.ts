@@ -62,6 +62,19 @@ export class PurchasingMaterialsReportsController {
     return this.service.getSupplierStats({ supplierId, from, to, groupBy });
   }
 
+  @Get('supplier-comparison')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_SUPPLIER_COMPARISON_REPORT)
+  @ApiBearerAuth()
+  getSupplierComparison(
+    @Query('supplierAId') supplierAId: string,
+    @Query('supplierBId') supplierBId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.getSupplierComparison({ supplierAId, supplierBId, from, to });
+  }
+
   @Get('total-amount-mismatches')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_TOTAL_AMOUNT_MISMATCHES_REPORT)
