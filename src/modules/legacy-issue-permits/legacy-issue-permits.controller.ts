@@ -34,6 +34,14 @@ export class LegacyIssuePermitsController {
     return this.legacyIssuePermitsService.list(query);
   }
 
+  @Get(':id/neighbors')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_LEGACY_ISSUE_PERMITS)
+  @ApiBearerAuth()
+  getNeighbors(@Param('id', ParseUUIDPipe) id: string, @Query() query: QueryParams) {
+    return this.legacyIssuePermitsService.getNeighbors(id, query);
+  }
+
   @Get(':id')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_LEGACY_ISSUE_PERMITS)

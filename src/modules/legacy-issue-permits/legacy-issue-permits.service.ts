@@ -57,6 +57,31 @@ export class LegacyIssuePermitsService {
     });
   }
 
+  public async getNeighbors(id: string, queryParams: QueryParams) {
+    const existing = await this.db.query.legacyIssuePermits.findFirst({
+      where: eq(legacyIssuePermits.id, id),
+      columns: { id: true },
+    });
+
+    if (!existing)
+      throw new NotFoundException(
+        translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
+      );
+
+    return await this.queryBuilderService.findNeighbors<{ id: string; issuePermitNumber: string }>(
+      legacyIssuePermits,
+      id,
+      { keyword: queryParams.keyword, sortBy: queryParams.sortBy },
+      {
+        searchableFields: ['issuePermitNumber', 'issueOrderNumber', 'contractNumber', 'workOrderNumber', 'notes'],
+        select: {
+          id: legacyIssuePermits.id,
+          issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        },
+      },
+    );
+  }
+
   public async get(id: string) {
     const transaction = await this.db.query.legacyIssuePermits.findFirst({
       where: eq(legacyIssuePermits.id, id),
