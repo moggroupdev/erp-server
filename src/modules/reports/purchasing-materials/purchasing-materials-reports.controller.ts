@@ -110,4 +110,16 @@ export class PurchasingMaterialsReportsController {
   ) {
     return this.service.getRequisitionFollowUp({ productionSubDepartment, from, to });
   }
+
+  @Get('requisition-history')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASING_REQUISITION_HISTORY_REPORT)
+  @ApiBearerAuth()
+  getRequisitionHistory(
+    @Query('materialCode') materialCode: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.getRequisitionHistory({ materialCode, from, to });
+  }
 }

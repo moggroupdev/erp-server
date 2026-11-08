@@ -7,12 +7,21 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsUuidString, Trim, TrimToNull } from 'src/utils/decorators';
-import { LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES, PRODUCTION_SUB_DEPARTMENT_VALUES } from 'src/utils/constants';
-import { type LegacyIssuePermitWorkOrderType, type ProductionSubDepartment } from 'src/utils/types';
+import {
+  LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_TYPE_VALUES,
+  PRODUCTION_SUB_DEPARTMENT_VALUES,
+} from 'src/utils/constants';
+import {
+  type LegacyIssuePermitMaintenanceOrderType,
+  type LegacyIssuePermitType,
+  type ProductionSubDepartment,
+} from 'src/utils/types';
 import { CreateLegacyIssuePermitItemDto } from './create-legacy-issue-permit-item.dto';
 
 export class CreateLegacyIssuePermitDto {
@@ -22,15 +31,17 @@ export class CreateLegacyIssuePermitDto {
   @ApiProperty()
   issuePermitNumber: string;
 
-  @Trim()
+  @TrimToNull()
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty()
-  issueOrderNumber: string;
+  @IsOptional()
+  @ApiPropertyOptional()
+  issueOrderNumber: string | null;
 
+  @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsDateString()
-  @ApiProperty()
-  issueOrderDate: string;
+  @IsOptional()
+  @ApiPropertyOptional()
+  issueOrderDate: string | null;
 
   @IsDateString()
   @ApiProperty()
@@ -46,6 +57,10 @@ export class CreateLegacyIssuePermitDto {
   @ApiPropertyOptional({ enum: PRODUCTION_SUB_DEPARTMENT_VALUES })
   productionSubDepartment: ProductionSubDepartment | null;
 
+  @IsIn(LEGACY_ISSUE_PERMIT_TYPE_VALUES)
+  @ApiProperty({ enum: LEGACY_ISSUE_PERMIT_TYPE_VALUES })
+  permitType: LegacyIssuePermitType;
+
   @TrimToNull()
   @IsString()
   @IsOptional()
@@ -56,12 +71,23 @@ export class CreateLegacyIssuePermitDto {
   @IsString()
   @IsOptional()
   @ApiPropertyOptional()
-  workOrderNumber: string | null;
+  maintenanceOrderNumber: string | null;
 
-  @IsIn(LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)
+  @IsIn(LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES)
   @IsOptional()
-  @ApiPropertyOptional({ enum: LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES })
-  workOrderNumberType: LegacyIssuePermitWorkOrderType;
+  @ApiPropertyOptional({ enum: LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES })
+  maintenanceOrderType: LegacyIssuePermitMaintenanceOrderType | null;
+
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsUuidString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  customerId: string | null;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional()
+  hasMultipleCustomers: boolean;
 
   @IsBoolean()
   @IsOptional()

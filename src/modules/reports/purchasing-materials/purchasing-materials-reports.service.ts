@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
   inventoryTransactions,
@@ -15,6 +16,7 @@ import {
   materials,
   materialUnitConversions,
   suppliers,
+  users,
 } from 'src/database/schema';
 import {
   APPROVAL_DECISIONS,
@@ -24,9 +26,15 @@ import {
   PRODUCTION_SUB_DEPARTMENT_VALUES,
 } from 'src/utils/constants';
 import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
-import { convertUnitPrice, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
+import {
+  convertUnitPrice,
+  getKnownConversionFactorToBase,
+  resolveConversionFactor,
+  toBaseQuantity,
+} from 'src/utils/helpers/unit-conversion';
 import { translate } from 'src/utils/i18n/translate';
 import type {
+  ApprovalDecision,
   AveragePriceGapCause,
   AveragePriceGapDirection,
   MaterialUnit,
@@ -1175,7 +1183,164 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
+  public async getRequisitionHistory(params: { materialCode: string; from?: string; to?: string }) {
+    const [material] = await this.db
+      .select({ code: materials.code, title: materials.title, unitOfMeasurement: materials.unitOfMeasurement })
+      .from(materials)
+      .where(eq(materials.code, params.materialCode))
+      .limit(1);
+
+    if (!material) {
+      throw new NotFoundException(
+        translate(
+          `Material with code ${params.materialCode} does not exist.`,
+          `لا توجد مادة بالرمز ${params.materialCode}.`,
+        ),
+      );
+    }
+
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const conditions: SQL[] = [eq(materialPurchaseRequisitionItems.materialCode, params.materialCode)];
+    if (dateRange.from) conditions.push(gte(materialPurchaseRequisitions.createdAt, dateRange.from));
+    if (dateRange.to) conditions.push(lte(materialPurchaseRequisitions.createdAt, dateRange.to));
+
+    const requester = alias(users, 'mprq_requester');
+    const manager = alias(users, 'mprq_manager');
+
+    const rows = await this.db
+      .select({
+        requisitionItemId: materialPurchaseRequisitionItems.id,
+        requisitionId: materialPurchaseRequisitions.id,
+        requisitionCode: materialPurchaseRequisitions.code,
+        createdAt: materialPurchaseRequisitions.createdAt,
+        productionSubDepartment: materialPurchaseRequisitions.productionSubDepartment,
+        managerId: materialPurchaseRequisitions.productionSubDepartmentManagerId,
+        managerName: manager.name,
+        createdById: materialPurchaseRequisitions.createdBy,
+        createdByName: requester.name,
+        unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
+        quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
+        notes: materialPurchaseRequisitionItems.notes,
+        planningDecision: materialPurchaseRequisitions.planningDecision,
+        inventoryControlDecision: materialPurchaseRequisitions.inventoryControlDecision,
+        managerDecision: materialPurchaseRequisitions.managerDecision,
+      })
+      .from(materialPurchaseRequisitionItems)
+      .innerJoin(
+        materialPurchaseRequisitions,
+        eq(materialPurchaseRequisitionItems.materialPurchaseRequisitionId, materialPurchaseRequisitions.id),
+      )
+      .innerJoin(requester, eq(materialPurchaseRequisitions.createdBy, requester.id))
+      .leftJoin(manager, eq(materialPurchaseRequisitions.productionSubDepartmentManagerId, manager.id))
+      .where(and(...conditions))
+      .orderBy(asc(materialPurchaseRequisitions.createdAt));
+
+    const [materialWithConversions] = await this.attachUnitConversions([{ ...material, materialCode: material.code }]);
+    const conversions = materialWithConversions.unitConversions.map((row) => ({
+      unit: row.unit as MaterialUnit,
+      conversionFactorToBase: row.conversionFactorToBase,
+    }));
+    const baseUnit = material.unitOfMeasurement as MaterialUnit;
+
+    let totalQuantity = 0;
+    let approvedQuantity = 0;
+    let pendingQuantity = 0;
+    let rejectedQuantity = 0;
+    let missingConversionCount = 0;
+
+    const entries = rows.map((row) => {
+      const lineUnit = row.unitOfMeasurementSelected as MaterialUnit;
+      const quantityRequested = Number(row.quantityRequested);
+      const canConvert = this.canConvertEnteredUnitToBase(lineUnit, baseUnit, conversions);
+      const quantityRequestedInBase = canConvert
+        ? toBaseQuantity(quantityRequested, resolveConversionFactor(lineUnit, baseUnit, conversions))
+        : null;
+      const status = this.deriveRequisitionStatus({
+        planningDecision: row.planningDecision as ApprovalDecision,
+        inventoryControlDecision: row.inventoryControlDecision as ApprovalDecision,
+        managerDecision: row.managerDecision as ApprovalDecision,
+      });
+
+      if (quantityRequestedInBase == null) {
+        missingConversionCount += 1;
+      } else {
+        totalQuantity += quantityRequestedInBase;
+        if (status === 'approved') approvedQuantity += quantityRequestedInBase;
+        else if (status === 'rejected') rejectedQuantity += quantityRequestedInBase;
+        else pendingQuantity += quantityRequestedInBase;
+      }
+
+      return {
+        requisitionItemId: row.requisitionItemId,
+        requisitionId: row.requisitionId,
+        requisitionCode: row.requisitionCode,
+        createdAt: row.createdAt,
+        productionSubDepartment: row.productionSubDepartment,
+        managerId: row.managerId,
+        managerName: row.managerName,
+        createdById: row.createdById,
+        createdByName: row.createdByName,
+        unitOfMeasurementSelected: lineUnit,
+        quantityRequested,
+        quantityRequestedInBase,
+        status,
+        notes: row.notes,
+      };
+    });
+
+    return {
+      material: {
+        code: materialWithConversions.code,
+        title: materialWithConversions.title,
+        unitOfMeasurement: materialWithConversions.unitOfMeasurement,
+        unitConversions: materialWithConversions.unitConversions,
+      },
+      entries,
+      summary: {
+        requisitionCount: entries.length,
+        totalQuantity,
+        approvedQuantity,
+        pendingQuantity,
+        rejectedQuantity,
+        missingConversionCount,
+      },
+    };
+  }
+
   // ============================== PRIVATE METHODS ==============================
+
+  private deriveRequisitionStatus(gates: {
+    planningDecision: ApprovalDecision;
+    inventoryControlDecision: ApprovalDecision;
+    managerDecision: ApprovalDecision;
+  }): 'rejected' | 'approved' | 'pending' {
+    if (
+      gates.planningDecision === APPROVAL_DECISIONS.REJECTED ||
+      gates.inventoryControlDecision === APPROVAL_DECISIONS.REJECTED ||
+      gates.managerDecision === APPROVAL_DECISIONS.REJECTED
+    ) {
+      return 'rejected';
+    }
+    if (
+      gates.planningDecision === APPROVAL_DECISIONS.APPROVED &&
+      gates.inventoryControlDecision === APPROVAL_DECISIONS.APPROVED &&
+      gates.managerDecision === APPROVAL_DECISIONS.APPROVED
+    ) {
+      return 'approved';
+    }
+    return 'pending';
+  }
+
+  private canConvertEnteredUnitToBase(
+    selectedUnit: MaterialUnit,
+    baseUnit: MaterialUnit,
+    unitConversions: { unit: MaterialUnit; conversionFactorToBase: number }[],
+  ): boolean {
+    if (selectedUnit === baseUnit) return true;
+    if (unitConversions.some((row) => row.unit === selectedUnit)) return true;
+    return getKnownConversionFactorToBase(selectedUnit, baseUnit, unitConversions) != null;
+  }
+
 
   private async getLastPurchasePriceByMaterialCode(materialCodes: string[]) {
     const uniqueCodes = [...new Set(materialCodes)];
