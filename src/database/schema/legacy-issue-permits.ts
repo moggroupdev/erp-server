@@ -1,16 +1,18 @@
-import { relations } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, index, foreignKey, integer, unique } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, boolean, index, foreignKey, integer, unique, check } from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
-    positiveNullableQuantityCheck,
-    positiveQuantityCheck,
-    productionSubDepartmentEnum,
-  legacyIssuePermitWorkOrderTypeEnum,
+  positiveNullableQuantityCheck,
+  positiveQuantityCheck,
+  productionSubDepartmentEnum,
+  legacyIssuePermitTypeEnum,
+  legacyIssuePermitMaintenanceOrderTypeEnum,
   materialUnitEnum,
 } from './common';
 import { users } from './users';
 import { materials } from './materials';
+import { customers } from './customers';
 
 // Staging tables for legacy issue permits - used only for seeding; later loaded into inventory_transactions / inventory_transaction_items
 export const legacyIssuePermits = pgTable(
@@ -18,14 +20,17 @@ export const legacyIssuePermits = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     issuePermitNumber: text('issue_permit_number').notNull().unique(),
-    issueOrderNumber: text('issue_order_number').notNull(),
-    issueOrderDate: timestamp('issue_order_date', { withTimezone: true }).notNull(),
+    issueOrderNumber: text('issue_order_number'),
+    issueOrderDate: timestamp('issue_order_date', { withTimezone: true }),
     date: timestamp('date', { withTimezone: true }).notNull(),
     creatorId: uuid('creator_id').notNull(),
     productionSubDepartment: productionSubDepartmentEnum('production_sub_department'),
+    permitType: legacyIssuePermitTypeEnum('permit_type').notNull(),
     contractNumber: text('contract_number'),
-    workOrderNumber: text('work_order_number'),
-    workOrderNumberType: legacyIssuePermitWorkOrderTypeEnum('work_order_number_type').notNull().default('base_contract'),
+    maintenanceOrderNumber: text('maintenance_order_number'),
+    maintenanceOrderType: legacyIssuePermitMaintenanceOrderTypeEnum('maintenance_order_type'),
+    customerId: uuid('customer_id'),
+    hasMultipleCustomers: boolean('has_multiple_customers').notNull().default(false),
     isCancelled: boolean('is_cancelled').notNull().default(false),
     notes: text('notes'),
     createdAt,
@@ -42,13 +47,52 @@ export const legacyIssuePermits = pgTable(
       columns: [table.createdBy],
       foreignColumns: [users.id],
     }),
+    foreignKey({
+      name: 'lip_customer_id_fk',
+      columns: [table.customerId],
+      foreignColumns: [customers.id],
+    }),
     index('legacy_issue_permit_creator_id_idx').on(table.creatorId),
     index('legacy_issue_permit_production_sub_department_idx').on(table.productionSubDepartment),
     index('legacy_issue_permit_date_idx').on(table.date),
     index('legacy_issue_permit_issue_order_date_idx').on(table.issueOrderDate),
+    index('legacy_issue_permit_permit_type_idx').on(table.permitType),
+    index('legacy_issue_permit_customer_id_idx').on(table.customerId),
     index('legacy_issue_permit_created_at_idx').on(table.createdAt),
     index('legacy_issue_permit_created_by_idx').on(table.createdBy),
-    index('legacy_issue_permit_work_order_number_type_idx').on(table.workOrderNumberType),
+    index('legacy_issue_permit_maintenance_order_type_idx').on(table.maintenanceOrderType),
+    check(
+      'legacy_issue_permit_issue_order_pair',
+      sql`(${table.issueOrderNumber} IS NULL) = (${table.issueOrderDate} IS NULL)`,
+    ),
+    // Enum literals must match LEGACY_ISSUE_PERMIT_TYPES in src/utils/constants.ts
+    check(
+      'legacy_issue_permit_contract_number_by_type',
+      sql`${table.contractNumber} IS NULL OR ${table.permitType} = 'contract_review'`,
+    ),
+    check(
+      'legacy_issue_permit_maintenance_fields_by_type',
+      sql`(${table.maintenanceOrderNumber} IS NULL AND ${table.maintenanceOrderType} IS NULL) OR ${table.permitType} = 'maintenance_order'`,
+    ),
+    check(
+      'legacy_issue_permit_customer_fields_by_type',
+      sql`(
+        ${table.customerId} IS NULL
+        AND ${table.hasMultipleCustomers} = false
+      ) OR ${table.permitType} IN ('contract_review', 'maintenance_order')`,
+    ),
+    check(
+      'legacy_issue_permit_production_department_required',
+      sql`${table.permitType} <> 'production_department' OR ${table.productionSubDepartment} IS NOT NULL`,
+    ),
+    check(
+      'legacy_issue_permit_multiple_customers_exclusive',
+      sql`${table.hasMultipleCustomers} = false OR (
+        ${table.customerId} IS NULL
+        AND ${table.contractNumber} IS NULL
+        AND ${table.maintenanceOrderNumber} IS NULL
+      )`,
+    ),
   ],
 );
 
@@ -89,6 +133,10 @@ export const legacyIssuePermitsRelations = relations(legacyIssuePermits, ({ one,
     fields: [legacyIssuePermits.createdBy],
     references: [users.id],
     relationName: 'legacyIssuePermitCreatedBy',
+  }),
+  customer: one(customers, {
+    fields: [legacyIssuePermits.customerId],
+    references: [customers.id],
   }),
   items: many(legacyIssuePermitItems),
 }));

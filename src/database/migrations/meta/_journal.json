@@ -589,6 +589,13 @@
       "when": 1793776995852,
       "tag": "0083_careless_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1794137441371,
+      "tag": "0084_smiling_power_man",
+      "breakpoints": true
     }
   ]
 }

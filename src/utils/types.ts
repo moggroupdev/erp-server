@@ -17,7 +17,8 @@ import {
   AVERAGE_PRICE_GAP_DIRECTION_VALUES,
   APPROVAL_DECISION_VALUES,
   PRODUCTION_SUB_DEPARTMENT_VALUES,
-  LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES,
   GENDER_VALUES,
   MPO_DELIVERY_LOCATION_VALUES,
   MPO_DELIVERY_TIMING_VALUES,
@@ -78,7 +79,9 @@ export type InventoryTransactionType = (typeof INVENTORY_TRANSACTION_TYPE_VALUES
 
 export type ProductionSubDepartment = (typeof PRODUCTION_SUB_DEPARTMENT_VALUES)[number];
 
-export type LegacyIssuePermitWorkOrderType = (typeof LEGACY_ISSUE_PERMIT_WORK_ORDER_TYPE_VALUES)[number];
+export type LegacyIssuePermitType = (typeof LEGACY_ISSUE_PERMIT_TYPE_VALUES)[number];
+
+export type LegacyIssuePermitMaintenanceOrderType = (typeof LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES)[number];
 
 export type Gender = (typeof GENDER_VALUES)[number];
 

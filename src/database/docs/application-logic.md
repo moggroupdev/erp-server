@@ -112,6 +112,15 @@ All sources live on the header — one source event per transaction; items only 
 
 - `legacy_issue_permit_items.sequence_order` — sequential display order within a permit; assigned from create-payload array order (`index + 1`), `max + 1` when appending an item, or `index + 1` from a full item-id list on reorder
 - `legacy_issue_permit_items.material_code` — optional; empty items are allowed. When set, `unit_of_measurement_selected` and `quantity` are required (create, add, and update)
+- `legacy_issue_permits.issue_order_number` / `issue_order_date` — optional as a pair; both null or both set (DB check + service)
+- `legacy_issue_permits.permit_type` — required. Field rules by type (DB checks + service):
+  - `contract_review`: optional `contract_number`; optional `customer_id` **or** `has_multiple_customers`; no maintenance fields
+  - `maintenance_order`: optional `maintenance_order_number` / `maintenance_order_type`; optional `customer_id` **or** `has_multiple_customers`; no `contract_number`
+  - `production_department`: `production_sub_department` required; no contract, maintenance, or customer fields
+  - `internal_use` / `executive_personal`: no contract, maintenance, or customer fields
+- When `has_multiple_customers` is true: `customer_id`, `contract_number`, and `maintenance_order_number` must all be null
+- `legacy_issue_permits.customer_id` — optional FK to `customers`; verified to exist when set. Hard-delete of a referenced customer is blocked by the FK
+- Migration backfill (edit generated SQL before `db:migrate`): set `permit_type` from old `work_order_number_type` (`base_contract` → `contract_review`, else → `maintenance_order`); null out maintenance type on former `base_contract` rows; rename `work_order_number` → `maintenance_order_number` and `work_order_number_type` → `maintenance_order_type`; recreate enum without `base_contract`; then add the new checks
 
 ### Purchasing
 
