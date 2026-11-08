@@ -24,4 +24,16 @@ export class MaterialsReportsController {
   getCategoryStats(@Query('mainCategoryId', ParseUUIDPipe) mainCategoryId: string) {
     return this.materialsReportsService.getCategoryStats(mainCategoryId);
   }
+
+  @Get('issue-permit-history')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_LEGACY_ISSUE_PERMIT_HISTORY_REPORT)
+  @ApiBearerAuth()
+  getIssuePermitHistory(
+    @Query('materialCode') materialCode: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.materialsReportsService.getIssuePermitHistory({ materialCode, from, to });
+  }
 }
