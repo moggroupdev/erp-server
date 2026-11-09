@@ -1,4 +1,4 @@
-import { Type, Transform } from 'class-transformer';
+import { Type, Transform, plainToInstance } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -132,16 +132,24 @@ export class CreateLegacyReceiptPermitDto {
 
 /**
  * Multipart form wrapper: `pdf` file + `payload` JSON string.
- * The Transform parses the JSON string so ValidationPipe can validate the nested DTO.
+ * Must `plainToInstance` after JSON.parse so ValidationPipe whitelist sees DTO metadata
+ * (a bare plain object is rejected as `property supplierId should not exist`).
  */
 export class CreateLegacyReceiptPermitFormDto {
   @Transform(({ value }) => {
-    if (typeof value !== 'string') return value;
-    try {
-      return JSON.parse(value);
-    } catch {
-      return value;
-    }
+    const raw =
+      typeof value === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(value);
+            } catch {
+              return value;
+            }
+          })()
+        : value;
+
+    if (raw == null || typeof raw !== 'object') return raw;
+    return plainToInstance(CreateLegacyReceiptPermitDto, raw);
   })
   @ValidateNested()
   @Type(() => CreateLegacyReceiptPermitDto)
