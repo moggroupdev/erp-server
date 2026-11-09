@@ -123,6 +123,18 @@ All sources live on the header — one source event per transaction; items only 
 - `legacy_issue_permits.customer_id` — optional FK to `customers`; verified to exist when set. Hard-delete of a referenced customer is blocked by the FK
 - Migration backfill (edit generated SQL before `db:migrate`): set `permit_type` from old `work_order_number_type` (`base_contract` → `contract_review`, else → `maintenance_order`); null out maintenance type on former `base_contract` rows; rename `work_order_number` → `maintenance_order_number` and `work_order_number_type` → `maintenance_order_type`; recreate enum without `base_contract`; then add the new checks
 
+### Warehouse (legacy receipt permits — reverse entry)
+
+Temporary reverse-entry path for historical supplier invoices and addition permits. Via `POST /legacy-receipt-permits` with permission `add_legacy_receipt_permit`. Multipart: PDF + JSON `payload` (`supplierId`, `invoice`, `permits[]`). Creates in one transaction (no MPReq / RFQ):
+
+- One completed MPO (`completed_at` = invoice `issuedAt`); lines merged per material (same selected unit → sum qty + cost-weighted average price; mixed units → convert to material base unit then merge). Shared helper: `mergePurchaseOrderLines`
+- One MPR per permit (`quantity_rejected` 0) + one IVT (`transaction_type = receipt`, `legacy_number` = permit number). IVT item prices are the entered actual prices
+- One `supplier_invoices` row linked to the MPO, with PDF under `uploads/supplier-invoices/`
+
+Date mapping: invoice `issuedAt` → MPO `created_at` / `completed_at`, invoice `issued_at` / `created_at`. Each permit `receivedAt` → MPR `received_at` / `created_at` and IVT `created_at`. Permit calendar day must be on or after the invoice issue day.
+
+Uniqueness: invoice number unique per supplier; `legacy_number` unique among existing IVTs and within the payload; no repeated material inside one permit. Units validated via `MaterialUnitValidationService`. MPO / MPR / IVT notes use `LEGACY_RECEIPT_IMPORT_NOTE` (distinct from `SEED_IMPORT_NOTE` so seeded wipe scripts do not match). Does not update `materials.quantity` / `materials.unit_price` (same deferred rule as normal receipt → IVT).
+
 ### Purchasing
 
 - Requests for quotation (`request_for_quotations` / items), separate from `supplier_quotation_emails` and from requisitions:

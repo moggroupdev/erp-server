@@ -18,6 +18,7 @@ import {
 } from '../../src/utils/constants';
 import { ensureNoUnitMismatchesBeforeSeeding } from '../_utils/unit-mismatch-guard';
 import { resolveMaterialUnit, SEED_IMPORT_NOTE } from '../_utils/seed-constants';
+import { mergePurchaseOrderLines } from '../../src/utils/helpers/merge-purchase-order-lines';
 
 dotenv.config();
 
@@ -1038,26 +1039,7 @@ async function main() {
           else orderItemGroups.set(row.materialCode, [row]);
         }
 
-        let totalAmount = 0;
-        const mergedOrderItems = [...orderItemGroups.entries()].map(([materialCode, itemRows]) => {
-          const allSameResolvedUnit = itemRows.every((row) => row.resolvedUnit === itemRows[0].resolvedUnit);
-
-          let unitOfMeasurementSelected: (typeof MATERIAL_UNIT_VALUES)[number];
-          let quantityOrdered: number;
-          let unitPrice: number;
-
-          if (allSameResolvedUnit) {
-            unitOfMeasurementSelected = itemRows[0].resolvedUnit;
-            quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantity, 0);
-            const totalCost = itemRows.reduce((sum, row) => sum + row.quantity * row.unitPrice, 0);
-            unitPrice = totalCost / quantityOrdered;
-          } else {
-            unitOfMeasurementSelected = itemRows[0].baseUnit;
-            quantityOrdered = itemRows.reduce((sum, row) => sum + row.quantityBase, 0);
-            const totalCost = itemRows.reduce((sum, row) => sum + row.quantityBase * row.unitPriceBase, 0);
-            unitPrice = totalCost / quantityOrdered;
-          }
-
+        for (const [, itemRows] of orderItemGroups) {
           if (itemRows.length > 1) {
             duplicateOrderItemWarnings.push({
               groupKey,
@@ -1067,10 +1049,20 @@ async function main() {
               unitPrices: itemRows.map((row) => row.unitPrice),
             });
           }
+        }
 
-          totalAmount += quantityOrdered * unitPrice;
-          return { materialCode, unitOfMeasurementSelected, quantityOrdered, unitPrice };
-        });
+        const merged = mergePurchaseOrderLines(
+          usableRows.map((row) => ({
+            materialCode: row.materialCode,
+            unitOfMeasurementSelected: row.resolvedUnit,
+            quantity: row.quantity,
+            unitPrice: row.unitPrice,
+            baseUnit: row.baseUnit,
+            conversionFactorToBase: row.quantityBase / row.quantity,
+          })),
+        );
+        const totalAmount = merged.totalAmount;
+        const mergedOrderItems: PlannedOrderItem[] = merged.items;
 
         const receiptGroups = new Map<string, UsableWorkbookRow[]>();
         for (const row of usableRows) {

@@ -1,5 +1,4 @@
 import { createReadStream, existsSync } from 'fs';
-import { randomUUID } from 'crypto';
 import { and, eq } from 'drizzle-orm';
 import {
   BadRequestException,
@@ -15,12 +14,16 @@ import { QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { UploaderService } from 'src/utils/services/uploader.service';
+import {
+  buildInvoicePdfFilename,
+  sanitizeInvoiceFilenamePart,
+  SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
+} from 'src/utils/helpers/supplier-invoice-pdf-filename';
 import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
 import { UpdateSupplierInvoiceFromPdfDto } from './dto/update-supplier-invoice-from-pdf.dto';
 
 const ORDER_COLUMNS = { id: true, code: true } as const;
 const SUPPLIER_COLUMNS = { id: true, name: true } as const;
-const INVOICE_PDF_SUBDIRECTORY = 'supplier-invoices';
 
 type MulterFile = {
   fieldname: string;
@@ -81,7 +84,7 @@ export class SupplierInvoicesService {
 
     const pdfFilename = this.uploaderService.saveFile(
       file,
-      INVOICE_PDF_SUBDIRECTORY,
+      SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
       buildInvoicePdfFilename(invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
@@ -112,7 +115,7 @@ export class SupplierInvoicesService {
         outsourcingOrder: null,
       };
     } catch (error) {
-      this.uploaderService.deleteFile(pdfFilename, INVOICE_PDF_SUBDIRECTORY);
+      this.uploaderService.deleteFile(pdfFilename, SUPPLIER_INVOICE_PDF_SUBDIRECTORY);
       throw error;
     }
   }
@@ -180,7 +183,7 @@ export class SupplierInvoicesService {
     const previousFilename = invoice.pdfFilename;
     const pdfFilename = this.uploaderService.saveFile(
       file,
-      INVOICE_PDF_SUBDIRECTORY,
+      SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
       buildInvoicePdfFilename(invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
@@ -202,14 +205,14 @@ export class SupplierInvoicesService {
         .returning();
 
       if (previousFilename && previousFilename !== pdfFilename)
-        this.uploaderService.deleteFile(previousFilename, INVOICE_PDF_SUBDIRECTORY);
+        this.uploaderService.deleteFile(previousFilename, SUPPLIER_INVOICE_PDF_SUBDIRECTORY);
 
       return {
         ...invoice,
         ...updated,
       };
     } catch (error) {
-      this.uploaderService.deleteFile(pdfFilename, INVOICE_PDF_SUBDIRECTORY);
+      this.uploaderService.deleteFile(pdfFilename, SUPPLIER_INVOICE_PDF_SUBDIRECTORY);
       throw error;
     }
   }
@@ -222,30 +225,17 @@ export class SupplierInvoicesService {
         translate('This supplier invoice has no PDF attached.', 'لا يوجد ملف PDF مرفق بهذه الفاتورة.'),
       );
 
-    const filepath = this.uploaderService.getFilePath(invoice.pdfFilename, INVOICE_PDF_SUBDIRECTORY);
+    const filepath = this.uploaderService.getFilePath(invoice.pdfFilename, SUPPLIER_INVOICE_PDF_SUBDIRECTORY);
     if (!filepath || !existsSync(filepath))
       throw new NotFoundException(
         translate('The invoice PDF file was not found on disk.', 'لم يتم العثور على ملف PDF الخاص بالفاتورة.'),
       );
 
     const stream = createReadStream(filepath);
-    const safeDownloadName = sanitizeFilenamePart(invoice.invoiceNumber);
+    const safeDownloadName = sanitizeInvoiceFilenamePart(invoice.invoiceNumber);
     return new StreamableFile(stream, {
       type: 'application/pdf',
       disposition: `inline; filename="${safeDownloadName}.pdf"`,
     });
   }
-}
-
-function buildInvoicePdfFilename(invoiceNumber: string): string {
-  return `${sanitizeFilenamePart(invoiceNumber)}_${randomUUID().slice(0, 8)}.pdf`;
-}
-
-function sanitizeFilenamePart(value: string): string {
-  const sanitized = value
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-  return (sanitized || 'invoice').slice(0, 80);
 }
