@@ -308,6 +308,28 @@ export class LegacyIssuePermitsService {
     return updated;
   }
 
+  public async deleteItem(transactionId: string, itemId: string) {
+    const existing = await this.db.query.legacyIssuePermitItems.findFirst({
+      where: and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)),
+      columns: { id: true },
+    });
+
+    if (!existing)
+      throw new NotFoundException(
+        translate(
+          `Legacy issue permit item with ID ${itemId} does not exist for transaction ${transactionId}.`,
+          `لا يوجد بند إذن صرف مرحلي بالمعرف ${itemId} للمعاملة ${transactionId}.`,
+        ),
+      );
+
+    const [deleted] = await this.db
+      .delete(legacyIssuePermitItems)
+      .where(and(eq(legacyIssuePermitItems.id, itemId), eq(legacyIssuePermitItems.issuePermitId, transactionId)))
+      .returning();
+
+    return deleted;
+  }
+
   // ============================== PRIVATE METHODS ==============================
 
   private async assertPermitHeader(header: PermitHeaderFields) {

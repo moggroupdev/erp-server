@@ -18,6 +18,9 @@ export const PURCHASING_DEPARTMENT_ID = '02c39af1-7de4-48b3-6a0c-3bf3913485f0';
 /** Seeded Egypt country — see data/locations/countries.csv */
 export const EGYPT_COUNTRY_ID = 'f1dd27d6-ac02-5671-97b2-0679193340c4';
 
+/** Note stamped on MPO / MPR / IVT rows created by reverse-entry (legacy receipt permits). Distinct from SEED_IMPORT_NOTE. */
+export const LEGACY_RECEIPT_IMPORT_NOTE = 'تم إدخال هذه البيانات بأثر رجعي من فاتورة المورد وأذون الإضافة.';
+
 // ==================== PERMISSIONS ====================
 
 export const PERMISSION_VALUES = [
@@ -107,6 +110,7 @@ export const PERMISSION_VALUES = [
   'add_legacy_issue_permit',
   'read_legacy_issue_permits',
   'update_legacy_issue_permit',
+  'add_legacy_receipt_permit',
   'read_audit_logs',
   'show_analytics',
 ] as const;

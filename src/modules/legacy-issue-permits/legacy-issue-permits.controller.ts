@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -84,5 +84,13 @@ export class LegacyIssuePermitsController {
     @Body() updateDto: UpdateLegacyIssuePermitItemDto,
   ) {
     return this.legacyIssuePermitsService.updateItem(id, itemId, updateDto);
+  }
+
+  @Delete(':id/items/:itemId')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.UPDATE_LEGACY_ISSUE_PERMIT)
+  @ApiBearerAuth()
+  deleteItem(@Param('id', ParseUUIDPipe) id: string, @Param('itemId', ParseUUIDPipe) itemId: string) {
+    return this.legacyIssuePermitsService.deleteItem(id, itemId);
   }
 }
