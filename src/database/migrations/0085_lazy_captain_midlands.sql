@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'add_legacy_receipt_permit' BEFORE 'read_audit_logs';
