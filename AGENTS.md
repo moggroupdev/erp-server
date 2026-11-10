@@ -62,6 +62,21 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with `MATERIAL_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
 
+### Customer merge script (required with schema changes)
+
+`scripts/others/merge-customers.ts` hardcodes every table and column that references `customers.id` (and follow-on links through `customer_addresses.id`). It does **not** discover FKs from Postgres. A merge can leave the removed customer behind, or fail on delete, if a new reference is missing from the script.
+
+**Update that script in the same change** when you:
+
+- Add a table/column that references `customers.id` or `customer_addresses.id`
+- Add or change a unique constraint that includes `customer_id` (e.g. one default address / one primary contact)
+- Rename or drop any table/column the script already updates
+- Change `customers` identity or profile fields it fills (`phone`, `email`, `tax_number`, `commercial_registration_number`, `classification`, `website`, `notes`, blacklist pair)
+
+**Skip it** for unrelated tables, non-customer columns, indexes, checks, or labels.
+
+After a customers-related schema change: search schema for `customers.id` / `customerId` / `customer_addresses` and compare with `CUSTOMER_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
+
 ### Product main-category delete script (required with schema changes)
 
 `scripts/others/delete-product-category-main.ts` hardcodes the catalog tree under `product_category_mains` and every child it deletes (subcategories, products, dimensions, BOM lines, production routes, sales lines, serial units, and unit-linked rows). It does **not** discover FKs from Postgres. A missing reference usually fails the delete (`ON DELETE NO ACTION`) and rolls back the run.
@@ -116,6 +131,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | New/changed table                                                            | `tables-summary.md`                                                              |
 | New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script)         |
+| New/changed FK, unique, or column involving `customers.id` / customer addresses | `scripts/others/merge-customers.ts` (see Schema → Customer merge script)       |
 | New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
 | New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |
 | New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |
