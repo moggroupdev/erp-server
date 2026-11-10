@@ -25,6 +25,14 @@ export class MaterialsReportsController {
     return this.materialsReportsService.getCategoryStats(mainCategoryId);
   }
 
+  @Get('legacy-issue-permit-summary')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_LEGACY_ISSUE_PERMIT_SUMMARY_REPORT)
+  @ApiBearerAuth()
+  getLegacyIssuePermitSummary(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.materialsReportsService.getLegacyIssuePermitSummary({ from, to });
+  }
+
   @Get('issue-permit-history')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIAL_LEGACY_ISSUE_PERMIT_HISTORY_REPORT)
