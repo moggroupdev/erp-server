@@ -383,11 +383,13 @@ function parseTransactionFile(filePath: string): {
     if (!row) continue;
 
     const legacyCode = norm(row[codeCol]);
-    if (!legacyCode) continue;
+    const title = titleCol >= 0 ? norm(row[titleCol]) : '';
+    // Keep code-less rows. The receipt seed matches those by title and can still skip them.
+    if (!legacyCode && !title) continue;
 
     rows.push({
       legacyCode,
-      title: titleCol >= 0 ? norm(row[titleCol]) : '',
+      title,
       unit: norm(row[unitCol]),
       supplierName: supplierCol >= 0 ? norm(row[supplierCol]) : '',
       invoiceNumber: invoiceNumberCol >= 0 ? normIdentifier(row[invoiceNumberCol]) : '',
@@ -516,6 +518,19 @@ function resolveMaterial(dbMaterials: DbMaterials, legacyCode: string, title: st
   return null;
 }
 
+/**
+ * Same material resolution the receipt seed uses.
+ * A row with a code is never matched by title: the seed creates a new material instead.
+ * A row without a code is matched by title, and a unit that cannot convert is skipped.
+ */
+function resolveTransactionMaterial(dbMaterials: DbMaterials, legacyCode: string, title: string): MaterialRow | null {
+  if (legacyCode) return dbMaterials.byLegacy.get(legacyCode) ?? null;
+
+  const titleKey = norm(title);
+  if (!titleKey) return null;
+  return dbMaterials.byTitle.get(titleKey) ?? null;
+}
+
 async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> {
   if (!fs.existsSync(TRANSACTIONS_DIR)) {
     throw new Error(`Transactions directory not found: ${TRANSACTIONS_DIR}`);
@@ -531,10 +546,13 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
   console.log(`\n--- Transaction invoices ---`);
   console.log(`Using source file: ${TRANSACTIONS_SOURCE_FILE}`);
 
-  const invoiceUnitsByLegacy = new Map<string, Map<string, UnitUsage>>();
+  const invoiceUnitsByMaterial = new Map<string, Map<string, UnitUsage>>();
   let filesParsed = 0;
   let rowsScanned = 0;
+  let noCodeRows = 0;
+  let noCodeRowsMatchedByTitle = 0;
   const unmatchedLegacyCodes = new Set<string>();
+  const unmatchedNoCodeTitles = new Set<string>();
 
   for (const fileName of files) {
     const filePath = path.join(TRANSACTIONS_DIR, fileName);
@@ -550,15 +568,20 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
     console.log(`  Parsed ${fileName}: ${rows.length} item rows`);
 
     for (const row of rows) {
-      if (!dbMaterials.byLegacy.has(row.legacyCode)) {
-        unmatchedLegacyCodes.add(row.legacyCode);
+      if (!row.legacyCode) noCodeRows++;
+
+      const material = resolveTransactionMaterial(dbMaterials, row.legacyCode, row.title);
+      if (!material) {
+        if (row.legacyCode) unmatchedLegacyCodes.add(row.legacyCode);
+        else unmatchedNoCodeTitles.add(row.title);
         continue;
       }
+      if (!row.legacyCode) noCodeRowsMatchedByTitle++;
 
-      let units = invoiceUnitsByLegacy.get(row.legacyCode);
+      let units = invoiceUnitsByMaterial.get(material.code);
       if (!units) {
         units = new Map();
-        invoiceUnitsByLegacy.set(row.legacyCode, units);
+        invoiceUnitsByMaterial.set(material.code, units);
       }
 
       const invoiceUnit = row.unit || '(فارغ)';
@@ -587,9 +610,13 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
   let matchedMaterials = 0;
   let materialsWithMismatch = 0;
 
-  for (const [legacyCode, invoiceUnits] of invoiceUnitsByLegacy) {
+  const materialByCode = new Map<string, MaterialRow>();
+  for (const material of dbMaterials.byLegacy.values()) materialByCode.set(material.code, material);
+  for (const material of dbMaterials.byTitle.values()) materialByCode.set(material.code, material);
+
+  for (const [materialCode, invoiceUnits] of invoiceUnitsByMaterial) {
     matchedMaterials++;
-    const material = dbMaterials.byLegacy.get(legacyCode)!;
+    const material = materialByCode.get(materialCode)!;
     const dbUnitArabic = formatDbUnitsArabic(material);
 
     let hasMismatch = false;
@@ -598,7 +625,7 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
 
       hasMismatch = true;
       output.push({
-        legacyCode,
+        legacyCode: material.legacyCode ?? '',
         title: material.title,
         dbUnitArabic,
         sourceUnit: usage.invoiceUnit,
@@ -610,7 +637,12 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
     if (hasMismatch) materialsWithMismatch++;
   }
 
-  output.sort((a, b) => a.legacyCode.localeCompare(b.legacyCode) || a.sourceUnit.localeCompare(b.sourceUnit));
+  output.sort(
+    (a, b) =>
+      a.legacyCode.localeCompare(b.legacyCode) ||
+      a.title.localeCompare(b.title, 'ar') ||
+      a.sourceUnit.localeCompare(b.sourceUnit),
+  );
 
   await writeReport(TRANSACTIONS_OUT_DIR, 'unit-mismatches', output, {
     sourceUnitHeader: 'الوحدة في الفواتير',
@@ -623,10 +655,16 @@ async function compareTransactionUnits(dbMaterials: DbMaterials): Promise<void> 
   console.log('\n========== TRANSACTION UNIT COMPARISON STATS ==========');
   console.log(`Files parsed:                    ${filesParsed}`);
   console.log(`Transaction rows scanned:        ${rowsScanned}`);
+  console.log(`No-code rows scanned:            ${noCodeRows}`);
+  console.log(`No-code rows matched by title:   ${noCodeRowsMatchedByTitle}`);
   console.log(`Materials matched (in invoices): ${matchedMaterials}`);
   console.log(`Unmatched legacy codes in files: ${unmatchedLegacyCodes.size}`);
   if (unmatchedLegacyCodes.size > 0) {
     console.log(`  samples: ${[...unmatchedLegacyCodes].slice(0, 10).join(', ')}`);
+  }
+  console.log(`Unmatched no-code titles:        ${unmatchedNoCodeTitles.size}`);
+  if (unmatchedNoCodeTitles.size > 0) {
+    console.log(`  samples: ${[...unmatchedNoCodeTitles].slice(0, 10).join(' | ')}`);
   }
   console.log(`Materials with unit mismatch:    ${materialsWithMismatch}`);
   console.log(`Mismatch rows written:           ${output.length}`);
