@@ -45,7 +45,6 @@ import type {
 const VALID_GROUP_BY = ['month', 'quarter', 'year'] as const;
 type GroupBy = (typeof VALID_GROUP_BY)[number];
 
-const TOP_SUPPLIERS_LIMIT = 10;
 const TOP_MATERIALS_LIMIT = 10;
 const TOP_ORDERS_LIMIT = 10;
 
@@ -215,7 +214,7 @@ export class PurchasingMaterialsReportsService {
     const [overview, byPeriod, bySupplier, byMaterial, byMainCategory, topOrders] = await Promise.all([
       this.getOverview(dateRange),
       this.getByPeriod(dateRange, groupBy),
-      this.getBySupplier(dateRange, TOP_SUPPLIERS_LIMIT),
+      this.getBySupplier(dateRange),
       this.getByMaterial(dateRange, TOP_MATERIALS_LIMIT),
       this.getByMainCategory(dateRange),
       this.getTopOrders(dateRange, TOP_ORDERS_LIMIT),
@@ -1466,7 +1465,7 @@ export class PurchasingMaterialsReportsService {
     }));
   }
 
-  private async getBySupplier(dateRange: { from?: Date; to?: Date }, limit: number) {
+  private async getBySupplier(dateRange: { from?: Date; to?: Date }) {
     const where = this.notCancelledWithDateRange(dateRange);
 
     const rows = await this.db
@@ -1481,8 +1480,7 @@ export class PurchasingMaterialsReportsService {
       .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
       .where(where)
       .groupBy(suppliers.id, suppliers.code, suppliers.name)
-      .orderBy(desc(sql`coalesce(sum(${invoiceTotalPurchases}), 0)`))
-      .limit(limit);
+      .orderBy(desc(sql`coalesce(sum(${invoiceTotalPurchases}), 0)`));
 
     return rows.map((r) => ({
       supplierId: r.supplierId,

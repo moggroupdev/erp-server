@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, type SQL } from 'drizzle-orm';
 import { ConflictException, Inject, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { productCategorySubs, productDimensions, productProductionRoutes, products } from 'src/database/schema';
@@ -12,8 +12,9 @@ import { CreateProductDimensionDto } from './dto/create-product-dimension.dto';
 import { UpdateProductDimensionDto } from './dto/update-product-dimension.dto';
 import { SetProductProductionRoutesDto } from './dto/set-product-production-routes.dto';
 import { SetProductPricingFactorDto } from './dto/set-product-pricing-factor.dto';
+import { ExportProductsExcelQueryDto } from './dto/export-products-excel-query.dto';
 import { omitPricingFactorIfUnauthorized } from './product-pricing-factor.helper';
-import { buildProductsCatalogWorkbook, type ProductsExcelColumns } from './products-excel';
+import { buildProductsCatalogWorkbook } from './products-excel';
 
 @Injectable()
 export class ProductsService {
@@ -58,9 +59,31 @@ export class ProductsService {
     };
   }
 
-  public async exportCatalogExcel(columns: ProductsExcelColumns = {}): Promise<StreamableFile> {
+  public async exportCatalogExcel(query: ExportProductsExcelQueryDto = {}): Promise<StreamableFile> {
+    const { keyword, mainCategoryId, subCategoryId, sourceType, ...columns } = query;
+    const conditions: SQL[] = [isNull(products.deletedAt)];
+
+    if (keyword) {
+      conditions.push(
+        or(ilike(products.code, `%${keyword}%`), ilike(products.title, `%${keyword}%`), ilike(products.description, `%${keyword}%`))!,
+      );
+    }
+    if (subCategoryId) conditions.push(eq(products.subCategoryId, subCategoryId));
+    if (sourceType) conditions.push(eq(products.sourceType, sourceType));
+    if (mainCategoryId) {
+      conditions.push(
+        inArray(
+          products.subCategoryId,
+          this.db
+            .select({ id: productCategorySubs.id })
+            .from(productCategorySubs)
+            .where(eq(productCategorySubs.mainCategoryId, mainCategoryId)),
+        ),
+      );
+    }
+
     const catalogProducts = await this.db.query.products.findMany({
-      where: isNull(products.deletedAt),
+      where: and(...conditions),
       with: {
         dimensions: true,
         subCategory: { with: { mainCategory: true } },

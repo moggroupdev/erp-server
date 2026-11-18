@@ -1,6 +1,9 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsUuidString, Trim } from 'src/utils/decorators';
+import { PRODUCT_SOURCE_TYPE_VALUES } from 'src/utils/constants';
+import { type ProductSourceType } from 'src/utils/types';
 
 function optionalBoolean() {
   return Transform(({ value }: { value: unknown }) => {
@@ -11,6 +14,27 @@ function optionalBoolean() {
 }
 
 export class ExportProductsExcelQueryDto {
+  @Trim()
+  @IsString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  keyword?: string;
+
+  @IsUuidString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  mainCategoryId?: string;
+
+  @IsUuidString()
+  @IsOptional()
+  @ApiPropertyOptional()
+  subCategoryId?: string;
+
+  @IsIn(PRODUCT_SOURCE_TYPE_VALUES)
+  @IsOptional()
+  @ApiPropertyOptional({ enum: PRODUCT_SOURCE_TYPE_VALUES })
+  sourceType?: ProductSourceType;
+
   @IsOptional()
   @optionalBoolean()
   @IsBoolean()

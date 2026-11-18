@@ -36,6 +36,7 @@
     "delete:product-category-main": "ts-node -r tsconfig-paths/register scripts/others/delete-product-category-main.ts",
     "update:seeded-material-descriptions": "ts-node -r tsconfig-paths/register scripts/others/update-seeded-material-descriptions.ts",
     "merge:materials": "ts-node -r tsconfig-paths/register scripts/others/merge-materials.ts",
+    "merge:customers": "ts-node -r tsconfig-paths/register scripts/others/merge-customers.ts",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\""
   },

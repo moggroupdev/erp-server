@@ -40,11 +40,13 @@ Dates are always interpreted as DD/MM/YYYY (e.g. 12/1/2026 = 12 January 2026).
   تاريخ الإضافة → inventory_transactions.createdAt
 
 Serial codes (MPO / MPR / IVT) prefer free gaps left by prior deletes (lowest
-unused numbers first, in chronological insert order). When no free codes remain,
-the DB sequences assign the next values as usual.
+unused numbers first, in insert order). When no free codes remain, the DB
+sequences assign the next values as usual.
 
-This seed inserts those entities in chronological date order so earlier dates
-get lower serials (MPO-00000001 before later invoices, etc.).
+MPO serials follow invoice date (earliest first). MPR and IVT serials follow
+the numeric legacy permit number (رقم إذن الإضافة), so lower permits get lower
+codes. Within each calendar day, MPR receivedAt/createdAt and IVT createdAt
+are staggered by 1 second so same-day rows sort in code order.
 
 Suppliers created by this seed get createdAt on 31/12/2025 (UTC noon), with a
 10ms gap between each insert so SUP-00000001 sorts before SUP-00000002, etc.
@@ -456,6 +458,26 @@ function isoDay(date: Date): string {
 
 function compareByTime(a: Date, b: Date): number {
   return a.getTime() - b.getTime();
+}
+
+/** Numeric permit order when both values are all digits; otherwise localeCompare. */
+function comparePermitNumbers(a: string, b: string): number {
+  const aDigits = /^\d+$/.test(a);
+  const bDigits = /^\d+$/.test(b);
+  if (aDigits && bDigits) return Number(a) - Number(b);
+  return a.localeCompare(b);
+}
+
+/**
+ * Same calendar day as `base`, offset by n seconds so same-day inserts sort
+ * stably in insert/code order. `dayCounters` tracks how many rows already used
+ * that day (0-based).
+ */
+function staggerWithinDay(base: Date, dayCounters: Map<string, number>): Date {
+  const day = isoDay(base);
+  const n = dayCounters.get(day) ?? 0;
+  dayCounters.set(day, n + 1);
+  return new Date(base.getTime() + n * 1000);
 }
 
 /**
@@ -1093,7 +1115,7 @@ async function main() {
 
       console.log();
       console.log(
-        `Inserting ${plannedOrders.length} orders chronologically by invoice date (MPO → MPR → IVT sequences).`,
+        `Inserting ${plannedOrders.length} orders (MPO by invoice date; MPR/IVT by numeric permit number).`,
       );
 
       // Earliest invoice date first so MPO-00000001 aligns with the oldest order date.
@@ -1175,31 +1197,29 @@ async function main() {
 
       console.log();
 
-      // Earliest receipt / invoice date first so MPR serials follow chronology.
-      plannedReceipts.sort(
-        (a, b) =>
-          compareByTime(a.invoiceDate, b.invoiceDate) ||
-          compareByTime(a.receiptDate, b.receiptDate) ||
-          a.permitNumber.localeCompare(b.permitNumber),
-      );
+      // Numeric legacy permit order so MPR serials align with رقم إذن الإضافة.
+      plannedReceipts.sort((a, b) => comparePermitNumbers(a.permitNumber, b.permitNumber));
 
       const plannedTransactions: PlannedInventoryTransaction[] = [];
+      const receiptDayCounters = new Map<string, number>();
       let insertedReceipts = 0;
 
-      // Phase 3: insert MPRs in date order.
+      // Phase 3: insert MPRs in permit-number order.
       for (const receipt of plannedReceipts) {
         const receiptCode = takeNextCode(mprCodeQueue);
         if (typeof receiptCode === 'string') summary.mprCodesReused++;
+
+        const stampedAt = staggerWithinDay(receipt.invoiceDate, receiptDayCounters);
 
         const [createdReceipt] = await tx
           .insert(schema.materialPurchaseReceipts)
           .values({
             code: receiptCode,
             materialPurchaseOrderId: receipt.materialPurchaseOrderId,
-            receivedAt: receipt.invoiceDate,
+            receivedAt: stampedAt,
             receivedBy: user.id,
             notes: SEED_IMPORT_NOTE,
-            createdAt: receipt.invoiceDate,
+            createdAt: stampedAt,
             createdBy: user.id,
           })
           .returning({ id: schema.materialPurchaseReceipts.id });
@@ -1234,17 +1254,18 @@ async function main() {
 
       console.log();
 
-      // Earliest إضافة date first so IVT serials follow chronology.
-      plannedTransactions.sort(
-        (a, b) => compareByTime(a.receiptDate, b.receiptDate) || a.permitNumber.localeCompare(b.permitNumber),
-      );
+      // Numeric legacy permit order so IVT serials align with رقم إذن الإضافة.
+      plannedTransactions.sort((a, b) => comparePermitNumbers(a.permitNumber, b.permitNumber));
 
+      const transactionDayCounters = new Map<string, number>();
       let insertedTransactions = 0;
 
-      // Phase 4: insert IVTs in date order.
+      // Phase 4: insert IVTs in permit-number order.
       for (const transaction of plannedTransactions) {
         const transactionCode = takeNextCode(ivtCodeQueue);
         if (typeof transactionCode === 'string') summary.ivtCodesReused++;
+
+        const stampedAt = staggerWithinDay(transaction.receiptDate, transactionDayCounters);
 
         const [createdTransaction] = await tx
           .insert(schema.inventoryTransactions)
@@ -1254,7 +1275,7 @@ async function main() {
             transactionType: INVENTORY_TRANSACTION_TYPES.RECEIPT,
             materialPurchaseReceiptId: transaction.materialPurchaseReceiptId,
             notes: SEED_IMPORT_NOTE,
-            createdAt: transaction.receiptDate,
+            createdAt: stampedAt,
             createdBy: user.id,
           })
           .returning({ id: schema.inventoryTransactions.id });

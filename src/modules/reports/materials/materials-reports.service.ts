@@ -1,8 +1,9 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
+  customers,
   legacyIssuePermitItems,
   legacyIssuePermits,
   materialCategoryMains,
@@ -12,12 +13,14 @@ import {
   users,
 } from 'src/database/schema';
 import type { MaterialUnitConversionSummary } from 'src/utils/extras/material-unit-conversions-extra';
+import { getKnownConversionFactorToBase, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import {
-  getKnownConversionFactorToBase,
-  resolveConversionFactor,
-  toBaseQuantity,
-} from 'src/utils/helpers/unit-conversion';
-import { MATERIAL_TYPE_VALUES } from 'src/utils/constants';
+  LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_TYPE_VALUES,
+  LEGACY_ISSUE_PERMIT_TYPES,
+  MATERIAL_TYPE_VALUES,
+  PRODUCTION_SUB_DEPARTMENT_VALUES,
+} from 'src/utils/constants';
 import { translate } from 'src/utils/i18n/translate';
 import type { MaterialUnit } from 'src/utils/types';
 
@@ -27,6 +30,10 @@ type StockStatus = (typeof STOCK_STATUS_VALUES)[number];
 
 const TOP_MATERIALS_LIMIT = 10;
 const LOW_STOCK_LIMIT = 20;
+const LEGACY_ISSUE_PERMIT_TOP_MATERIALS_LIMIT = 15;
+const LEGACY_ISSUE_PERMIT_TOP_CUSTOMERS_LIMIT = 10;
+const LEGACY_ISSUE_PERMIT_TOP_CREATORS_LIMIT = 10;
+const LEGACY_ISSUE_PERMIT_NOTES_LIST_LIMIT = 30;
 
 @Injectable()
 export class MaterialsReportsService {
@@ -86,16 +93,23 @@ export class MaterialsReportsService {
     const valueExpr = sql<number>`coalesce(${materials.quantity}, 0) * coalesce(${materials.unitPrice}, 0)`;
     const openingValueExpr = sql<number>`coalesce(${materials.openingQuantity}, 0) * coalesce(${materials.openingUnitPrice}, 0)`;
 
-    const [overview, byMaterialType, stockStatus, bySubCategory, topMaterialsByValue, topMaterialsByQuantity, lowStockMaterials] =
-      await Promise.all([
-        this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
-        this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
-        this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
-        this.getBySubCategory(scoped, valueExpr),
-        this.getTopMaterialsByValue(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
-        this.getTopMaterialsByQuantity(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
-        this.getLowStockMaterials(scoped, LOW_STOCK_LIMIT, { joinSubs: true }),
-      ]);
+    const [
+      overview,
+      byMaterialType,
+      stockStatus,
+      bySubCategory,
+      topMaterialsByValue,
+      topMaterialsByQuantity,
+      lowStockMaterials,
+    ] = await Promise.all([
+      this.getOverview(scoped, valueExpr, openingValueExpr, { joinSubs: true }),
+      this.getByMaterialType(scoped, valueExpr, { joinSubs: true }),
+      this.getStockStatus(scoped, valueExpr, { joinSubs: true }),
+      this.getBySubCategory(scoped, valueExpr),
+      this.getTopMaterialsByValue(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
+      this.getTopMaterialsByQuantity(scoped, valueExpr, TOP_MATERIALS_LIMIT, { joinSubs: true }),
+      this.getLowStockMaterials(scoped, LOW_STOCK_LIMIT, { joinSubs: true }),
+    ]);
 
     return {
       category,
@@ -107,6 +121,690 @@ export class MaterialsReportsService {
       topMaterialsByQuantity,
       lowStockMaterials,
     };
+  }
+
+  public async getLegacyIssuePermitSummary(params: { from?: string; to?: string }) {
+    const dateRange = this.buildDateRange(params.from, params.to);
+    const permitConditions: SQL[] = [];
+    if (dateRange.from) permitConditions.push(gte(legacyIssuePermits.date, dateRange.from));
+    if (dateRange.to) permitConditions.push(lte(legacyIssuePermits.date, dateRange.to));
+    const permitWhere = permitConditions.length > 0 ? and(...permitConditions) : undefined;
+
+    const [
+      overview,
+      byPermitType,
+      byProductionSubDepartment,
+      byMaintenanceOrderType,
+      byMonth,
+      topCustomers,
+      topCreators,
+      dataQuality,
+      headerNotes,
+      lineNotes,
+      topMaterials,
+    ] = await Promise.all([
+      this.getLegacyIssuePermitOverview(permitWhere),
+      this.getLegacyIssuePermitByPermitType(permitWhere),
+      this.getLegacyIssuePermitByProductionSubDepartment(permitWhere),
+      this.getLegacyIssuePermitByMaintenanceOrderType(permitWhere),
+      this.getLegacyIssuePermitByMonth(permitWhere),
+      this.getLegacyIssuePermitTopCustomers(permitWhere),
+      this.getLegacyIssuePermitTopCreators(permitWhere),
+      this.getLegacyIssuePermitDataQuality(permitWhere),
+      this.getLegacyIssuePermitHeaderNotes(permitWhere),
+      this.getLegacyIssuePermitLineNotes(permitWhere),
+      this.getLegacyIssuePermitTopMaterials(permitWhere),
+    ]);
+
+    return {
+      overview,
+      byPermitType,
+      byProductionSubDepartment,
+      byMaintenanceOrderType,
+      byMonth,
+      topMaterials,
+      topCustomers,
+      topCreators,
+      dataQuality,
+      headerNotes,
+      lineNotes,
+    };
+  }
+
+  private async getLegacyIssuePermitOverview(permitWhere: SQL | undefined) {
+    const [permitRow] = await this.db
+      .select({
+        permitCount: count(),
+        activePermitCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = false)`,
+        cancelledPermitCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = true)`,
+        permitsWithIssueOrder: sql<number>`count(*) filter (where ${legacyIssuePermits.issueOrderNumber} is not null)`,
+        multipleCustomerPermitCount: sql<number>`count(*) filter (where ${legacyIssuePermits.hasMultipleCustomers} = true)`,
+        distinctCustomerCount: sql<number>`count(distinct ${legacyIssuePermits.customerId})`,
+        distinctCreatorCount: sql<number>`count(distinct ${legacyIssuePermits.creatorId})`,
+        headerNoteCount: sql<number>`count(*) filter (
+          where ${legacyIssuePermits.notes} is not null and btrim(${legacyIssuePermits.notes}) <> ''
+        )`,
+        minDate: sql<Date | null>`min(${legacyIssuePermits.date})`,
+        maxDate: sql<Date | null>`max(${legacyIssuePermits.date})`,
+      })
+      .from(legacyIssuePermits)
+      .where(permitWhere);
+
+    const itemJoinWhere = permitWhere
+      ? and(eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id), permitWhere)
+      : eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id);
+
+    const [itemRow] = await this.db
+      .select({
+        itemCount: count(),
+        materialLineCount: sql<number>`count(*) filter (where ${legacyIssuePermitItems.materialCode} is not null)`,
+        noteOnlyLineCount: sql<number>`count(*) filter (where ${legacyIssuePermitItems.materialCode} is null)`,
+        lineNoteCount: sql<number>`count(*) filter (
+          where ${legacyIssuePermitItems.notes} is not null and btrim(${legacyIssuePermitItems.notes}) <> ''
+        )`,
+        distinctMaterialCount: sql<number>`count(distinct ${legacyIssuePermitItems.materialCode})`,
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(itemJoinWhere);
+
+    const emptyPermitConditions: SQL[] = [
+      sql`not exists (
+        select 1 from ${legacyIssuePermitItems}
+        where ${legacyIssuePermitItems.issuePermitId} = ${legacyIssuePermits.id}
+      )`,
+    ];
+    if (permitWhere) emptyPermitConditions.push(permitWhere);
+
+    const [emptyRow] = await this.db
+      .select({ emptyPermitCount: count() })
+      .from(legacyIssuePermits)
+      .where(and(...emptyPermitConditions));
+
+    return {
+      permitCount: Number(permitRow?.permitCount ?? 0),
+      activePermitCount: Number(permitRow?.activePermitCount ?? 0),
+      cancelledPermitCount: Number(permitRow?.cancelledPermitCount ?? 0),
+      itemCount: Number(itemRow?.itemCount ?? 0),
+      materialLineCount: Number(itemRow?.materialLineCount ?? 0),
+      noteOnlyLineCount: Number(itemRow?.noteOnlyLineCount ?? 0),
+      emptyPermitCount: Number(emptyRow?.emptyPermitCount ?? 0),
+      permitsWithIssueOrder: Number(permitRow?.permitsWithIssueOrder ?? 0),
+      multipleCustomerPermitCount: Number(permitRow?.multipleCustomerPermitCount ?? 0),
+      distinctMaterialCount: Number(itemRow?.distinctMaterialCount ?? 0),
+      distinctCustomerCount: Number(permitRow?.distinctCustomerCount ?? 0),
+      distinctCreatorCount: Number(permitRow?.distinctCreatorCount ?? 0),
+      minDate: permitRow?.minDate ?? null,
+      maxDate: permitRow?.maxDate ?? null,
+      headerNoteCount: Number(permitRow?.headerNoteCount ?? 0),
+      lineNoteCount: Number(itemRow?.lineNoteCount ?? 0),
+    };
+  }
+
+  private async getLegacyIssuePermitByPermitType(permitWhere: SQL | undefined) {
+    const rows = await this.db
+      .select({
+        permitType: legacyIssuePermits.permitType,
+        permitCount: count(),
+        cancelledCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = true)`,
+        headerNoteCount: sql<number>`count(*) filter (
+          where ${legacyIssuePermits.notes} is not null and btrim(${legacyIssuePermits.notes}) <> ''
+        )`,
+      })
+      .from(legacyIssuePermits)
+      .where(permitWhere)
+      .groupBy(legacyIssuePermits.permitType);
+
+    const itemRows = await this.db
+      .select({
+        permitType: legacyIssuePermits.permitType,
+        itemCount: count(),
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(permitWhere)
+      .groupBy(legacyIssuePermits.permitType);
+
+    const byKey = new Map(
+      rows.map((row) => [
+        row.permitType,
+        {
+          permitCount: Number(row.permitCount),
+          cancelledCount: Number(row.cancelledCount),
+          headerNoteCount: Number(row.headerNoteCount),
+          itemCount: 0,
+        },
+      ]),
+    );
+    for (const row of itemRows) {
+      const existing = byKey.get(row.permitType) ?? {
+        permitCount: 0,
+        cancelledCount: 0,
+        headerNoteCount: 0,
+        itemCount: 0,
+      };
+      existing.itemCount = Number(row.itemCount);
+      byKey.set(row.permitType, existing);
+    }
+
+    return LEGACY_ISSUE_PERMIT_TYPE_VALUES.map((permitType) => {
+      const row = byKey.get(permitType);
+      return {
+        permitType,
+        permitCount: row?.permitCount ?? 0,
+        cancelledCount: row?.cancelledCount ?? 0,
+        itemCount: row?.itemCount ?? 0,
+        headerNoteCount: row?.headerNoteCount ?? 0,
+      };
+    });
+  }
+
+  private async getLegacyIssuePermitByProductionSubDepartment(permitWhere: SQL | undefined) {
+    const rows = await this.db
+      .select({
+        productionSubDepartment: legacyIssuePermits.productionSubDepartment,
+        permitCount: count(),
+        cancelledCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = true)`,
+        headerNoteCount: sql<number>`count(*) filter (
+          where ${legacyIssuePermits.notes} is not null and btrim(${legacyIssuePermits.notes}) <> ''
+        )`,
+      })
+      .from(legacyIssuePermits)
+      .where(permitWhere)
+      .groupBy(legacyIssuePermits.productionSubDepartment);
+
+    const itemRows = await this.db
+      .select({
+        productionSubDepartment: legacyIssuePermits.productionSubDepartment,
+        itemCount: count(),
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(permitWhere)
+      .groupBy(legacyIssuePermits.productionSubDepartment);
+
+    const byKey = new Map<
+      string | null,
+      { permitCount: number; cancelledCount: number; headerNoteCount: number; itemCount: number }
+    >();
+    for (const row of rows) {
+      byKey.set(row.productionSubDepartment, {
+        permitCount: Number(row.permitCount),
+        cancelledCount: Number(row.cancelledCount),
+        headerNoteCount: Number(row.headerNoteCount),
+        itemCount: 0,
+      });
+    }
+    for (const row of itemRows) {
+      const existing = byKey.get(row.productionSubDepartment) ?? {
+        permitCount: 0,
+        cancelledCount: 0,
+        headerNoteCount: 0,
+        itemCount: 0,
+      };
+      existing.itemCount = Number(row.itemCount);
+      byKey.set(row.productionSubDepartment, existing);
+    }
+
+    const known = PRODUCTION_SUB_DEPARTMENT_VALUES.map((productionSubDepartment) => {
+      const row = byKey.get(productionSubDepartment);
+      return {
+        productionSubDepartment,
+        permitCount: row?.permitCount ?? 0,
+        cancelledCount: row?.cancelledCount ?? 0,
+        itemCount: row?.itemCount ?? 0,
+        headerNoteCount: row?.headerNoteCount ?? 0,
+      };
+    });
+
+    const none = byKey.get(null);
+    return [
+      ...known,
+      {
+        productionSubDepartment: null,
+        permitCount: none?.permitCount ?? 0,
+        cancelledCount: none?.cancelledCount ?? 0,
+        itemCount: none?.itemCount ?? 0,
+        headerNoteCount: none?.headerNoteCount ?? 0,
+      },
+    ];
+  }
+
+  private async getLegacyIssuePermitByMaintenanceOrderType(permitWhere: SQL | undefined) {
+    const maintenanceWhere = permitWhere
+      ? and(eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER), permitWhere)
+      : eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER);
+
+    const rows = await this.db
+      .select({
+        maintenanceOrderType: legacyIssuePermits.maintenanceOrderType,
+        permitCount: count(),
+        cancelledCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = true)`,
+        headerNoteCount: sql<number>`count(*) filter (
+          where ${legacyIssuePermits.notes} is not null and btrim(${legacyIssuePermits.notes}) <> ''
+        )`,
+      })
+      .from(legacyIssuePermits)
+      .where(maintenanceWhere)
+      .groupBy(legacyIssuePermits.maintenanceOrderType);
+
+    const itemRows = await this.db
+      .select({
+        maintenanceOrderType: legacyIssuePermits.maintenanceOrderType,
+        itemCount: count(),
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(maintenanceWhere)
+      .groupBy(legacyIssuePermits.maintenanceOrderType);
+
+    const byKey = new Map<
+      string | null,
+      { permitCount: number; cancelledCount: number; headerNoteCount: number; itemCount: number }
+    >();
+    for (const row of rows) {
+      byKey.set(row.maintenanceOrderType, {
+        permitCount: Number(row.permitCount),
+        cancelledCount: Number(row.cancelledCount),
+        headerNoteCount: Number(row.headerNoteCount),
+        itemCount: 0,
+      });
+    }
+    for (const row of itemRows) {
+      const existing = byKey.get(row.maintenanceOrderType) ?? {
+        permitCount: 0,
+        cancelledCount: 0,
+        headerNoteCount: 0,
+        itemCount: 0,
+      };
+      existing.itemCount = Number(row.itemCount);
+      byKey.set(row.maintenanceOrderType, existing);
+    }
+
+    const known = LEGACY_ISSUE_PERMIT_MAINTENANCE_ORDER_TYPE_VALUES.map((maintenanceOrderType) => {
+      const row = byKey.get(maintenanceOrderType);
+      return {
+        maintenanceOrderType,
+        permitCount: row?.permitCount ?? 0,
+        cancelledCount: row?.cancelledCount ?? 0,
+        itemCount: row?.itemCount ?? 0,
+        headerNoteCount: row?.headerNoteCount ?? 0,
+      };
+    });
+
+    const none = byKey.get(null);
+    return [
+      ...known,
+      {
+        maintenanceOrderType: null,
+        permitCount: none?.permitCount ?? 0,
+        cancelledCount: none?.cancelledCount ?? 0,
+        itemCount: none?.itemCount ?? 0,
+        headerNoteCount: none?.headerNoteCount ?? 0,
+      },
+    ];
+  }
+
+  private async getLegacyIssuePermitByMonth(permitWhere: SQL | undefined) {
+    const monthExpr = sql<string>`to_char(${legacyIssuePermits.date}, 'YYYY-MM')`;
+
+    const rows = await this.db
+      .select({
+        month: monthExpr,
+        permitCount: count(),
+        cancelledCount: sql<number>`count(*) filter (where ${legacyIssuePermits.isCancelled} = true)`,
+      })
+      .from(legacyIssuePermits)
+      .where(permitWhere)
+      .groupBy(monthExpr)
+      .orderBy(asc(monthExpr));
+
+    const itemRows = await this.db
+      .select({
+        month: monthExpr,
+        itemCount: count(),
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(permitWhere)
+      .groupBy(monthExpr);
+
+    const itemByMonth = new Map(itemRows.map((row) => [row.month, Number(row.itemCount)]));
+
+    return rows.map((row) => ({
+      month: row.month,
+      permitCount: Number(row.permitCount),
+      cancelledCount: Number(row.cancelledCount),
+      itemCount: itemByMonth.get(row.month) ?? 0,
+    }));
+  }
+
+  private async getLegacyIssuePermitTopCustomers(permitWhere: SQL | undefined) {
+    const where = permitWhere
+      ? and(isNotNull(legacyIssuePermits.customerId), permitWhere)
+      : isNotNull(legacyIssuePermits.customerId);
+
+    const rows = await this.db
+      .select({
+        customerId: customers.id,
+        customerName: customers.name,
+        permitCount: count(),
+      })
+      .from(legacyIssuePermits)
+      .innerJoin(customers, eq(legacyIssuePermits.customerId, customers.id))
+      .where(where)
+      .groupBy(customers.id, customers.name)
+      .orderBy(desc(count()), asc(customers.name))
+      .limit(LEGACY_ISSUE_PERMIT_TOP_CUSTOMERS_LIMIT);
+
+    return rows.map((row) => ({
+      customerId: row.customerId,
+      customerName: row.customerName,
+      permitCount: Number(row.permitCount),
+    }));
+  }
+
+  private async getLegacyIssuePermitTopCreators(permitWhere: SQL | undefined) {
+    const rows = await this.db
+      .select({
+        creatorId: users.id,
+        creatorName: users.name,
+        permitCount: count(),
+      })
+      .from(legacyIssuePermits)
+      .innerJoin(users, eq(legacyIssuePermits.creatorId, users.id))
+      .where(permitWhere)
+      .groupBy(users.id, users.name)
+      .orderBy(desc(count()), asc(users.name))
+      .limit(LEGACY_ISSUE_PERMIT_TOP_CREATORS_LIMIT);
+
+    return rows.map((row) => ({
+      creatorId: row.creatorId,
+      creatorName: row.creatorName,
+      permitCount: Number(row.permitCount),
+    }));
+  }
+
+  private async getLegacyIssuePermitDataQuality(permitWhere: SQL | undefined) {
+    const contractReviewWhere = permitWhere
+      ? and(eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.CONTRACT_REVIEW), permitWhere)
+      : eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.CONTRACT_REVIEW);
+
+    const maintenanceWhere = permitWhere
+      ? and(eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER), permitWhere)
+      : eq(legacyIssuePermits.permitType, LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER);
+
+    const customerScopedWhere = permitWhere
+      ? and(
+          inArray(legacyIssuePermits.permitType, [
+            LEGACY_ISSUE_PERMIT_TYPES.CONTRACT_REVIEW,
+            LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER,
+          ]),
+          permitWhere,
+        )
+      : inArray(legacyIssuePermits.permitType, [
+          LEGACY_ISSUE_PERMIT_TYPES.CONTRACT_REVIEW,
+          LEGACY_ISSUE_PERMIT_TYPES.MAINTENANCE_ORDER,
+        ]);
+
+    const [
+      [contractMissingNumber],
+      [maintenanceMissingNumber],
+      [maintenanceMissingType],
+      [missingCustomer],
+      missingConversionCount,
+    ] = await Promise.all([
+      this.db
+        .select({ count: count() })
+        .from(legacyIssuePermits)
+        .where(and(contractReviewWhere, isNull(legacyIssuePermits.contractNumber))),
+      this.db
+        .select({ count: count() })
+        .from(legacyIssuePermits)
+        .where(and(maintenanceWhere, isNull(legacyIssuePermits.maintenanceOrderNumber))),
+      this.db
+        .select({ count: count() })
+        .from(legacyIssuePermits)
+        .where(and(maintenanceWhere, isNull(legacyIssuePermits.maintenanceOrderType))),
+      this.db
+        .select({ count: count() })
+        .from(legacyIssuePermits)
+        .where(
+          and(
+            customerScopedWhere,
+            isNull(legacyIssuePermits.customerId),
+            eq(legacyIssuePermits.hasMultipleCustomers, false),
+          ),
+        ),
+      this.countLegacyIssuePermitMissingConversions(permitWhere),
+    ]);
+
+    return [
+      {
+        code: 'contract_review_missing_contract_number' as const,
+        count: Number(contractMissingNumber?.count ?? 0),
+        caption: {
+          en: 'Contract review permits without a contract number.',
+          ar: 'أذونات مراجعة العقود بدون رقم عقد.',
+        },
+      },
+      {
+        code: 'maintenance_order_missing_order_number' as const,
+        count: Number(maintenanceMissingNumber?.count ?? 0),
+        caption: {
+          en: 'Maintenance order permits without an order number.',
+          ar: 'أذونات أوامر الصيانة بدون رقم أمر.',
+        },
+      },
+      {
+        code: 'maintenance_order_missing_order_type' as const,
+        count: Number(maintenanceMissingType?.count ?? 0),
+        caption: {
+          en: 'Maintenance order permits without an order type.',
+          ar: 'أذونات أوامر الصيانة بدون نوع أمر.',
+        },
+      },
+      {
+        code: 'customer_scoped_missing_customer' as const,
+        count: Number(missingCustomer?.count ?? 0),
+        caption: {
+          en: 'Contract review or maintenance permits with no customer and not marked as multiple customers.',
+          ar: 'أذونات مراجعة عقود أو صيانة بدون عميل وغير مميزة بعدة عملاء.',
+        },
+      },
+      {
+        code: 'material_lines_missing_conversion' as const,
+        count: missingConversionCount,
+        caption: {
+          en: 'Material lines that cannot convert to the material base unit.',
+          ar: 'بنود مواد لا يمكن تحويل كميتها إلى الوحدة الأساسية للمادة.',
+        },
+      },
+    ];
+  }
+
+  private async countLegacyIssuePermitMissingConversions(permitWhere: SQL | undefined): Promise<number> {
+    const itemWhere = permitWhere
+      ? and(isNotNull(legacyIssuePermitItems.materialCode), permitWhere)
+      : isNotNull(legacyIssuePermitItems.materialCode);
+
+    const rows = await this.db
+      .select({
+        materialCode: legacyIssuePermitItems.materialCode,
+        unitOfMeasurementSelected: legacyIssuePermitItems.unitOfMeasurementSelected,
+        quantity: legacyIssuePermitItems.quantity,
+        unitOfMeasurement: materials.unitOfMeasurement,
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .innerJoin(materials, eq(legacyIssuePermitItems.materialCode, materials.code))
+      .where(itemWhere);
+
+    if (rows.length === 0) return 0;
+
+    const withConversions = await this.attachUnitConversions(
+      rows.map((row) => ({ ...row, materialCode: row.materialCode! })),
+    );
+
+    let missing = 0;
+    for (const row of withConversions) {
+      const lineUnit = row.unitOfMeasurementSelected as MaterialUnit | null;
+      const quantity = row.quantity == null ? null : Number(row.quantity);
+      const baseUnit = row.unitOfMeasurement as MaterialUnit;
+      const conversions = row.unitConversions.map((c) => ({
+        unit: c.unit as MaterialUnit,
+        conversionFactorToBase: c.conversionFactorToBase,
+      }));
+      const canConvert =
+        quantity != null && lineUnit != null && this.canConvertEnteredUnitToBase(lineUnit, baseUnit, conversions);
+      if (!canConvert) missing += 1;
+    }
+    return missing;
+  }
+
+  private async getLegacyIssuePermitHeaderNotes(permitWhere: SQL | undefined) {
+    const where = permitWhere
+      ? and(isNotNull(legacyIssuePermits.notes), ne(sql`btrim(${legacyIssuePermits.notes})`, ''), permitWhere)
+      : and(isNotNull(legacyIssuePermits.notes), ne(sql`btrim(${legacyIssuePermits.notes})`, ''));
+
+    const rows = await this.db
+      .select({
+        id: legacyIssuePermits.id,
+        issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        date: legacyIssuePermits.date,
+        permitType: legacyIssuePermits.permitType,
+        notes: legacyIssuePermits.notes,
+      })
+      .from(legacyIssuePermits)
+      .where(where)
+      .orderBy(desc(legacyIssuePermits.date), desc(legacyIssuePermits.createdAt))
+      .limit(LEGACY_ISSUE_PERMIT_NOTES_LIST_LIMIT);
+
+    return rows.map((row) => ({
+      id: row.id,
+      issuePermitNumber: row.issuePermitNumber,
+      date: row.date,
+      permitType: row.permitType,
+      notes: row.notes!,
+    }));
+  }
+
+  private async getLegacyIssuePermitLineNotes(permitWhere: SQL | undefined) {
+    const where = permitWhere
+      ? and(isNotNull(legacyIssuePermitItems.notes), ne(sql`btrim(${legacyIssuePermitItems.notes})`, ''), permitWhere)
+      : and(isNotNull(legacyIssuePermitItems.notes), ne(sql`btrim(${legacyIssuePermitItems.notes})`, ''));
+
+    const rows = await this.db
+      .select({
+        itemId: legacyIssuePermitItems.id,
+        issuePermitId: legacyIssuePermits.id,
+        issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        date: legacyIssuePermits.date,
+        materialCode: legacyIssuePermitItems.materialCode,
+        notes: legacyIssuePermitItems.notes,
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .where(where)
+      .orderBy(desc(legacyIssuePermits.date), asc(legacyIssuePermitItems.sequenceOrder))
+      .limit(LEGACY_ISSUE_PERMIT_NOTES_LIST_LIMIT);
+
+    return rows.map((row) => ({
+      itemId: row.itemId,
+      issuePermitId: row.issuePermitId,
+      issuePermitNumber: row.issuePermitNumber,
+      date: row.date,
+      materialCode: row.materialCode,
+      notes: row.notes!,
+    }));
+  }
+
+  private async getLegacyIssuePermitTopMaterials(permitWhere: SQL | undefined) {
+    const itemWhere = permitWhere
+      ? and(isNotNull(legacyIssuePermitItems.materialCode), permitWhere)
+      : isNotNull(legacyIssuePermitItems.materialCode);
+
+    const rows = await this.db
+      .select({
+        materialCode: legacyIssuePermitItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurement: materials.unitOfMeasurement,
+        unitOfMeasurementSelected: legacyIssuePermitItems.unitOfMeasurementSelected,
+        quantity: legacyIssuePermitItems.quantity,
+        isCancelled: legacyIssuePermits.isCancelled,
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .innerJoin(materials, eq(legacyIssuePermitItems.materialCode, materials.code))
+      .where(itemWhere);
+
+    if (rows.length === 0) return [];
+
+    const withConversions = await this.attachUnitConversions(
+      rows.map((row) => ({ ...row, materialCode: row.materialCode! })),
+    );
+
+    type Acc = {
+      materialCode: string;
+      materialTitle: string;
+      unitOfMeasurement: MaterialUnit;
+      unitConversions: MaterialUnitConversionSummary[];
+      lineCount: number;
+      issuedQuantityInBase: number;
+      cancelledQuantityInBase: number;
+      missingConversionCount: number;
+    };
+
+    const byCode = new Map<string, Acc>();
+
+    for (const row of withConversions) {
+      const baseUnit = row.unitOfMeasurement as MaterialUnit;
+      const conversions = row.unitConversions.map((c) => ({
+        unit: c.unit as MaterialUnit,
+        conversionFactorToBase: c.conversionFactorToBase,
+      }));
+      const existing = byCode.get(row.materialCode) ?? {
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurement: baseUnit,
+        unitConversions: row.unitConversions,
+        lineCount: 0,
+        issuedQuantityInBase: 0,
+        cancelledQuantityInBase: 0,
+        missingConversionCount: 0,
+      };
+
+      existing.lineCount += 1;
+
+      const lineUnit = row.unitOfMeasurementSelected as MaterialUnit | null;
+      const quantity = row.quantity == null ? null : Number(row.quantity);
+      const canConvert =
+        quantity != null && lineUnit != null && this.canConvertEnteredUnitToBase(lineUnit, baseUnit, conversions);
+
+      if (!canConvert || quantity == null || lineUnit == null) {
+        existing.missingConversionCount += 1;
+      } else {
+        const quantityInBase = toBaseQuantity(quantity, resolveConversionFactor(lineUnit, baseUnit, conversions));
+        if (row.isCancelled) existing.cancelledQuantityInBase += quantityInBase;
+        else existing.issuedQuantityInBase += quantityInBase;
+      }
+
+      byCode.set(row.materialCode, existing);
+    }
+
+    return [...byCode.values()]
+      .sort((a, b) => b.lineCount - a.lineCount || a.materialTitle.localeCompare(b.materialTitle))
+      .slice(0, LEGACY_ISSUE_PERMIT_TOP_MATERIALS_LIMIT)
+      .map((row) => ({
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurement: row.unitOfMeasurement,
+        unitConversions: row.unitConversions,
+        lineCount: row.lineCount,
+        issuedQuantityInBase: row.issuedQuantityInBase,
+        cancelledQuantityInBase: row.cancelledQuantityInBase,
+        missingConversionCount: row.missingConversionCount,
+      }));
   }
 
   public async getIssuePermitHistory(params: { materialCode: string; from?: string; to?: string }) {

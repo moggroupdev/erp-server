@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'read_legacy_issue_permit_summary_report' BEFORE 'read_material_legacy_issue_permit_history_report';

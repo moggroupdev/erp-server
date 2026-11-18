@@ -66,6 +66,7 @@ export const PERMISSION_VALUES = [
   'delete_manufactured_material_bom',
   'read_material_inventory_summary_report',
   'read_material_category_stats_report',
+  'read_legacy_issue_permit_summary_report',
   'read_material_legacy_issue_permit_history_report',
   'read_material_purchasing_spending_summary_report',
   'read_material_purchasing_price_history_report',
