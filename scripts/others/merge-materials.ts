@@ -72,6 +72,7 @@ type MaterialRow = {
   marketManufacturingCostSetAt: Date | null;
   marketManufacturingCostSetBy: string | null;
   deletedAt: Date | null;
+  deletedBy: string | null;
   createdBy: string;
 };
 
@@ -241,6 +242,7 @@ async function loadMaterial(db: Db, code: string): Promise<MaterialRow | undefin
       marketManufacturingCostSetAt: schema.materials.marketManufacturingCostSetAt,
       marketManufacturingCostSetBy: schema.materials.marketManufacturingCostSetBy,
       deletedAt: schema.materials.deletedAt,
+      deletedBy: schema.materials.deletedBy,
       createdBy: schema.materials.createdBy,
     })
     .from(schema.materials)

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Patch, Param, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Patch, Delete, Param, ParseUUIDPipe, UseGuards, Query, HttpCode } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -15,6 +15,7 @@ import { SetMaterialMarketPriceDto } from './dto/set-material-market-price.dto';
 import { SetMaterialMarketManufacturingCostDto } from './dto/set-material-market-manufacturing-cost.dto';
 import { SetMaterialTypeDto } from './dto/set-material-type.dto';
 import { MaterialTypeChangePreviewQueryDto } from './dto/material-type-change-preview-query.dto';
+import { DeleteMaterialDto } from './dto/delete-material.dto';
 
 @Controller('materials')
 export class MaterialsController {
@@ -87,6 +88,23 @@ export class MaterialsController {
   @ApiBearerAuth()
   setType(@Param('code') code: string, @Body() dto: SetMaterialTypeDto) {
     return this.materialsService.setType(code, dto);
+  }
+
+  @Get(':code/delete-impact')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.DELETE_MATERIAL)
+  @ApiBearerAuth()
+  getDeleteImpact(@Param('code') code: string) {
+    return this.materialsService.getDeleteImpact(code);
+  }
+
+  @Delete(':code')
+  @HttpCode(204)
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.DELETE_MATERIAL)
+  @ApiBearerAuth()
+  delete(@Param('code') code: string, @Body() dto: DeleteMaterialDto, @RequestUser() user: User) {
+    return this.materialsService.delete(code, dto, user);
   }
 
   @Post(':code/units')

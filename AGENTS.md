@@ -62,6 +62,22 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with `MATERIAL_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
 
+### Material delete impact (required with schema changes)
+
+`MaterialsService.collectDeleteImpact` in `src/modules/materials/materials.service.ts` hardcodes every table/column that blocks hard delete and is listed on soft-delete preview (`GET /materials/:code/delete-impact`). It does **not** discover FKs from Postgres. A missing reference can let the UI show hard delete as allowed, then fail with a FK / 409 on `DELETE`, or under-report usage on the confirmation steps.
+
+**Update that helper in the same change** when you:
+
+- Add a table/column that references `materials.code` or `manufactured_material_code`
+- Rename or drop any table/column the helper already queries
+- Change which parent code/label should appear in a usage group (e.g. permit number vs header `code`)
+
+Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey` in `src/types/material.ts` and labels in `src/app/[locale]/(inner)/warehouse/materials/[code]/components/delete-material-modal.tsx`.
+
+**Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
+
+After a materials-related schema change: search schema for `materials.code` / `materialCode` / `manufacturedMaterialCode` and compare with the `Promise.all` queries in `collectDeleteImpact` (and with `MATERIAL_REF_COLUMNS` in the merge script). If a new match is missing, update the helper before shipping delete.
+
 ### Customer merge script (required with schema changes)
 
 `scripts/others/merge-customers.ts` hardcodes every table and column that references `customers.id` (and follow-on links through `customer_addresses.id`). It does **not** discover FKs from Postgres. A merge can leave the removed customer behind, or fail on delete, if a new reference is missing from the script.
@@ -130,7 +146,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | Change type                                                                  | Update                                                                           |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | New/changed table                                                            | `tables-summary.md`                                                              |
-| New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script)         |
+| New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
 | New/changed FK, unique, or column involving `customers.id` / customer addresses | `scripts/others/merge-customers.ts` (see Schema → Customer merge script)       |
 | New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
 | New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |
