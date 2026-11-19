@@ -63,7 +63,7 @@ export class LegacyReceiptPermitsService {
 
     const supplier = await this.db.query.suppliers.findFirst({
       where: eq(suppliers.id, dto.supplierId),
-      columns: { id: true, name: true },
+      columns: { id: true, code: true, name: true },
     });
     if (!supplier) {
       throw new NotFoundException(
@@ -142,7 +142,7 @@ export class LegacyReceiptPermitsService {
     const pdfFilename = this.uploaderService.saveFile(
       file,
       SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
-      buildInvoicePdfFilename(invoiceNumber),
+      buildInvoicePdfFilename(supplier.code, invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
 

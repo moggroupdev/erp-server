@@ -23,7 +23,7 @@ import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
 import { UpdateSupplierInvoiceFromPdfDto } from './dto/update-supplier-invoice-from-pdf.dto';
 
 const ORDER_COLUMNS = { id: true, code: true } as const;
-const SUPPLIER_COLUMNS = { id: true, name: true } as const;
+const SUPPLIER_COLUMNS = { id: true, code: true, name: true } as const;
 
 type MulterFile = {
   fieldname: string;
@@ -85,7 +85,7 @@ export class SupplierInvoicesService {
     const pdfFilename = this.uploaderService.saveFile(
       file,
       SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
-      buildInvoicePdfFilename(invoiceNumber),
+      buildInvoicePdfFilename(order.supplier.code, invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
 
@@ -184,7 +184,7 @@ export class SupplierInvoicesService {
     const pdfFilename = this.uploaderService.saveFile(
       file,
       SUPPLIER_INVOICE_PDF_SUBDIRECTORY,
-      buildInvoicePdfFilename(invoiceNumber),
+      buildInvoicePdfFilename(invoice.supplier.code, invoiceNumber),
     );
     if (!pdfFilename) throw new BadRequestException(translate('Failed to save the PDF file.', 'فشل حفظ ملف PDF.'));
 
