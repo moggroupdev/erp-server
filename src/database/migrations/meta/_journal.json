@@ -610,6 +610,13 @@
       "when": 1795008812669,
       "tag": "0086_brave_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795073936079,
+      "tag": "0087_icy_stranger",
+      "breakpoints": true
     }
   ]
 }
