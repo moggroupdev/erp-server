@@ -12,7 +12,7 @@ export type MaterialUnitConversionSummary = {
  * Pass as `extras` instead of nested `with: { unitConversions }` — Drizzle's `with`
  * aliases (`{table}_{rel}_{rel}_…`) are truncated by Postgres at 63 chars.
  */
-export function materialUnitConversionsExtra(fields: { code: SQLWrapper }, operators: { sql: typeof sql }) {
+export function materialUnitConversionsExtra(fields: Record<string, SQLWrapper>, operators: { sql: typeof sql }) {
   return {
     unitConversions: operators.sql<MaterialUnitConversionSummary[]>`(
       select coalesce(

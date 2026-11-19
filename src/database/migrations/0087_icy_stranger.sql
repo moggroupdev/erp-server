@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'read_accounting_supplier_invoices_report' BEFORE 'add_product';

@@ -43,7 +43,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | product_production_routes                         | uuid        | —     | NO                          | NO        | NO             |
 | product_dimensions                                | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
 | product_standard_boms                             | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
-| materials                                         | text        | —     | deletedAt field             | YES       | YES (NOT NULL) |
+| materials                                         | text        | —     | deletedAt + deletedBy       | YES       | YES (NOT NULL) |
 | material_unit_conversions                         | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
 | manufactured_material_boms                        | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
 | inquiries                                         | uuid        | —     | cancelled status            | YES       | YES (NOT NULL) |

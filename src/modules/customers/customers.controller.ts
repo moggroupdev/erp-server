@@ -7,14 +7,20 @@ import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permissio
 import { RequestUser } from 'src/modules/auth/decorators/request-user.decorator';
 import { PERMISSIONS } from 'src/utils/constants';
 import { CustomersService } from './customers.service';
+import { CustomerMergeService } from './customer-merge.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { CreateAddressDto } from 'src/utils/dto/create-address.dto';
 import { CreateContactPersonDto } from 'src/utils/dto/create-contact-person.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { MergeCustomerPreviewQueryDto } from './dto/merge-customer-preview-query.dto';
+import { MergeCustomerDto } from './dto/merge-customer.dto';
 
 @Controller('customers')
 export class CustomersController {
-  constructor(private readonly customersService: CustomersService) {}
+  constructor(
+    private readonly customersService: CustomersService,
+    private readonly customerMergeService: CustomerMergeService,
+  ) {}
 
   @Post()
   @UseGuards(PermissionGuard)
@@ -39,6 +45,22 @@ export class CustomersController {
   @ApiBearerAuth()
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.customersService.get(id);
+  }
+
+  @Get(':id/merge-preview')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.MERGE_CUSTOMERS)
+  @ApiBearerAuth()
+  previewMerge(@Param('id', ParseUUIDPipe) id: string, @Query() query: MergeCustomerPreviewQueryDto) {
+    return this.customerMergeService.preview(id, query.removeId);
+  }
+
+  @Post(':id/merge')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.MERGE_CUSTOMERS)
+  @ApiBearerAuth()
+  merge(@Param('id', ParseUUIDPipe) id: string, @Body() dto: MergeCustomerDto, @RequestUser() user: User) {
+    return this.customerMergeService.merge(id, dto, user);
   }
 
   @Put(':id')

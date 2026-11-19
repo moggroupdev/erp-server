@@ -610,6 +610,27 @@
       "when": 1795008812669,
       "tag": "0086_brave_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795073936079,
+      "tag": "0087_icy_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795077470174,
+      "tag": "0088_misty_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795087483554,
+      "tag": "0089_bored_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

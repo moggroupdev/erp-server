@@ -41,6 +41,7 @@ export const materials = pgTable(
     marketManufacturingCostSetAt: timestamp('market_manufacturing_cost_set_at', { withTimezone: true }),
     marketManufacturingCostSetBy: uuid('market_manufacturing_cost_set_by').references(() => users.id),
     deletedAt,
+    deletedBy: uuid('deleted_by').references(() => users.id), // @APP_CHECKED - set with deletedAt on soft delete; both null or both set
     createdAt,
     createdBy: uuid('created_by')
       .notNull()
@@ -48,6 +49,7 @@ export const materials = pgTable(
   },
   (table) => [
     index('materials_sub_category_id_idx').on(table.subCategoryId),
+    index('materials_deleted_by_idx').on(table.deletedBy),
     nonNegativeQuantityCheck('materials_unit_price_non_negative', table.unitPrice),
     nonNegativeQuantityCheck('materials_quantity_non_negative', table.quantity),
     nonNegativeNullableQuantityCheck('materials_opening_unit_price_non_negative', table.openingUnitPrice),
@@ -62,6 +64,10 @@ export const materials = pgTable(
     check(
       'materials_market_manufacturing_cost_pair',
       sql`(${table.marketManufacturingCost} IS NULL) = (${table.marketManufacturingCostSetAt} IS NULL) AND (${table.marketManufacturingCostSetAt} IS NULL) = (${table.marketManufacturingCostSetBy} IS NULL)`,
+    ),
+    check(
+      'materials_deleted_pair',
+      sql`(${table.deletedAt} IS NULL) = (${table.deletedBy} IS NULL)`,
     ),
   ],
 );
@@ -141,6 +147,11 @@ export const materialsRelations = relations(materials, ({ one, many }) => ({
     fields: [materials.marketManufacturingCostSetBy],
     references: [users.id],
     relationName: 'materialMarketManufacturingCostSetBy',
+  }),
+  deletedBy: one(users, {
+    fields: [materials.deletedBy],
+    references: [users.id],
+    relationName: 'materialDeletedBy',
   }),
   subCategory: one(materialCategorySubs, {
     fields: [materials.subCategoryId],
