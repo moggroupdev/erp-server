@@ -135,7 +135,7 @@ const UNIT_SCAN_TARGETS: { table: string; materialColumn: string; unitColumn: st
   { table: 'manufactured_material_boms', materialColumn: 'material_code', unitColumn: 'unit_of_measurement_selected' },
 ];
 
-/** Hardcoded material FK inventory for merge. Keep in sync with scripts/others/merge-materials.ts (see AGENTS.md). */
+/** Hardcoded material FK inventory for merge. Keep in sync with material FKs (see AGENTS.md → Material merge service). */
 @Injectable()
 export class MaterialMergeService {
   constructor(@Inject(DRIZZLE) private db: DrizzleDB) {}
