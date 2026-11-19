@@ -45,6 +45,22 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 - After a mutation, avoid a second `get()` just to build the response. Prefer Drizzle `.returning()` on the same `insert`/`update`, or compose `{ ...entity, updatedField }` from data already in hand when the client revalidates anyway. Spotlight: fewer DB round-trips.
 - Replacing a child set: load the existing rows and write the diff. Delete removed keys, insert new keys, and update a kept row only when a mutable column changed. Leave unchanged rows in place so they are not rewritten or re-audited.
 
+### Material delete impact (required with schema changes)
+
+`MaterialsService.collectDeleteImpact` in `src/modules/materials/materials.service.ts` hardcodes every table/column that blocks hard delete and is listed on soft-delete preview (`GET /materials/:code/delete-impact`). It does **not** discover FKs from Postgres. A missing reference can let the UI show hard delete as allowed, then fail with a FK / 409 on `DELETE`, or under-report usage on the confirmation steps.
+
+**Update that helper in the same change** when you:
+
+- Add a table/column that references `materials.code` or `manufactured_material_code`
+- Rename or drop any table/column the helper already queries
+- Change which parent code/label should appear in a usage group (e.g. permit number vs header `code`)
+
+Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey` in `src/types/material.ts` and labels in `src/app/[locale]/(inner)/warehouse/materials/[code]/components/material-reference-group-label.ts` (shared by delete and merge modals).
+
+**Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
+
+After a materials-related schema change: search schema for `materials.code` / `materialCode` / `manufacturedMaterialCode` and compare with the `Promise.all` queries in `collectDeleteImpact` (and with the scans/writes in `MaterialMergeService`). If a new match is missing, update the helper before shipping delete.
+
 ### Material merge service (required with schema changes)
 
 `MaterialMergeService` in `src/modules/materials/material-merge.service.ts` hardcodes every table and column that references `materials.code` (and `manufactured_material_code`). It does **not** discover FKs from Postgres. A merge can leave the removed code behind, or fail on delete, if a new reference is missing from the service.
@@ -61,22 +77,6 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 **Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
 
 After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with the reference scans, collision queries, and write steps in `MaterialMergeService`. If a new match is missing, update the service before the next merge.
-
-### Material delete impact (required with schema changes)
-
-`MaterialsService.collectDeleteImpact` in `src/modules/materials/materials.service.ts` hardcodes every table/column that blocks hard delete and is listed on soft-delete preview (`GET /materials/:code/delete-impact`). It does **not** discover FKs from Postgres. A missing reference can let the UI show hard delete as allowed, then fail with a FK / 409 on `DELETE`, or under-report usage on the confirmation steps.
-
-**Update that helper in the same change** when you:
-
-- Add a table/column that references `materials.code` or `manufactured_material_code`
-- Rename or drop any table/column the helper already queries
-- Change which parent code/label should appear in a usage group (e.g. permit number vs header `code`)
-
-Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey` in `src/types/material.ts` and labels in `src/app/[locale]/(inner)/warehouse/materials/[code]/components/material-reference-group-label.ts` (shared by delete and merge modals).
-
-**Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
-
-After a materials-related schema change: search schema for `materials.code` / `materialCode` / `manufacturedMaterialCode` and compare with the `Promise.all` queries in `collectDeleteImpact` (and with the scans/writes in `MaterialMergeService`). If a new match is missing, update the helper before shipping delete.
 
 ### Customer merge service (required with schema changes)
 
@@ -145,19 +145,19 @@ After a product-category-tree schema change: search schema for those FKs and com
 
 After **every** change, update all affected docs in the **same** change — never leave them stale.
 
-| Change type                                                                  | Update                                                                           |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| New/changed table                                                            | `tables-summary.md`                                                              |
-| New/changed FK, unique, or column involving `materials.code`                 | `MaterialMergeService` (see Schema → Material merge service) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
-| New/changed FK, unique, or column involving `customers.id` / customer addresses | `CustomerMergeService` (see Schema → Customer merge service)                 |
-| New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
-| New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |
-| New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |
-| `@RFP_APP_CHECKED` redundant column, or `@CACHING_APP_SYNCED` derived column | `db-duplications.md` and `application-logic.md`                                  |
-| `@HISTORICAL_SNAPSHOT column`                                                | `db-duplications.md`                                                             |
-| `@APP_CHECKED` column or validation rule                                     | `application-logic.md`                                                           |
-| New/changed domain, entity, or workflow step                                 | `README.md` (What the System Manages, business process, Current Scope as needed) |
-| Schema or feature scope shift                                                | `README.md` Current Scope                                                        |
+| Change type                                                                     | Update                                                                                                                                            |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New/changed table                                                               | `tables-summary.md`                                                                                                                               |
+| New/changed FK, unique, or column involving `materials.code`                    | `MaterialMergeService` (see Schema → Material merge service) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
+| New/changed FK, unique, or column involving `customers.id` / customer addresses | `CustomerMergeService` (see Schema → Customer merge service)                                                                                      |
+| New/changed FK or table hanging off the product-category tree                   | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script)                                               |
+| New/changed FK or table under material purchasing / inventory / suppliers       | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts)               |
+| New/changed `code` prefix or coded table                                        | `triggers.sql`                                                                                                                                    |
+| `@RFP_APP_CHECKED` redundant column, or `@CACHING_APP_SYNCED` derived column    | `db-duplications.md` and `application-logic.md`                                                                                                   |
+| `@HISTORICAL_SNAPSHOT column`                                                   | `db-duplications.md`                                                                                                                              |
+| `@APP_CHECKED` column or validation rule                                        | `application-logic.md`                                                                                                                            |
+| New/changed domain, entity, or workflow step                                    | `README.md` (What the System Manages, business process, Current Scope as needed)                                                                  |
+| Schema or feature scope shift                                                   | `README.md` Current Scope                                                                                                                         |
 
 Updating existing docs is required; do not create new markdown files unless the user asks, and keep these docs summarized.
 
