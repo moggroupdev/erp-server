@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -94,6 +94,37 @@ export class MaterialsService {
         },
       },
     });
+  }
+
+  public async listDeleted(queryParams: QueryParams) {
+    return await this.queryBuilderService.execute(
+      materials,
+      { ...queryParams, sortBy: queryParams.sortBy || '-deletedAt' },
+      {
+        filtering: true,
+        searchableFields: ['code', 'legacyCode', 'title', 'description'],
+        fieldLimiting: true,
+        sorting: true,
+        pagination: true,
+        additionalConditions: [isNotNull(materials.deletedAt)],
+        extras: (fields, operators) => ({
+          ...materialUnitConversionsExtra(fields, operators),
+          deletedByName: operators.sql<string | null>`(
+            select u.name
+            from users u
+            where u.id = ${fields.deletedBy}
+          )`.as('deleted_by_name'),
+        }),
+        joinFilters: {
+          mainCategoryId: {
+            localColumn: materials.subCategoryId,
+            relatedIdColumn: materialCategorySubs.id,
+            relatedTable: materialCategorySubs,
+            relatedFilterColumn: materialCategorySubs.mainCategoryId,
+          },
+        },
+      },
+    );
   }
 
   // We allow the `get` method to return a deleted material too
@@ -377,6 +408,27 @@ export class MaterialsService {
 
     if (!softDeleted)
       throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+  }
+
+  public async restore(code: string) {
+    const [restored] = await this.db
+      .update(materials)
+      .set({ deletedAt: null, deletedBy: null })
+      .where(and(eq(materials.code, code), isNotNull(materials.deletedAt)))
+      .returning();
+
+    if (restored) return restored;
+
+    const material = await this.db.query.materials.findFirst({
+      where: eq(materials.code, code),
+      columns: { code: true, deletedAt: true },
+    });
+    if (!material)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+    throw new BadRequestException(
+      translate(`Material ${code} is not deleted.`, `المادة ${code} ليست محذوفة.`),
+    );
   }
 
   // ============================== UNIT CONVERSIONS ==============================

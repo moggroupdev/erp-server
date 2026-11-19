@@ -38,6 +38,15 @@ export class MaterialsController {
     return this.materialsService.list(query);
   }
 
+  @Get('deleted')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_DELETED_MATERIALS)
+  @ApiBearerAuth()
+  @ApiListQueries()
+  listDeleted(@Query() query: QueryParams) {
+    return this.materialsService.listDeleted(query);
+  }
+
   @Get(':code')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.READ_MATERIALS)
@@ -105,6 +114,14 @@ export class MaterialsController {
   @ApiBearerAuth()
   delete(@Param('code') code: string, @Body() dto: DeleteMaterialDto, @RequestUser() user: User) {
     return this.materialsService.delete(code, dto, user);
+  }
+
+  @Patch(':code/restore')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.RESTORE_MATERIAL)
+  @ApiBearerAuth()
+  restore(@Param('code') code: string) {
+    return this.materialsService.restore(code);
   }
 
   @Post(':code/units')
