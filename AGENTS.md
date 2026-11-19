@@ -47,20 +47,20 @@ NestJS + Drizzle (PostgreSQL) ERP backend. Follow existing patterns; keep change
 
 ### Material merge script (required with schema changes)
 
-`scripts/others/merge-materials.ts` hardcodes every table and column that references `materials.code` (and `manufactured_material_code`). It does **not** discover FKs from Postgres. A merge can leave the removed code behind, or fail on delete, if a new reference is missing from the script.
+`scripts/others/merge-materials.ts` **and** `MaterialMergeService` in `src/modules/materials/material-merge.service.ts` each hardcode every table and column that references `materials.code` (and `manufactured_material_code`). Neither discovers FKs from Postgres. The CLI script and the API service are separate copies; a merge can leave the removed code behind, or fail on delete, if a new reference is missing from either.
 
-**Update that script in the same change** when you:
+**Update both the script and `MaterialMergeService` in the same change** when you:
 
 - Add a table/column that references `materials.code` or `manufactured_material_code`
 - Add or change a unique constraint that includes a material code (e.g. one material per parent)
 - Add or change a composite FK in the RFQ → quotation → purchase-order chain
-- Rename or drop any table/column the script already updates
+- Rename or drop any table/column either already updates
 - Change `materials` fields it merges (`quantity`, `unit_price`, `opening_*`, `minimum_stock`, market price, `unit_of_measurement`, `material_type`, `deleted_at`)
 - Change how unit conversions work (`material_unit_conversions`, or the meaning of `unit_of_measurement_selected`)
 
-**Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
+**Skip them** for unrelated tables, non-material columns, indexes, checks, or labels.
 
-After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with `MATERIAL_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
+After a materials-related schema change: search schema for `materials.code` / `materialCode` and compare with `MATERIAL_REF_COLUMNS` / the collision queries in the script **and** the matching scans/writes in `MaterialMergeService`. If a new match is missing, update both before the next merge.
 
 ### Material delete impact (required with schema changes)
 
@@ -72,7 +72,7 @@ After a materials-related schema change: search schema for `materials.code` / `m
 - Rename or drop any table/column the helper already queries
 - Change which parent code/label should appear in a usage group (e.g. permit number vs header `code`)
 
-Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey` in `src/types/material.ts` and labels in `src/app/[locale]/(inner)/warehouse/materials/[code]/components/delete-material-modal.tsx`.
+Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey` in `src/types/material.ts` and labels in `src/app/[locale]/(inner)/warehouse/materials/[code]/components/material-reference-group-label.ts` (shared by delete and merge modals).
 
 **Skip it** for unrelated tables, non-material columns, indexes, checks, or labels.
 
@@ -146,7 +146,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | Change type                                                                  | Update                                                                           |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | New/changed table                                                            | `tables-summary.md`                                                              |
-| New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` (see Schema → Material merge script) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
+| New/changed FK, unique, or column involving `materials.code`                 | `scripts/others/merge-materials.ts` **and** `MaterialMergeService` (see Schema → Material merge script) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
 | New/changed FK, unique, or column involving `customers.id` / customer addresses | `scripts/others/merge-customers.ts` (see Schema → Customer merge script)       |
 | New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
 | New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |

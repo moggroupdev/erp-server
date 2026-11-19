@@ -16,10 +16,16 @@ import { SetMaterialMarketManufacturingCostDto } from './dto/set-material-market
 import { SetMaterialTypeDto } from './dto/set-material-type.dto';
 import { MaterialTypeChangePreviewQueryDto } from './dto/material-type-change-preview-query.dto';
 import { DeleteMaterialDto } from './dto/delete-material.dto';
+import { MergeMaterialPreviewQueryDto } from './dto/merge-material-preview-query.dto';
+import { MergeMaterialDto } from './dto/merge-material.dto';
+import { MaterialMergeService } from './material-merge.service';
 
 @Controller('materials')
 export class MaterialsController {
-  constructor(private readonly materialsService: MaterialsService) {}
+  constructor(
+    private readonly materialsService: MaterialsService,
+    private readonly materialMergeService: MaterialMergeService,
+  ) {}
 
   @Post()
   @UseGuards(PermissionGuard)
@@ -122,6 +128,22 @@ export class MaterialsController {
   @ApiBearerAuth()
   restore(@Param('code') code: string) {
     return this.materialsService.restore(code);
+  }
+
+  @Get(':code/merge-preview')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.MERGE_MATERIALS)
+  @ApiBearerAuth()
+  previewMerge(@Param('code') code: string, @Query() query: MergeMaterialPreviewQueryDto) {
+    return this.materialMergeService.preview(code, query.removeCode);
+  }
+
+  @Post(':code/merge')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.MERGE_MATERIALS)
+  @ApiBearerAuth()
+  merge(@Param('code') code: string, @Body() dto: MergeMaterialDto, @RequestUser() user: User) {
+    return this.materialMergeService.merge(code, dto, user);
   }
 
   @Post(':code/units')

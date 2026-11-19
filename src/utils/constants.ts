@@ -55,6 +55,7 @@ export const PERMISSION_VALUES = [
   'delete_material',
   'read_deleted_materials',
   'restore_material',
+  'merge_materials',
   'set_material_market_price',
   'set_material_type',
   'print_materials_list',
