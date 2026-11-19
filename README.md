@@ -16,7 +16,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Customers & Sales Pipeline
 
-- Customer records with classification (restaurant, hotel, tourist village, hospital, residential, and similar), optional website, tax number, and commercial registration, structured delivery addresses (country, governorate, and city), contact persons, and a blacklist timestamp when a customer is blocked
+- Customer records with classification (restaurant, hotel, tourist village, hospital, residential, and similar), optional website, tax number, and commercial registration, structured delivery addresses (country, governorate, and city), contact persons, a blacklist timestamp when a customer is blocked, and merge of duplicate customers (repoint all usage to the kept customer, fill empty identity/profile fields, then hard-delete the duplicate)
 - Product inquiries listing requested equipment and quantities, progressing through preview scheduling, site visit, quotation, and acceptance or rejection
 - Site previews: scheduled visits with assigned staff, per-item measurements, and technical notes
 - Sales offers (quotations) with line pricing, validity period, status, and optional blanket discount negotiation (round log before acceptance)

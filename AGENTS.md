@@ -78,20 +78,22 @@ Also mirror new/removed group keys in erp-app: `MaterialDeleteReferenceGroupKey`
 
 After a materials-related schema change: search schema for `materials.code` / `materialCode` / `manufacturedMaterialCode` and compare with the `Promise.all` queries in `collectDeleteImpact` (and with the scans/writes in `MaterialMergeService`). If a new match is missing, update the helper before shipping delete.
 
-### Customer merge script (required with schema changes)
+### Customer merge service (required with schema changes)
 
-`scripts/others/merge-customers.ts` hardcodes every table and column that references `customers.id` (and follow-on links through `customer_addresses.id`). It does **not** discover FKs from Postgres. A merge can leave the removed customer behind, or fail on delete, if a new reference is missing from the script.
+`CustomerMergeService` in `src/modules/customers/customer-merge.service.ts` hardcodes every table and column that references `customers.id` (and follow-on links through `customer_addresses.id`). It does **not** discover FKs from Postgres. A merge can leave the removed customer behind, or fail on delete, if a new reference is missing from the service.
 
-**Update that script in the same change** when you:
+**Update `CustomerMergeService` in the same change** when you:
 
 - Add a table/column that references `customers.id` or `customer_addresses.id`
 - Add or change a unique constraint that includes `customer_id` (e.g. one default address / one primary contact)
-- Rename or drop any table/column the script already updates
+- Rename or drop any table/column the service already updates
 - Change `customers` identity or profile fields it fills (`phone`, `email`, `tax_number`, `commercial_registration_number`, `classification`, `website`, `notes`, blacklist pair)
+
+Also mirror new/removed group keys in erp-app: `CustomerMergeReferenceGroupKey` in `src/types/customer.ts` and labels in the merge-customer modal.
 
 **Skip it** for unrelated tables, non-customer columns, indexes, checks, or labels.
 
-After a customers-related schema change: search schema for `customers.id` / `customerId` / `customer_addresses` and compare with `CUSTOMER_REF_COLUMNS` and the collision queries in the script. If a new match is missing, update the script before the next merge.
+After a customers-related schema change: search schema for `customers.id` / `customerId` / `customer_addresses` and compare with `CUSTOMER_REF_COLUMNS`, the collision queries, and the write steps in `CustomerMergeService`. If a new match is missing, update the service before the next merge.
 
 ### Product main-category delete script (required with schema changes)
 
@@ -147,7 +149,7 @@ After **every** change, update all affected docs in the **same** change — neve
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | New/changed table                                                            | `tables-summary.md`                                                              |
 | New/changed FK, unique, or column involving `materials.code`                 | `MaterialMergeService` (see Schema → Material merge service) **and** `MaterialsService.collectDeleteImpact` (see Schema → Material delete impact) |
-| New/changed FK, unique, or column involving `customers.id` / customer addresses | `scripts/others/merge-customers.ts` (see Schema → Customer merge script)       |
+| New/changed FK, unique, or column involving `customers.id` / customer addresses | `CustomerMergeService` (see Schema → Customer merge service)                 |
 | New/changed FK or table hanging off the product-category tree                | `scripts/others/delete-product-category-main.ts` (see Schema → Product main-category delete script) |
 | New/changed FK or table under material purchasing / inventory / suppliers    | `scripts/others/delete-purchasing-inventory.ts` (and the seeded-before-cutoff wipe; see Schema → Purchasing inventory wipe scripts) |
 | New/changed `code` prefix or coded table                                     | `triggers.sql`                                                                   |

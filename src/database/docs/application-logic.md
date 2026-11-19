@@ -94,6 +94,13 @@ Skip when DB already enforces (checks, partial unique indexes, deferred triggers
 - Existing contracts, orders, and invoices stay as they are. Creating a new document with an already-known id is not extra-blocked.
 - `PUT /customers/:id/blacklist` and `DELETE /customers/:id/blacklist` (same for suppliers). Permission: `update_customer` / `update_supplier`.
 
+### Customers (merge duplicates)
+
+- Merge duplicates via `GET /customers/:id/merge-preview?removeId=…` and `POST /customers/:id/merge` (`merge_customers`). The URL `:id` is the kept customer; `removeId` is merged into it then hard-deleted. Body requires `confirmationCode` matching the removed customer's `code`.
+- Guards (returned as preview blockers; merge re-checks inside a transaction and 409s if any remain): different ids; both exist; unique identity fields (`phone`, `email`, `tax_number`, `commercial_registration_number`) abort when both sides are non-null and differ; app-rule collisions abort when a related document would still disagree on customer after treating keep/remove as one (contract vs inquiry, contract vs delivery address, maintenance order vs address, reception vs unit contract).
+- Writes (audited): clear removed-side default address / primary contact flags when the kept side already has them; null unique fields on removed that will fill kept; repoint every customer FK from remove → keep (addresses, contact persons, inquiries, contracts, receptions, maintenance orders, legacy issue permits — address-linked service agreements / delivery / maintenance rows move with the address, no separate `customer_id` rewrite); fill empty kept profile fields from removed (`phone`, `email`, tax/CR numbers, `classification`, `website`, `notes`); copy blacklist pair when only removed is blacklisted; name stays on kept; hard-delete the removed `customers` row; abort if any reference to remove remains.
+- **Maintenance:** merge reference lists are hardcoded in `CustomerMergeService` (not discovered from Postgres); update that service in the same change (see AGENTS.md → Customer merge service).
+
 ### Inventory (`inventory_transactions` / `inventory_transaction_items`)
 
 All sources live on the header — one source event per transaction; items only carry material, selected unit, quantity, and price. Source exclusivity and source-vs-`transaction_type` matching are DB checks (`inv_tx_source_non_conflicting`, `inv_tx_receipt_source_type_match`, `inv_tx_issue_source_type_match`), so `return` transactions can carry no source at all.
