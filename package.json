@@ -24,6 +24,7 @@
     "seed:materials": "ts-node -r tsconfig-paths/register scripts/seeding/seed-materials.ts",
     "seed:inventory-receipts": "ts-node -r tsconfig-paths/register scripts/seeding/seed-inventory-receipts.ts",
     "seed:invoice-totals": "ts-node -r tsconfig-paths/register scripts/seeding/seed-invoice-totals.ts",
+    "seed:invoice-pdfs": "ts-node -r tsconfig-paths/register scripts/seeding/seed-invoice-pdfs.ts",
     "seed:products": "ts-node -r tsconfig-paths/register scripts/seeding/seed-products.ts",
     "seed:product-category-tree": "ts-node -r tsconfig-paths/register scripts/seeding/seed-product-category-tree.ts",
     "seed:products-to-add": "ts-node -r tsconfig-paths/register scripts/seeding/seed-products-to-add.ts",
