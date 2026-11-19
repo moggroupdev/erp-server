@@ -624,6 +624,13 @@
       "when": 1795077470174,
       "tag": "0088_misty_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795087483554,
+      "tag": "0089_bored_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
