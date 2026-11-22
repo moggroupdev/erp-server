@@ -205,6 +205,7 @@ export class MaterialPurchaseRequisitionsService {
       .innerJoin(materials, eq(materialPurchaseRequisitionItems.materialCode, materials.code))
       .where(
         and(
+          eq(materialPurchaseRequisitions.isPreGoLive, false),
           eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
           eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
           eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
@@ -365,6 +366,7 @@ export class MaterialPurchaseRequisitionsService {
     reason?: string,
   ) {
     const requisition = await this.requireRequisition(id);
+    this.assertNotPreGoLive(requisition);
 
     if (this.isRejected(requisition)) {
       throw new BadRequestException(
@@ -443,7 +445,19 @@ export class MaterialPurchaseRequisitionsService {
     return item;
   }
 
+  private assertNotPreGoLive(requisition: RequisitionRow) {
+    if (requisition.isPreGoLive) {
+      throw new BadRequestException(
+        translate(
+          'This purchase requisition is from the pre-go-live period and cannot be changed.',
+          'طلب الشراء هذا من فترة ما قبل التشغيل ولا يمكن تعديله.',
+        ),
+      );
+    }
+  }
+
   private assertEditable(requisition: RequisitionRow) {
+    this.assertNotPreGoLive(requisition);
     if (this.hasAnyDecision(requisition)) {
       throw new BadRequestException(
         translate(

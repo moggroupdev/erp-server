@@ -193,6 +193,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
   - Keep at least one item on the requisition (delete blocked when only one remains)
   - Gate decide is not idempotent — second decision on the same party returns 400
   - Rejecting a gate requires a non-empty `decision_reason`; approve stores `decision_reason` as null
+  - `is_pre_go_live` (`@APP_CHECKED`): boolean, default false; set only by `npm run mark:pre-go-live-requisitions` (not in create/update DTOs). Flagged rows are fully read-only (header, items, and gate decisions rejected). Excluded from open-items (`listOpenItems`), MPO allocation validation, requisition follow-up report, and dashboard requisition counts. Requisition history keeps the rows, returns `isPreGoLive`, and buckets their quantity under `preGoLiveQuantity` (excluded from approved / pending / rejected qty). Script resets all three gates to `pending` (clears decided_at / decided_by / decision_reason) then sets the flag; aborts if any MPO allocation already links those requisitions
 - `material_purchase_requisition_item_contract_items` (`@APP_CHECKED`):
   - Contract review line must not be cancelled at link time
   - Links are editable only before any requisition gate decision (same lock as header and item edits)
@@ -201,7 +202,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
   - Written at MPO create (`POST /material-purchase-orders`) and on update (`PATCH /material-purchase-orders/:id`), nested `requisitionAllocations`
   - Update is allowed only until `createdAt` plus `MATERIAL_PURCHASE_ORDER_UPDATE_WINDOW_MS` (1 day). Reject when `cancelledAt` or `completedAt` is set, or the order already has a receipt or supplier invoice. `supplierId`, `code`, `createdAt`, and `createdBy` stay as created. `updatedAt` is null until the first successful update and is set to the current time on each update (receipts and invoices do not stamp it)
   - Every MPO line must include at least one allocation (create and update from open MPReq items only)
-  - Parent requisition must be fully approved (all three `decision = 'approved'`)
+  - Parent requisition must be fully approved (all three `decision = 'approved'`) and not `is_pre_go_live`
   - Requisition item `material_code` must match the MPO line `material_code`
   - `quantity_allocated` is stored in the requisition line's `unit_of_measurement_selected` (junction has no unit column)
   - `SUM(quantity_allocated)` per requisition line ≤ `quantity_requested` (requisition line unit)

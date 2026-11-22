@@ -1,0 +1,1 @@
+ALTER TABLE "material_purchase_requisitions" ADD COLUMN "is_pre_go_live" boolean DEFAULT false NOT NULL;

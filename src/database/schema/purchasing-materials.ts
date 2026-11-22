@@ -1,5 +1,17 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, index, foreignKey, check, unique, uniqueIndex, integer } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  index,
+  foreignKey,
+  check,
+  unique,
+  uniqueIndex,
+  integer,
+} from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
@@ -34,6 +46,8 @@ export const materialPurchaseRequisitions = pgTable(
     ...approvalGateColumns('planning'),
     ...approvalGateColumns('inventoryControl'),
     ...approvalGateColumns('manager'),
+    // @APP_CHECKED - Set only by the go-live script; flagged rows are read-only and excluded from live demand
+    isPreGoLive: boolean('is_pre_go_live').notNull().default(false),
     createdAt,
     createdBy: uuid('created_by')
       .notNull()

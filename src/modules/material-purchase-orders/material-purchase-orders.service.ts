@@ -858,6 +858,7 @@ export class MaterialPurchaseOrdersService {
           columns: {
             id: true,
             code: true,
+            isPreGoLive: true,
             planningDecision: true,
             inventoryControlDecision: true,
             managerDecision: true,
@@ -923,6 +924,15 @@ export class MaterialPurchaseOrdersService {
       if (!material) {
         throw new NotFoundException(
           translate(`Material ${row.materialCode} does not exist.`, `المادة ${row.materialCode} غير موجودة.`),
+        );
+      }
+
+      if (requisition.isPreGoLive) {
+        throw new BadRequestException(
+          translate(
+            `Requisition ${requisition.code} is from the pre-go-live period and cannot be linked to a purchase order.`,
+            `طلب الشراء ${requisition.code} من فترة ما قبل التشغيل ولا يمكن ربطه بأمر توريد.`,
+          ),
         );
       }
 
