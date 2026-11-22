@@ -374,7 +374,7 @@ export class QueryBuilderService {
 
   /**
    * Finds the previous and next rows for `currentId` in the same keyword + stable sort
-   * order used by paginated `execute` (primary sort, then primary-key ascending).
+   * order used by paginated `execute` (requested sort keys, then primary-key ascending).
    *
    * Returns null neighbors when the current row is missing from the filtered set.
    */
@@ -427,34 +427,18 @@ export class QueryBuilderService {
       return { previous: null, next: null };
     }
 
-    const { primarySortColumn, primarySortDesc, tieBreakers } = resolved;
-    const primarySortKey = columnJsKey(tableColumns, primarySortColumn);
-    const currentSortValue = (currentRow as Record<string, unknown>)[primarySortKey];
-    const currentTieValues = tieBreakers.map((col) => {
-      const key = columnJsKey(tableColumns, col);
-      return (currentRow as Record<string, unknown>)[key];
+    const { keys } = resolved;
+    const currentValues = keys.map((key) => {
+      const jsKey = columnJsKey(tableColumns, key.column);
+      return (currentRow as Record<string, unknown>)[jsKey];
     });
 
     const selectFields = select ?? { [idField]: idColumn };
     const forwardOrder = buildStableOrderBy(table, tableColumns, queryParams.sortBy as string | undefined);
-    const reverseOrder = reverseOrderBy(forwardOrder, primarySortColumn, primarySortDesc, tieBreakers);
+    const reverseOrder = reverseOrderBy(keys);
 
-    const nextCondition = buildAdjacentCondition(
-      primarySortColumn,
-      primarySortDesc,
-      tieBreakers,
-      currentSortValue,
-      currentTieValues,
-      'next',
-    );
-    const previousCondition = buildAdjacentCondition(
-      primarySortColumn,
-      primarySortDesc,
-      tieBreakers,
-      currentSortValue,
-      currentTieValues,
-      'previous',
-    );
+    const nextCondition = buildAdjacentCondition(keys, currentValues, 'next');
+    const previousCondition = buildAdjacentCondition(keys, currentValues, 'previous');
 
     const nextWhere = filterWhere ? and(filterWhere, nextCondition) : nextCondition;
     const previousWhere = filterWhere ? and(filterWhere, previousCondition) : previousCondition;
@@ -522,35 +506,50 @@ function parseValue(column: PgColumn, value: unknown): number | boolean | Date |
   }
 }
 
-type ResolvedStableSort = {
-  primarySortColumn: PgColumn;
-  primarySortDesc: boolean;
-  tieBreakers: PgColumn[];
+type SortKey = {
+  column: PgColumn;
+  desc: boolean;
 };
 
+type ResolvedStableSort = {
+  keys: SortKey[];
+};
+
+/**
+ * Resolves `sortBy` into ordered sort keys.
+ * Supports comma-separated fields with optional `-` prefix for descending
+ * (e.g. `-createdAt,-code`). Unknown fields are skipped. Primary-key columns
+ * are appended ascending so LIMIT/OFFSET pages stay stable on ties.
+ */
 function resolveStableSort(
   table: PgTable,
   tableColumns: Record<string, PgColumn>,
   sortByParam: string | undefined,
 ): ResolvedStableSort | null {
-  const sortBy = sortByParam || '-createdAt';
-  const isDesc = sortBy.startsWith('-');
-  const fieldName = isDesc ? sortBy.slice(1) : sortBy;
+  const tokens = (sortByParam || '-createdAt')
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
 
-  let primarySortColumn: PgColumn | undefined;
-  let primarySortDesc = false;
+  const keys: SortKey[] = [];
+  const usedNames = new Set<string>();
 
-  if (tableColumns[fieldName]) {
-    primarySortColumn = tableColumns[fieldName];
-    primarySortDesc = isDesc;
-  } else if (tableColumns['createdAt']) {
-    primarySortColumn = tableColumns['createdAt'];
-    primarySortDesc = true;
+  for (const token of tokens) {
+    const isDesc = token.startsWith('-');
+    const fieldName = isDesc ? token.slice(1) : token;
+    const column = tableColumns[fieldName];
+    if (!column || usedNames.has(column.name)) continue;
+    usedNames.add(column.name);
+    keys.push({ column, desc: isDesc });
   }
 
-  if (!primarySortColumn) return null;
+  if (keys.length === 0) {
+    const createdAt = tableColumns['createdAt'];
+    if (!createdAt) return null;
+    keys.push({ column: createdAt, desc: true });
+    usedNames.add(createdAt.name);
+  }
 
-  const usedNames = new Set<string>([primarySortColumn.name]);
   const pkColumns: PgColumn[] = [];
   for (const column of Object.values(tableColumns)) {
     if ((column as PgColumn & { primary?: boolean }).primary) pkColumns.push(column);
@@ -563,19 +562,19 @@ function resolveStableSort(
     }
   }
 
-  const tieBreakers: PgColumn[] = [];
   for (const pkColumn of pkColumns) {
     if (usedNames.has(pkColumn.name)) continue;
     usedNames.add(pkColumn.name);
-    tieBreakers.push(pkColumn);
+    keys.push({ column: pkColumn, desc: false });
   }
 
-  return { primarySortColumn, primarySortDesc, tieBreakers };
+  return { keys };
 }
 
 /**
- * Builds a total order for pagination: requested sort column, then primary-key columns
- * ascending so rows that share the same sort value never swap across LIMIT/OFFSET pages.
+ * Builds a total order for pagination: requested sort keys (comma-separated
+ * `sortBy`), then primary-key columns ascending so rows that share the same
+ * sort values never swap across LIMIT/OFFSET pages.
  *
  * Inline `.primaryKey()` columns expose `column.primary`; composite keys live in
  * `getTableConfig(table).primaryKeys`.
@@ -587,13 +586,7 @@ function buildStableOrderBy(
 ): SQL[] {
   const resolved = resolveStableSort(table, tableColumns, sortByParam);
   if (!resolved) return [];
-
-  const { primarySortColumn, primarySortDesc, tieBreakers } = resolved;
-  const sorts: SQL[] = [primarySortDesc ? desc(primarySortColumn) : asc(primarySortColumn)];
-  for (const pkColumn of tieBreakers) {
-    sorts.push(asc(pkColumn));
-  }
-  return sorts;
+  return resolved.keys.map((key) => (key.desc ? desc(key.column) : asc(key.column)));
 }
 
 function columnJsKey(tableColumns: Record<string, PgColumn>, column: PgColumn): string {
@@ -603,56 +596,34 @@ function columnJsKey(tableColumns: Record<string, PgColumn>, column: PgColumn): 
 }
 
 /**
- * Lexicographic neighbor of (primarySort, tieBreakers…) matching list order.
- * Tie-breakers are always ascending, same as `buildStableOrderBy`.
+ * Lexicographic neighbor of directed sort keys matching list order.
  */
-function buildAdjacentCondition(
-  primarySortColumn: PgColumn,
-  primarySortDesc: boolean,
-  tieBreakers: PgColumn[],
-  currentSortValue: unknown,
-  currentTieValues: unknown[],
-  direction: 'previous' | 'next',
-): SQL {
+function buildAdjacentCondition(keys: SortKey[], currentValues: unknown[], direction: 'previous' | 'next'): SQL {
   const wantLater = direction === 'next';
-  const primaryCmp = wantLater
-    ? primarySortDesc
-      ? lt(primarySortColumn, currentSortValue as string | number | Date)
-      : gt(primarySortColumn, currentSortValue as string | number | Date)
-    : primarySortDesc
-      ? gt(primarySortColumn, currentSortValue as string | number | Date)
-      : lt(primarySortColumn, currentSortValue as string | number | Date);
+  const branches: SQL[] = [];
 
-  if (tieBreakers.length === 0) {
-    return primaryCmp;
-  }
-
-  const branches: SQL[] = [primaryCmp];
-
-  for (let i = 0; i < tieBreakers.length; i++) {
-    const equalPrefix: SQL[] = [eq(primarySortColumn, currentSortValue as string | number | Date)];
+  for (let i = 0; i < keys.length; i++) {
+    const equalPrefix: SQL[] = [];
     for (let j = 0; j < i; j++) {
-      equalPrefix.push(eq(tieBreakers[j], currentTieValues[j] as string | number | Date));
+      equalPrefix.push(eq(keys[j].column, currentValues[j] as string | number | Date));
     }
-    const tieCol = tieBreakers[i];
-    const tieVal = currentTieValues[i] as string | number | Date;
-    const tieCmp = wantLater ? gt(tieCol, tieVal) : lt(tieCol, tieVal);
-    branches.push(and(...equalPrefix, tieCmp)!);
+
+    const { column, desc: isDesc } = keys[i];
+    const value = currentValues[i] as string | number | Date;
+    const cmp = wantLater
+      ? isDesc
+        ? lt(column, value)
+        : gt(column, value)
+      : isDesc
+        ? gt(column, value)
+        : lt(column, value);
+
+    branches.push(equalPrefix.length > 0 ? and(...equalPrefix, cmp)! : cmp);
   }
 
   return or(...branches)!;
 }
 
-function reverseOrderBy(
-  forwardOrder: SQL[],
-  primarySortColumn: PgColumn,
-  primarySortDesc: boolean,
-  tieBreakers: PgColumn[],
-): SQL[] {
-  if (forwardOrder.length === 0) return [];
-  const reversed: SQL[] = [primarySortDesc ? asc(primarySortColumn) : desc(primarySortColumn)];
-  for (const pkColumn of tieBreakers) {
-    reversed.push(desc(pkColumn));
-  }
-  return reversed;
+function reverseOrderBy(keys: SortKey[]): SQL[] {
+  return keys.map((key) => (key.desc ? asc(key.column) : desc(key.column)));
 }
