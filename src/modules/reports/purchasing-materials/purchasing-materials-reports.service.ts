@@ -947,6 +947,7 @@ export class PurchasingMaterialsReportsService {
     const dept = productionSubDepartment as ProductionSubDepartment;
     const dateRange = this.buildDateRange(params.from, params.to);
     const conditions: SQL[] = [
+      eq(materialPurchaseRequisitions.isPreGoLive, false),
       eq(materialPurchaseRequisitions.productionSubDepartment, dept),
       eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
       eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
@@ -1220,6 +1221,7 @@ export class PurchasingMaterialsReportsService {
         unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
         quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
         notes: materialPurchaseRequisitionItems.notes,
+        isPreGoLive: materialPurchaseRequisitions.isPreGoLive,
         planningDecision: materialPurchaseRequisitions.planningDecision,
         inventoryControlDecision: materialPurchaseRequisitions.inventoryControlDecision,
         managerDecision: materialPurchaseRequisitions.managerDecision,
@@ -1245,6 +1247,7 @@ export class PurchasingMaterialsReportsService {
     let approvedQuantity = 0;
     let pendingQuantity = 0;
     let rejectedQuantity = 0;
+    let preGoLiveQuantity = 0;
     let missingConversionCount = 0;
 
     const entries = rows.map((row) => {
@@ -1264,9 +1267,15 @@ export class PurchasingMaterialsReportsService {
         missingConversionCount += 1;
       } else {
         totalQuantity += quantityRequestedInBase;
-        if (status === 'approved') approvedQuantity += quantityRequestedInBase;
-        else if (status === 'rejected') rejectedQuantity += quantityRequestedInBase;
-        else pendingQuantity += quantityRequestedInBase;
+        if (row.isPreGoLive) {
+          preGoLiveQuantity += quantityRequestedInBase;
+        } else if (status === 'approved') {
+          approvedQuantity += quantityRequestedInBase;
+        } else if (status === 'rejected') {
+          rejectedQuantity += quantityRequestedInBase;
+        } else {
+          pendingQuantity += quantityRequestedInBase;
+        }
       }
 
       return {
@@ -1283,6 +1292,7 @@ export class PurchasingMaterialsReportsService {
         quantityRequested,
         quantityRequestedInBase,
         status,
+        isPreGoLive: row.isPreGoLive,
         notes: row.notes,
       };
     });
@@ -1301,6 +1311,7 @@ export class PurchasingMaterialsReportsService {
         approvedQuantity,
         pendingQuantity,
         rejectedQuantity,
+        preGoLiveQuantity,
         missingConversionCount,
       },
     };

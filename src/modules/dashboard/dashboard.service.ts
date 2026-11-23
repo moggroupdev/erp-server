@@ -131,17 +131,19 @@ export class DashboardService {
       eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
     )!;
 
+    const liveOnly = eq(materialPurchaseRequisitions.isPreGoLive, false);
+
     const [row] = await this.db
       .select({
-        weekTotal: this.countSince(materialPurchaseRequisitions.createdAt, weekStart),
-        monthTotal: this.countSince(materialPurchaseRequisitions.createdAt, monthStart),
-        overallTotal: count(),
-        weekRejected: this.countSince(materialPurchaseRequisitions.createdAt, weekStart, rejected),
-        monthRejected: this.countSince(materialPurchaseRequisitions.createdAt, monthStart, rejected),
-        overallRejected: this.countWhere(rejected),
-        weekApproved: this.countSince(materialPurchaseRequisitions.createdAt, weekStart, approved),
-        monthApproved: this.countSince(materialPurchaseRequisitions.createdAt, monthStart, approved),
-        overallApproved: this.countWhere(approved),
+        weekTotal: this.countSince(materialPurchaseRequisitions.createdAt, weekStart, liveOnly),
+        monthTotal: this.countSince(materialPurchaseRequisitions.createdAt, monthStart, liveOnly),
+        overallTotal: this.countWhere(liveOnly),
+        weekRejected: this.countSince(materialPurchaseRequisitions.createdAt, weekStart, and(liveOnly, rejected)!),
+        monthRejected: this.countSince(materialPurchaseRequisitions.createdAt, monthStart, and(liveOnly, rejected)!),
+        overallRejected: this.countWhere(and(liveOnly, rejected)!),
+        weekApproved: this.countSince(materialPurchaseRequisitions.createdAt, weekStart, and(liveOnly, approved)!),
+        monthApproved: this.countSince(materialPurchaseRequisitions.createdAt, monthStart, and(liveOnly, approved)!),
+        overallApproved: this.countWhere(and(liveOnly, approved)!),
       })
       .from(materialPurchaseRequisitions);
 
