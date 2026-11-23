@@ -40,7 +40,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 ### Inventory & Warehouse
 
-- Raw materials, spare parts, and manufactured materials with stock levels and minimum thresholds; materials can be soft-deleted (hidden from active lists), viewed and restored from the deleted list, permanently deleted only when nothing references them, or merged when a duplicate was defined twice (repoint all usage to the kept material, merge cached stock/price figures, then hard-delete the duplicate)
+- Raw materials, spare parts, tools and equipment, supplied products, and manufactured materials with stock levels and minimum thresholds; materials can be soft-deleted (hidden from active lists), viewed and restored from the deleted list, permanently deleted only when nothing references them, or merged when a duplicate was defined twice (repoint all usage to the kept material, merge cached stock/price figures, then hard-delete the duplicate)
 - Material category trees (main and sub) can be created, updated, and deleted in the app
 - Manufactured materials have their own bill of materials (BOM) listing the component materials required to produce them; components may themselves be manufactured materials
 - Manufactured materials can store a manually set market manufacturing cost (outsourcing fee in the material's base unit), used on product BOM costing as a fallback when no last outsourcing order cost exists for an externally manufactured line
@@ -76,7 +76,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 
 - Service agreements: recurring maintenance contracts per customer address (monthly, quarterly, semi-annual, or annual intervals)
 - Maintenance orders: in-warranty, out-of-warranty, or service-contract work on one or more product units; performed on-site at the customer or in-factory
-- Materials of any type (spare parts, raw materials, manufactured materials) consumed during maintenance with selling-price snapshots; customer is billed for them except in-warranty work not caused by misuse
+- Materials of any type (spare parts, raw materials, tools and equipment, supplied products, manufactured materials) consumed during maintenance with selling-price snapshots; customer is billed for them except in-warranty work not caused by misuse
 
 ### Organization & Access
 

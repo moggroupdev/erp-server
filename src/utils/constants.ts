@@ -201,7 +201,13 @@ export const MATERIAL_UNITS = Object.fromEntries(
 
 // ==================== MATERIAL_TYPES ====================
 
-export const MATERIAL_TYPE_VALUES = ['raw_materials', 'spare_parts', 'manufactured_material'] as const;
+export const MATERIAL_TYPE_VALUES = [
+  'raw_materials',
+  'manufactured_material',
+  'spare_parts',
+  'tools_and_equipment',
+  'supplied_products',
+] as const;
 
 export const MATERIAL_TYPES = Object.fromEntries(
   MATERIAL_TYPE_VALUES.map((materialType) => [materialType.toUpperCase(), materialType]),
