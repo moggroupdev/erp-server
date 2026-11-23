@@ -61,6 +61,14 @@ export class MaterialsController {
     return this.materialsService.get(code);
   }
 
+  @Get(':code/last-purchase-price')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_MATERIAL_PURCHASE_ORDERS)
+  @ApiBearerAuth()
+  getLastPurchasePrice(@Param('code') code: string) {
+    return this.materialsService.getLastPurchasePrice(code);
+  }
+
   @Put(':code')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_MATERIAL)
