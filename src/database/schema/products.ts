@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, text, uuid, index, check, unique, integer, boolean, uniqueIndex, foreignKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, uuid, index, check, unique, integer, boolean, foreignKey } from 'drizzle-orm/pg-core';
 import {
   numeric,
   percentage,
@@ -60,7 +60,7 @@ export const productDimensions = pgTable(
     depth: numeric('depth'),
     diameter: numeric('diameter'),
     height: numeric('height').notNull(),
-    isDefault: boolean('is_default').notNull().default(false),
+    isStandard: boolean('is_standard').notNull().default(false),
     notes: text('notes'),
     createdAt,
     createdBy: uuid('created_by')
@@ -69,9 +69,6 @@ export const productDimensions = pgTable(
   },
   (table) => [
     index('product_dimensions_product_code_idx').on(table.productCode),
-    uniqueIndex('product_dimensions_default_per_product_idx')
-      .on(table.productCode)
-      .where(sql`${table.isDefault} = true`),
     nonNegativeNullableQuantityCheck('product_dimensions_length_non_negative', table.length),
     nonNegativeNullableQuantityCheck('product_dimensions_depth_non_negative', table.depth),
     nonNegativeNullableQuantityCheck('product_dimensions_diameter_non_negative', table.diameter),

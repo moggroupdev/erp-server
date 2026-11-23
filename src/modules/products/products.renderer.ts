@@ -139,14 +139,14 @@ export class ProductsRenderer {
       return '<div class="no-dims">لا توجد مقاسات مسجلة</div>';
     }
 
-    const sorted = [...dimensions].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+    const sorted = [...dimensions].sort((a, b) => Number(b.isStandard) - Number(a.isStandard));
 
     const rows = sorted
       .map((dim) => {
-        const statusCell = dim.isDefault
-          ? '<td class="col-status"><span class="default-pill" title="افتراضي">افتراضي</span></td>'
+        const statusCell = dim.isStandard
+          ? '<td class="col-status"><span class="standard-pill" title="نمطي">نمطي</span></td>'
           : '<td class="col-status"></td>';
-        const rowClass = dim.isDefault ? 'default-row' : '';
+        const rowClass = dim.isStandard ? 'standard-row' : '';
         const label =
           dim.diameter != null
             ? `<span style="font-size:1.2em;color:#9ca3af;line-height:1">⌀</span>${escapeHtml(String(dim.diameter))} × ${escapeHtml(String(dim.height))} سم`

@@ -25,7 +25,7 @@ type CatalogDimension = {
   depth: number | null;
   diameter: number | null;
   height: number;
-  isDefault: boolean;
+  isStandard: boolean;
 };
 
 export type CatalogProductForExcel = {
@@ -268,7 +268,7 @@ function formatDimensionLines(dimensions: CatalogDimension[], unit: string): str
 
   return [...dimensions]
     .sort((a, b) => {
-      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      if (a.isStandard !== b.isStandard) return a.isStandard ? -1 : 1;
       return a.height - b.height;
     })
     .map((dimension) => {

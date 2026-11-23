@@ -234,6 +234,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 
 ### Production
 
+- `product_dimensions.is_standard` — independent boolean flag; any number of dimensions on the same product may be standard (including none). Create and update set the flag on that row only and do not clear siblings
 - `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
 - `product_standard_boms.quantity_required` — stored in `unit_of_measurement_selected` (or base unit when null). Must be > 0 when `no_longer_used` is false.
 - `product_standard_boms.legacy_quantity` — stored in the same unit as `quantity_required`. Optional (null or >= 0) on an active line. Required and > 0 when `no_longer_used` is true. Comparison only; costing does not use it.

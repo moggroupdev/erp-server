@@ -135,29 +135,20 @@ export class ProductsService {
   // ========================= Dimensions =========================
 
   public async addDimension(productCode: string, createProductDimensionDto: CreateProductDimensionDto, user: User) {
-    const { isDefault, ...dimensionData } = createProductDimensionDto;
+    const { isStandard, ...dimensionData } = createProductDimensionDto;
 
-    return await this.db.transaction(async (tx) => {
-      if (isDefault) {
-        await tx
-          .update(productDimensions)
-          .set({ isDefault: false })
-          .where(and(eq(productDimensions.productCode, productCode), eq(productDimensions.isDefault, true)));
-      }
+    const [dimension] = await this.db
+      .insert(productDimensions)
+      .values({ ...dimensionData, productCode, isStandard: isStandard || false, createdBy: user.id })
+      .returning();
 
-      const [dimension] = await tx
-        .insert(productDimensions)
-        .values({ ...dimensionData, productCode, isDefault: isDefault || false, createdBy: user.id })
-        .returning();
-
-      return dimension;
-    });
+    return dimension;
   }
 
   public async listDimensions(productCode: string) {
     return await this.db.query.productDimensions.findMany({
       where: eq(productDimensions.productCode, productCode),
-      orderBy: desc(productDimensions.isDefault),
+      orderBy: desc(productDimensions.isStandard),
     });
   }
 
@@ -166,9 +157,14 @@ export class ProductsService {
     dimensionId: string,
     updateProductDimensionDto: UpdateProductDimensionDto,
   ) {
+    const { isStandard, notes } = updateProductDimensionDto;
+    const patch: { isStandard?: boolean; notes?: string | null } = {};
+    if (isStandard != null) patch.isStandard = isStandard;
+    if (notes !== undefined) patch.notes = notes;
+
     const [updatedDimension] = await this.db
       .update(productDimensions)
-      .set(updateProductDimensionDto)
+      .set(patch)
       .where(and(eq(productDimensions.id, dimensionId), eq(productDimensions.productCode, productCode)))
       .returning();
 
@@ -182,37 +178,6 @@ export class ProductsService {
     }
 
     return updatedDimension;
-  }
-
-  public async setDefaultDimension(productCode: string, dimensionId: string) {
-    const dimension = await this.db.query.productDimensions.findFirst({
-      where: and(eq(productDimensions.id, dimensionId), eq(productDimensions.productCode, productCode)),
-    });
-
-    if (!dimension)
-      throw new NotFoundException(
-        translate(
-          `Dimension with ID ${dimensionId} does not exist for product ${productCode}.`,
-          `لا يوجد مقاس بالمعرف ${dimensionId} للمنتج ${productCode}.`,
-        ),
-      );
-
-    if (dimension.isDefault) return dimension;
-
-    return await this.db.transaction(async (tx) => {
-      await tx
-        .update(productDimensions)
-        .set({ isDefault: false })
-        .where(and(eq(productDimensions.productCode, productCode), eq(productDimensions.isDefault, true)));
-
-      const [updatedDimension] = await tx
-        .update(productDimensions)
-        .set({ isDefault: true })
-        .where(eq(productDimensions.id, dimensionId))
-        .returning();
-
-      return updatedDimension;
-    });
   }
 
   // ========================= Production Routes =========================

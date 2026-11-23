@@ -49,7 +49,7 @@ type CleanDimension = {
   depth: number | null;
   diameter: number | null;
   height: number | null;
-  isDefault: boolean;
+  isStandard: boolean;
   notes?: string | null;
 };
 
@@ -58,7 +58,7 @@ type ValidDimension = {
   depth: number | null;
   diameter: number | null;
   height: number;
-  isDefault: boolean;
+  isStandard: boolean;
   notes?: string | null;
 };
 
@@ -144,11 +144,8 @@ function isValidDimension(d: CleanDimension): d is ValidDimension {
 
 function normalizeDimensions(dims: CleanDimension[]): ValidDimension[] {
   const valid = dims.filter(isValidDimension);
-  if (valid.length > 0) {
-    valid[0].isDefault = true;
-    for (let i = 1; i < valid.length; i++) {
-      valid[i].isDefault = false;
-    }
+  if (valid.length > 0 && !valid.some((d) => d.isStandard)) {
+    valid[0].isStandard = true;
   }
   return valid;
 }
@@ -291,7 +288,7 @@ async function main() {
             depth: dim.depth,
             diameter: dim.diameter,
             height: dim.height,
-            isDefault: dim.isDefault,
+            isStandard: dim.isStandard,
             notes: dim.notes ?? null,
             createdBy: user.id,
           });

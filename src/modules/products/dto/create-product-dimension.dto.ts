@@ -30,7 +30,7 @@ export class CreateProductDimensionDto {
   @IsBoolean()
   @IsOptional()
   @ApiPropertyOptional()
-  isDefault: boolean | null;
+  isStandard: boolean | null;
 
   @TrimToNull()
   @IsString()
