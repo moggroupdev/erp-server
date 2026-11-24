@@ -411,6 +411,10 @@ export class PurchasingMaterialsReportsService {
 
     inRange.sort((a, b) => b.severity - a.severity || b.orderDate.getTime() - a.orderDate.getTime());
 
+    const legacyByItemId = await this.getInventoryTransactionLegacyNumbersByOrderItemIds(
+      inRange.map((row) => row.itemId),
+    );
+
     const byCause: Record<PriceOutlierCause, number> = {
       decimal_typo: 0,
       unit_mismatch: 0,
@@ -429,7 +433,10 @@ export class PurchasingMaterialsReportsService {
         materialsAffected: materialsAffected.size,
         byCause,
       },
-      rows: inRange.map(({ severity: _severity, ...row }) => row),
+      rows: inRange.map(({ severity: _severity, ...row }) => ({
+        ...row,
+        inventoryTransactionLegacyNumbers: legacyByItemId.get(row.itemId) ?? [],
+      })),
     };
   }
 
@@ -1738,6 +1745,38 @@ export class PurchasingMaterialsReportsService {
     }
 
     return legacyByOrderId;
+  }
+
+  private async getInventoryTransactionLegacyNumbersByOrderItemIds(itemIds: string[]) {
+    const legacyByItemId = new Map<string, string[]>();
+    if (itemIds.length === 0) return legacyByItemId;
+
+    const rows = await this.db
+      .select({
+        itemId: materialPurchaseReceiptItems.materialPurchaseOrderItemId,
+        legacyNumber: inventoryTransactions.legacyNumber,
+      })
+      .from(materialPurchaseReceiptItems)
+      .innerJoin(
+        materialPurchaseReceipts,
+        eq(materialPurchaseReceiptItems.materialPurchaseReceiptId, materialPurchaseReceipts.id),
+      )
+      .innerJoin(inventoryTransactions, eq(inventoryTransactions.materialPurchaseReceiptId, materialPurchaseReceipts.id))
+      .where(
+        and(
+          inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, itemIds),
+          isNotNull(inventoryTransactions.legacyNumber),
+        ),
+      );
+
+    for (const row of rows) {
+      if (!row.legacyNumber) continue;
+      const existing = legacyByItemId.get(row.itemId) ?? [];
+      if (!existing.includes(row.legacyNumber)) existing.push(row.legacyNumber);
+      legacyByItemId.set(row.itemId, existing);
+    }
+
+    return legacyByItemId;
   }
 
   private async getCategoryTopMaterials(where: SQL) {
