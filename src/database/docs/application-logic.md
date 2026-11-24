@@ -273,6 +273,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - `users.production_sub_department` — required if `department_id = PRODUCTION_DEPARTMENT_ID`
 - `roles.max_discount_pct` — cap company negotiation rounds and direct contract review discounts; `NULL` = no discount; admins exempt
 - `roles.department_id` — when set, user's `department_id` must match on role assignment
+- Role hard delete (`DELETE /roles/:id`, `delete_role`) — allowed only when no `users.role_id` points at the role, including soft-deleted users; deletes `permissions` rows for that role in the same transaction. `GET /roles/:id` returns `assignedUserCount` with that same unfiltered count
 
 ### Contract reviews
 

@@ -23,8 +23,8 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | Table                                             | Primary key | Code  | Deleting                    | createdAt | createdBy      |
 | ------------------------------------------------- | ----------- | ----- | --------------------------- | --------- | -------------- |
 | users                                             | uuid        | USR   | deletedAt field             | YES       | YES (NULLABLE) |
-| roles                                             | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
-| permissions                                       | composite   | —     | NO                          | NO        | NO             |
+| roles                                             | uuid        | —     | Hard delete when unused     | YES       | YES (NOT NULL) |
+| permissions                                       | composite   | —     | With role hard delete       | NO        | NO             |
 | departments                                       | uuid        | —     | NO                          | NO        | NO             |
 | countries                                         | uuid        | —     | NO                          | NO        | NO             |
 | governorates                                      | uuid        | —     | NO                          | NO        | NO             |
