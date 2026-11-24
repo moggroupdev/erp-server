@@ -72,7 +72,7 @@ Not performance caches. The writer sets them from the parent row on insert. Comp
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `offer_items.unit_price`                                       | Quoted price (e.g. catalog BOM × `pricing_factor`)                                                          |
 | `contract_items.unit_price`                                    | Pre-discount quoted price; changes via cancel-and-replace only. **Temporary:** nullable on legacy lines for paper backfill; required on ERP-native |
-| `inventory_transaction_items.unit_price`                       | User-provided actual price at transaction time                                                              |
+| `inventory_transaction_items.unit_price`                       | User-provided actual price at transaction time. Exception: posted MPO line correction rewrites it via `convertUnitPrice` from the corrected order line |
 | `maintenance_order_materials.unit_price`                       | Selling price at time of use                                                                                |
 | `material_purchase_requisitions.production_sub_department_manager_id` | `production_sub_department_managers.manager_id` for the requisition's `production_sub_department` |
 | `audit_logs.actor_name`                                        | `users.name` for `actor_user_id` at change time                                                 |

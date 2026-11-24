@@ -88,7 +88,7 @@ export const inventoryTransactionItems = pgTable(
       .references(() => materials.code),
     unitOfMeasurementSelected: materialUnitEnum('unit_of_measurement_selected').notNull(), // @APP_CHECKED - Must be the material's base unit or one of its conversions
     quantity: numeric('quantity').notNull(),
-    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - User-provided actual price at transaction time
+    unitPrice: numeric('unit_price').notNull(), // @HISTORICAL_SNAPSHOT - Set at transaction time; rewritten only by posted MPO line correction (`PATCH .../items/:itemId`)
   },
   (table) => [
     foreignKey({

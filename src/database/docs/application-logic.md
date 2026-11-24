@@ -64,7 +64,7 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
-**Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land.
+**Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land. The same obligation applies to posted MPO line correction (`PATCH /material-purchase-orders/:orderId/items/:itemId`): it rewrites the inventory line quantity and unit price but must later apply those changes as a stock/costing delta when sync lands.
 
 `**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`). The average-price-gaps report audits this not-yet-synced cache against the quantity-weighted average of non-cancelled `material_purchase_order_items` (converted to the material's base unit).
 
@@ -114,6 +114,7 @@ All sources live on the header — one source event per transaction; items only 
   - App enforces at most one IVT per receipt for new posts (legacy rows may already have several)
   - Items are projected from receipt lines with `quantity_received > 0`; `unit_price` is copied from the MPO line and converted into the receipt line's unit (not client-writable)
   - Does **not** update `materials.quantity` / `materials.unit_price` yet (see deferred note under Caching)
+  - Posted MPO line correction may rewrite that inventory item's `material_code`, selected unit, quantity, and converted `unit_price` (see Purchasing → posted line correction)
 
 ### Warehouse (legacy issue permits)
 
@@ -170,6 +171,14 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase order items (`material_purchase_order_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
+- Posted MPO line correction (`PATCH /material-purchase-orders/:orderId/items/:itemId`, permission `correct_material_purchase_order_item`) (`@APP_CHECKED`):
+  - Separate from the normal one-day whole-order update. Cancelled orders are refused; completed orders are allowed. `completed_at` is recomputed from every receipt line in base units
+  - Body: `materialCode`, `unitOfMeasurementSelected`, `quantityOrdered`, `unitPrice`, `notes`. Typed quantities are stored as entered (no unit conversion of the old number)
+  - When the line has exactly one receipt item, that receipt's selected unit and `quantity_received` are set to the order line unit and ordered quantity. `quantity_rejected` is unchanged. More than one receipt line, or any non-zero rejected quantity, is rejected
+  - When that receipt already has an inventory transaction, the one inventory item with the old material code is rewritten (material, unit, quantity = ordered, unit price via `convertUnitPrice`). Missing or ambiguous inventory lines, or a target material already on the transaction, are rejected. Unposted receipts update the receipt only
+  - Supplier invoice rows are not written; order `total_amount` is recomputed. When the order already has payment terms, they are rechecked against the new VAT-inclusive grand total and the correction is rejected when they no longer cover it. Orders with no payment terms skip that check
+  - Quotation link is cleared when the material changes. A single requisition allocation is resized to the new ordered base quantity (capped by the requisition). Multiple allocations reject material or ordered-quantity changes that break base-unit equality
+  - Does **not** update `materials.quantity` / `materials.unit_price` (see deferred note under Caching)
 - Material purchase order payment terms (`material_purchase_order_payment_terms`) (`@APP_CHECKED`):
   - Contractual slices on the order, not payables generated per receipt or invoice. `after_receipt` / `after_invoice` store a day offset; the due date is resolved later when that document exists
   - `POST /material-purchase-orders` requires delivery location and timing, and at least one payment slice. The set must cover the VAT-inclusive grand total (`total_amount * (1 + VAT_RATE)`, where `VAT_RATE` is the global constant) exactly. `total_amount` itself stays the pre-tax sum of line totals. Percentages are of that grand total (not of the remainder); fixed amounts are absolute. Compare at 6 decimal places
