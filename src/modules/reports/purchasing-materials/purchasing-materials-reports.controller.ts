@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AllowedPermission } from 'src/modules/auth/decorators/allowed-permission.decorator';
 import { PermissionGuard } from 'src/modules/auth/guards/permission.guard';
@@ -109,6 +109,15 @@ export class PurchasingMaterialsReportsController {
     @Query('to') to?: string,
   ) {
     return this.service.getRequisitionFollowUp({ productionSubDepartment, from, to });
+  }
+
+  @Get('requisition-follow-up/excel')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.DOWNLOAD_MATERIAL_PURCHASING_REQUISITION_FOLLOW_UP_REPORT)
+  @ApiBearerAuth()
+  @Header('Cache-Control', 'no-store')
+  downloadRequisitionFollowUpExcel(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.service.downloadRequisitionFollowUpExcel({ from, to });
   }
 
   @Get('requisition-history')

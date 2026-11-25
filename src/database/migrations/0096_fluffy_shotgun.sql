@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'download_material_purchasing_requisition_follow_up_report' BEFORE 'read_material_purchasing_requisition_history_report';

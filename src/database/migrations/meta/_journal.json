@@ -673,6 +673,13 @@
       "when": 1795594847909,
       "tag": "0095_noisy_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1795603859891,
+      "tag": "0096_fluffy_shotgun",
+      "breakpoints": true
     }
   ]
 }
