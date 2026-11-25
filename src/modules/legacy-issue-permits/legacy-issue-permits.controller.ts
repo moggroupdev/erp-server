@@ -12,6 +12,7 @@ import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
 import { ReorderLegacyIssuePermitItemsDto } from './dto/reorder-legacy-issue-permit-items.dto';
+import { ListNotedItemsQueryDto } from './dto/list-noted-items-query.dto';
 
 @Controller('legacy-issue-permits')
 export class LegacyIssuePermitsController {
@@ -32,6 +33,14 @@ export class LegacyIssuePermitsController {
   @ApiListQueries()
   list(@Query() query: QueryParams) {
     return this.legacyIssuePermitsService.list(query);
+  }
+
+  @Get('items-with-notes')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.READ_LEGACY_ISSUE_PERMITS)
+  @ApiBearerAuth()
+  listNotedItems(@Query() query: ListNotedItemsQueryDto) {
+    return this.legacyIssuePermitsService.listNotedItems(query);
   }
 
   @Get(':id/neighbors')

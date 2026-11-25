@@ -121,6 +121,7 @@ All sources live on the header — one source event per transaction; items only 
 - `legacy_issue_permit_items.sequence_order` — sequential display order within a permit; assigned from create-payload array order (`index + 1`), `max + 1` when appending an item, or `index + 1` from a full item-id list on reorder
 - `legacy_issue_permit_items` — hard-delete of a line is allowed (including the last remaining item); empty permits are valid
 - `legacy_issue_permit_items.material_code` — optional; empty items are allowed. When set, `unit_of_measurement_selected` and `quantity` are required (create, add, and update)
+- `GET /legacy-issue-permits/items-with-notes` — returns every line whose `notes` is non-null and not blank after trim (including note-only lines with no material); optional filters: permit `date` range (`from`/`to` as inclusive calendar days), `permitType`, `productionSubDepartment`, `isSst`, `isCancelled`, `customerId`, `creatorId`; ordered by permit date desc, permit number desc, then `sequence_order`
 - `legacy_issue_permits.issue_order_number` / `issue_order_date` — optional as a pair; both null or both set (DB check + service)
 - `legacy_issue_permits.permit_type` — required. Field rules by type (DB checks + service):
   - `contract_review`: optional `contract_number`; optional `customer_id` **or** `has_multiple_customers`; no maintenance fields

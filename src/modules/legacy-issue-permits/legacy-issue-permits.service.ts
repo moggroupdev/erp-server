@@ -1,4 +1,4 @@
-import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNotNull, lte, ne, sql, type SQL } from 'drizzle-orm';
 import {
   BadRequestException,
   ConflictException,
@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { customers, legacyIssuePermitItems, legacyIssuePermits } from 'src/database/schema';
+import { customers, legacyIssuePermitItems, legacyIssuePermits, materials } from 'src/database/schema';
 import { QueryParams, User, type LegacyIssuePermitType } from 'src/utils/types';
 import { LEGACY_ISSUE_PERMIT_TYPES } from 'src/utils/constants';
 import { translate } from 'src/utils/i18n/translate';
@@ -17,6 +17,7 @@ import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
 import { ReorderLegacyIssuePermitItemsDto } from './dto/reorder-legacy-issue-permit-items.dto';
+import { ListNotedItemsQueryDto } from './dto/list-noted-items-query.dto';
 
 const SST_SUFFIX_RE = /-\d+$/;
 
@@ -95,6 +96,73 @@ export class LegacyIssuePermitsService {
       sorting: true,
       pagination: true,
     });
+  }
+
+  public async listNotedItems(query: ListNotedItemsQueryDto) {
+    const dateRange = this.buildInclusiveCalendarDateRange(query.from, query.to);
+    if (dateRange.from && dateRange.to && dateRange.from > dateRange.to) {
+      throw new BadRequestException(
+        translate('The start date must be on or before the end date.', 'يجب أن يكون تاريخ البداية قبل تاريخ النهاية أو مساوياً له.'),
+      );
+    }
+
+    const conditions: SQL[] = [
+      isNotNull(legacyIssuePermitItems.notes),
+      ne(sql`btrim(${legacyIssuePermitItems.notes})`, ''),
+    ];
+
+    if (dateRange.from) conditions.push(gte(legacyIssuePermits.date, dateRange.from));
+    if (dateRange.to) conditions.push(lte(legacyIssuePermits.date, dateRange.to));
+    if (query.permitType) conditions.push(eq(legacyIssuePermits.permitType, query.permitType));
+    if (query.productionSubDepartment) {
+      conditions.push(eq(legacyIssuePermits.productionSubDepartment, query.productionSubDepartment));
+    }
+    if (query.isSst !== undefined) conditions.push(eq(legacyIssuePermits.isSst, query.isSst));
+    if (query.isCancelled !== undefined) conditions.push(eq(legacyIssuePermits.isCancelled, query.isCancelled));
+    if (query.customerId) conditions.push(eq(legacyIssuePermits.customerId, query.customerId));
+    if (query.creatorId) conditions.push(eq(legacyIssuePermits.creatorId, query.creatorId));
+
+    const rows = await this.db
+      .select({
+        itemId: legacyIssuePermitItems.id,
+        sequenceOrder: legacyIssuePermitItems.sequenceOrder,
+        notes: legacyIssuePermitItems.notes,
+        materialCode: legacyIssuePermitItems.materialCode,
+        materialTitle: materials.title,
+        unitOfMeasurementSelected: legacyIssuePermitItems.unitOfMeasurementSelected,
+        quantity: legacyIssuePermitItems.quantity,
+        issuePermitId: legacyIssuePermits.id,
+        issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        date: legacyIssuePermits.date,
+        isSst: legacyIssuePermits.isSst,
+        isCancelled: legacyIssuePermits.isCancelled,
+        permitType: legacyIssuePermits.permitType,
+      })
+      .from(legacyIssuePermitItems)
+      .innerJoin(legacyIssuePermits, eq(legacyIssuePermitItems.issuePermitId, legacyIssuePermits.id))
+      .leftJoin(materials, eq(legacyIssuePermitItems.materialCode, materials.code))
+      .where(and(...conditions))
+      .orderBy(
+        desc(legacyIssuePermits.date),
+        desc(legacyIssuePermits.issuePermitNumber),
+        asc(legacyIssuePermitItems.sequenceOrder),
+      );
+
+    return rows.map((row) => ({
+      itemId: row.itemId,
+      sequenceOrder: row.sequenceOrder,
+      notes: row.notes!,
+      materialCode: row.materialCode,
+      materialTitle: row.materialTitle,
+      unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+      quantity: row.quantity == null ? null : Number(row.quantity),
+      issuePermitId: row.issuePermitId,
+      issuePermitNumber: row.issuePermitNumber,
+      date: row.date,
+      isSst: row.isSst,
+      isCancelled: row.isCancelled,
+      permitType: row.permitType,
+    }));
   }
 
   public async getNeighbors(id: string, queryParams: QueryParams) {
@@ -569,5 +637,15 @@ export class LegacyIssuePermitsService {
         ),
       );
     }
+  }
+
+  /** Calendar-day bounds so a `to` date includes timestamps later that same day. */
+  private buildInclusiveCalendarDateRange(from?: string, to?: string): { from?: Date; to?: Date } {
+    const fromDay = from?.slice(0, 10);
+    const toDay = to?.slice(0, 10);
+    return {
+      from: fromDay ? new Date(`${fromDay}T00:00:00.000`) : undefined,
+      to: toDay ? new Date(`${toDay}T23:59:59.999`) : undefined,
+    };
   }
 }

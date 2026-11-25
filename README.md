@@ -46,6 +46,7 @@ Commercial kitchen equipment projects are rarely simple transactions. Each order
 - Manufactured materials can store a manually set market manufacturing cost (outsourcing fee in the material's base unit), used on product BOM costing as a fallback when no last outsourcing order cost exists for an externally manufactured line
 - Inventory movements: receipts from purchase inspection or outsourcing returns, issues to production, maintenance, or outsourcing suppliers, and returns
 - Material issues linked to the production work, maintenance order material lines, or outsourcing order lines consuming them
+- Legacy issue permits (staging): list and print line items that have non-empty notes, filterable by permit date range, type, production department, SST / cancelled flags, customer, and creator
 
 ### Procurement
 
