@@ -91,7 +91,7 @@ Auto-generated on `INSERT` when `code` is null (see [`triggers.sql`](../sql/trig
 | production_plan_item_notes                        | uuid        | —     | NO                          | YES       | YES (NOT NULL) |
 | inventory_transactions                            | uuid        | IVT   | NO                          | YES       | YES (NOT NULL) |
 | inventory_transaction_items                       | uuid        | —     | NO                          | NO        | NO             |
-| legacy_issue_permits                              | uuid        | —     | isCancelled flag            | YES       | YES (NOT NULL) |
+| legacy_issue_permits                              | uuid        | —     | isCancelled / isSst flags   | YES       | YES (NOT NULL) |
 | legacy_issue_permit_items                         | uuid        | —     | NO                          | NO        | NO             |
 | login_history                                     | uuid        | —     | NO                          | YES       | NO             |
 | audit_logs                                        | uuid        | —     | NO (append-only)            | YES       | NO             |

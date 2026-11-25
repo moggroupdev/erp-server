@@ -92,6 +92,11 @@ export class CreateLegacyIssuePermitDto {
   @IsBoolean()
   @IsOptional()
   @ApiPropertyOptional()
+  isSst: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiPropertyOptional()
   isCancelled: boolean;
 
   @TrimToNull()

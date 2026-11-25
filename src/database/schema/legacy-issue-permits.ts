@@ -1,5 +1,17 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable, uuid, text, timestamp, boolean, index, foreignKey, integer, unique, check } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  index,
+  foreignKey,
+  integer,
+  unique,
+  uniqueIndex,
+  check,
+} from 'drizzle-orm/pg-core';
 import {
   createdAt,
   numeric,
@@ -19,7 +31,7 @@ export const legacyIssuePermits = pgTable(
   'legacy_issue_permits',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    issuePermitNumber: text('issue_permit_number').notNull().unique(),
+    issuePermitNumber: text('issue_permit_number').notNull(),
     issueOrderNumber: text('issue_order_number'),
     issueOrderDate: timestamp('issue_order_date', { withTimezone: true }),
     date: timestamp('date', { withTimezone: true }).notNull(),
@@ -31,6 +43,7 @@ export const legacyIssuePermits = pgTable(
     maintenanceOrderType: legacyIssuePermitMaintenanceOrderTypeEnum('maintenance_order_type'),
     customerId: uuid('customer_id'),
     hasMultipleCustomers: boolean('has_multiple_customers').notNull().default(false),
+    isSst: boolean('is_sst').notNull().default(false),
     isCancelled: boolean('is_cancelled').notNull().default(false),
     notes: text('notes'),
     createdAt,
@@ -52,6 +65,12 @@ export const legacyIssuePermits = pgTable(
       columns: [table.customerId],
       foreignColumns: [customers.id],
     }),
+    uniqueIndex('lip_number_normal_uidx')
+      .on(table.issuePermitNumber)
+      .where(sql`${table.isSst} = false`),
+    uniqueIndex('lip_number_sst_uidx')
+      .on(table.issuePermitNumber)
+      .where(sql`${table.isSst} = true`),
     index('legacy_issue_permit_creator_id_idx').on(table.creatorId),
     index('legacy_issue_permit_production_sub_department_idx').on(table.productionSubDepartment),
     index('legacy_issue_permit_date_idx').on(table.date),
