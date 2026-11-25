@@ -110,6 +110,29 @@ export type RequisitionFollowUpExcelLine = {
   requestedValue: number | null;
 };
 
+/** Localized attachment name: title + date range (+ approved suffix when filtered). */
+export function buildRequisitionFollowUpExcelFilename(options: {
+  from: string;
+  to: string;
+  approvedOnly?: boolean;
+}): string {
+  const title = options.approvedOnly
+    ? translate('Approved Purchase Requisition Follow-up', 'متابعة طلبات الشراء المعتمدة')
+    : translate('Purchase Requisition Follow-up', 'متابعة طلبات الشراء');
+  const range = translate(`from ${options.from} to ${options.to}`, `من ${options.from} إلى ${options.to}`);
+  return sanitizeDownloadFilename(`${title} - ${range}.xlsx`);
+}
+
+function sanitizeDownloadFilename(value: string): string {
+  return value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 180);
+}
+
 export async function buildRequisitionFollowUpWorkbook(
   lines: RequisitionFollowUpExcelLine[],
   options: { from: string; to: string },

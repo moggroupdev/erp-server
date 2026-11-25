@@ -2,7 +2,10 @@ import { BadRequestException, Inject, Injectable, NotFoundException, StreamableF
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { buildRequisitionFollowUpWorkbook } from './requisition-follow-up-excel';
+import {
+  buildRequisitionFollowUpExcelFilename,
+  buildRequisitionFollowUpWorkbook,
+} from './requisition-follow-up-excel';
 import {
   inventoryTransactions,
   materialCategoryMains,
@@ -1048,9 +1051,15 @@ export class PurchasingMaterialsReportsService {
       { from, to },
     );
 
+    const downloadName = buildRequisitionFollowUpExcelFilename({ from, to, approvedOnly });
+    // Node rejects non-ASCII in bare header values; keep ASCII in `filename=` and put the
+    // localized name in RFC 5987 `filename*`.
+    const asciiFallback = approvedOnly
+      ? `approved-requisition-follow-up_${from}_to_${to}.xlsx`
+      : `requisition-follow-up_${from}_to_${to}.xlsx`;
     return new StreamableFile(buffer, {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      disposition: 'attachment; filename="requisition-follow-up.xlsx"',
+      disposition: `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
       length: buffer.length,
     });
   }
