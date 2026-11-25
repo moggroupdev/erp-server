@@ -1,7 +1,9 @@
-import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
+  inventoryTransactionItems,
+  inventoryTransactions,
   materialPurchaseOrderItemRequisitionItems,
   materialPurchaseOrderItems,
   materialPurchaseOrderPaymentTerms,
@@ -28,13 +30,16 @@ import {
 import { QueryParams, type MaterialUnit, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
-import { resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
+import { convertUnitPrice, resolveConversionFactor, toBaseQuantity } from 'src/utils/helpers/unit-conversion';
 import { MaterialUnitValidationService } from 'src/utils/services/material-unit-validation.service';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
 import { UpdateMaterialPurchaseOrderDto } from './dto/update-material-purchase-order.dto';
+import { UpdateMaterialPurchaseOrderItemDto } from './dto/update-material-purchase-order-item.dto';
 import { CreateMaterialPurchaseOrderItemDto } from './dto/create-material-purchase-order-item.dto';
 import { CreateMaterialPurchaseOrderPaymentTermDto } from './dto/create-material-purchase-order-payment-term.dto';
+
+const QTY_EPSILON = 1e-9;
 
 const MONEY_SCALE = 1_000_000;
 
@@ -272,6 +277,508 @@ export class MaterialPurchaseOrdersService {
         .returning();
 
       return { ...savedOrder, items: savedItems, paymentTerms: paymentTermsResult };
+    });
+  }
+
+  public async getItemUpdateContext(orderId: string, itemId: string) {
+    const order = await this.db.query.materialPurchaseOrders.findFirst({
+      where: eq(materialPurchaseOrders.id, orderId),
+      columns: { id: true, code: true, cancelledAt: true },
+    });
+    if (!order) {
+      throw new NotFoundException(
+        translate(`Material purchase order with ID ${orderId} does not exist.`, `لا يوجد أمر شراء مواد بالمعرف ${orderId}.`),
+      );
+    }
+
+    const item = await this.db.query.materialPurchaseOrderItems.findFirst({
+      where: and(
+        eq(materialPurchaseOrderItems.id, itemId),
+        eq(materialPurchaseOrderItems.materialPurchaseOrderId, orderId),
+      ),
+      columns: {
+        id: true,
+        materialCode: true,
+        unitOfMeasurementSelected: true,
+        quantityOrdered: true,
+        unitPrice: true,
+        notes: true,
+      },
+    });
+    if (!item) {
+      throw new NotFoundException(
+        translate(
+          `Purchase order item ${itemId} was not found on this order.`,
+          `بند أمر التوريد ${itemId} غير موجود على هذا الأمر.`,
+        ),
+      );
+    }
+
+    const [invoice] = await this.db
+      .select({ id: supplierInvoices.id })
+      .from(supplierInvoices)
+      .where(eq(supplierInvoices.materialPurchaseOrderId, orderId))
+      .limit(1);
+
+    const receiptRows = await this.db
+      .select({
+        receiptItemId: materialPurchaseReceiptItems.id,
+        receiptId: materialPurchaseReceipts.id,
+        receiptCode: materialPurchaseReceipts.code,
+        quantityReceived: materialPurchaseReceiptItems.quantityReceived,
+        quantityRejected: materialPurchaseReceiptItems.quantityRejected,
+        unitOfMeasurementSelected: materialPurchaseReceiptItems.unitOfMeasurementSelected,
+      })
+      .from(materialPurchaseReceiptItems)
+      .innerJoin(
+        materialPurchaseReceipts,
+        eq(materialPurchaseReceiptItems.materialPurchaseReceiptId, materialPurchaseReceipts.id),
+      )
+      .where(eq(materialPurchaseReceiptItems.materialPurchaseOrderItemId, itemId));
+
+    let linkedReceipt: {
+      receiptCode: string;
+      quantityReceived: number;
+      quantityRejected: number;
+      unitOfMeasurementSelected: MaterialUnit;
+      inventoryTransactionCode: string | null;
+    } | null = null;
+
+    if (receiptRows.length === 1) {
+      const row = receiptRows[0];
+      const [ivt] = await this.db
+        .select({ code: inventoryTransactions.code })
+        .from(inventoryTransactions)
+        .where(eq(inventoryTransactions.materialPurchaseReceiptId, row.receiptId))
+        .limit(1);
+
+      linkedReceipt = {
+        receiptCode: row.receiptCode,
+        quantityReceived: Number(row.quantityReceived),
+        quantityRejected: Number(row.quantityRejected),
+        unitOfMeasurementSelected: row.unitOfMeasurementSelected as MaterialUnit,
+        inventoryTransactionCode: ivt?.code ?? null,
+      };
+    }
+
+    return {
+      orderCode: order.code,
+      cancelled: !!order.cancelledAt,
+      hasSupplierInvoice: !!invoice,
+      receiptLineCount: receiptRows.length,
+      linkedReceipt,
+      item: {
+        id: item.id,
+        materialCode: item.materialCode,
+        unitOfMeasurementSelected: item.unitOfMeasurementSelected as MaterialUnit,
+        quantityOrdered: Number(item.quantityOrdered),
+        unitPrice: Number(item.unitPrice),
+        notes: item.notes,
+      },
+    };
+  }
+
+  public async updateItem(orderId: string, itemId: string, dto: UpdateMaterialPurchaseOrderItemDto) {
+    await this.materialUnitValidationService.assertValidSelectedUnits([
+      { materialCode: dto.materialCode, unitOfMeasurementSelected: dto.unitOfMeasurementSelected },
+    ]);
+
+    return await this.db.transaction(async (tx) => {
+      const [order] = await tx
+        .select()
+        .from(materialPurchaseOrders)
+        .where(eq(materialPurchaseOrders.id, orderId))
+        .for('update');
+
+      if (!order) {
+        throw new NotFoundException(
+          translate(
+            `Material purchase order with ID ${orderId} does not exist.`,
+            `لا يوجد أمر شراء مواد بالمعرف ${orderId}.`,
+          ),
+        );
+      }
+
+      if (order.cancelledAt) {
+        throw new BadRequestException(
+          translate('A cancelled purchase order cannot be updated.', 'لا يمكن تحديث أمر توريد ملغى.'),
+        );
+      }
+
+      const [item] = await tx
+        .select()
+        .from(materialPurchaseOrderItems)
+        .where(
+          and(
+            eq(materialPurchaseOrderItems.id, itemId),
+            eq(materialPurchaseOrderItems.materialPurchaseOrderId, orderId),
+          ),
+        )
+        .for('update');
+
+      if (!item) {
+        throw new NotFoundException(
+          translate(
+            `Purchase order item ${itemId} was not found on this order.`,
+            `بند أمر التوريد ${itemId} غير موجود على هذا الأمر.`,
+          ),
+        );
+      }
+
+      const material = await tx.query.materials.findFirst({
+        where: and(eq(materials.code, dto.materialCode), isNull(materials.deletedAt)),
+        columns: { code: true, unitOfMeasurement: true },
+        extras: materialUnitConversionsExtra,
+      });
+
+      if (!material) {
+        throw new NotFoundException(
+          translate(`Material ${dto.materialCode} does not exist.`, `المادة ${dto.materialCode} غير موجودة.`),
+        );
+      }
+
+      if (dto.materialCode !== item.materialCode) {
+        const [duplicate] = await tx
+          .select({ id: materialPurchaseOrderItems.id })
+          .from(materialPurchaseOrderItems)
+          .where(
+            and(
+              eq(materialPurchaseOrderItems.materialPurchaseOrderId, orderId),
+              eq(materialPurchaseOrderItems.materialCode, dto.materialCode),
+            ),
+          )
+          .limit(1);
+
+        if (duplicate) {
+          throw new ConflictException(
+            translate(
+              'Duplicate materials are not allowed on the same purchase order.',
+              'لا يُسمح بتكرار المواد في نفس أمر التوريد.',
+            ),
+          );
+        }
+      }
+
+      const receiptItems = await tx
+        .select({
+          id: materialPurchaseReceiptItems.id,
+          materialPurchaseReceiptId: materialPurchaseReceiptItems.materialPurchaseReceiptId,
+          quantityReceived: materialPurchaseReceiptItems.quantityReceived,
+          quantityRejected: materialPurchaseReceiptItems.quantityRejected,
+          unitOfMeasurementSelected: materialPurchaseReceiptItems.unitOfMeasurementSelected,
+        })
+        .from(materialPurchaseReceiptItems)
+        .where(eq(materialPurchaseReceiptItems.materialPurchaseOrderItemId, itemId))
+        .for('update');
+
+      if (receiptItems.length > 1) {
+        throw new BadRequestException(
+          translate(
+            'This order line has more than one receipt and cannot be corrected this way.',
+            'هذا البند له أكثر من سند استلام ولا يمكن تصحيحه بهذه الطريقة.',
+          ),
+        );
+      }
+
+      const receiptItem = receiptItems[0] ?? null;
+      if (receiptItem && Number(receiptItem.quantityRejected) > QTY_EPSILON) {
+        throw new BadRequestException(
+          translate(
+            'This order line has a rejected receipt quantity and cannot be corrected this way.',
+            'هذا البند يحتوي على كمية مرفوضة في الاستلام ولا يمكن تصحيحه بهذه الطريقة.',
+          ),
+        );
+      }
+
+      let inventoryTransaction: { id: string; code: string } | null = null;
+      let inventoryItem: { id: string; materialCode: string } | null = null;
+
+      if (receiptItem) {
+        const [ivt] = await tx
+          .select({ id: inventoryTransactions.id, code: inventoryTransactions.code })
+          .from(inventoryTransactions)
+          .where(eq(inventoryTransactions.materialPurchaseReceiptId, receiptItem.materialPurchaseReceiptId))
+          .for('update');
+
+        if (ivt) {
+          inventoryTransaction = ivt;
+          const ivtItems = await tx
+            .select({
+              id: inventoryTransactionItems.id,
+              materialCode: inventoryTransactionItems.materialCode,
+            })
+            .from(inventoryTransactionItems)
+            .where(eq(inventoryTransactionItems.transactionId, ivt.id))
+            .for('update');
+
+          const matches = ivtItems.filter((row) => row.materialCode === item.materialCode);
+          if (matches.length !== 1) {
+            throw new BadRequestException(
+              translate(
+                `Inventory transaction ${ivt.code} does not have exactly one line for material ${item.materialCode}.`,
+                `إذن الإضافة ${ivt.code} لا يحتوي على بند واحد بالضبط للمادة ${item.materialCode}.`,
+              ),
+            );
+          }
+
+          if (dto.materialCode !== item.materialCode) {
+            const targetTaken = ivtItems.some((row) => row.materialCode === dto.materialCode);
+            if (targetTaken) {
+              throw new ConflictException(
+                translate(
+                  `Inventory transaction ${ivt.code} already has a line for material ${dto.materialCode}.`,
+                  `إذن الإضافة ${ivt.code} يحتوي بالفعل على بند للمادة ${dto.materialCode}.`,
+                ),
+              );
+            }
+          }
+
+          inventoryItem = matches[0];
+        }
+      }
+
+      const allocations = await tx
+        .select({
+          id: materialPurchaseOrderItemRequisitionItems.id,
+          materialPurchaseRequisitionItemId: materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+          quantityAllocated: materialPurchaseOrderItemRequisitionItems.quantityAllocated,
+        })
+        .from(materialPurchaseOrderItemRequisitionItems)
+        .where(eq(materialPurchaseOrderItemRequisitionItems.materialPurchaseOrderItemId, itemId))
+        .for('update');
+
+      const conversions = (material.unitConversions ?? []) as UnitConversionRow[];
+      const orderFactor = resolveConversionFactor(
+        dto.unitOfMeasurementSelected,
+        material.unitOfMeasurement as MaterialUnit,
+        conversions,
+      );
+      const orderedBase = toBaseQuantity(Number(dto.quantityOrdered), orderFactor);
+
+      if (allocations.length === 1) {
+        const allocation = allocations[0];
+        const [reqItem] = await tx
+          .select({
+            id: materialPurchaseRequisitionItems.id,
+            materialCode: materialPurchaseRequisitionItems.materialCode,
+            quantityRequested: materialPurchaseRequisitionItems.quantityRequested,
+            unitOfMeasurementSelected: materialPurchaseRequisitionItems.unitOfMeasurementSelected,
+          })
+          .from(materialPurchaseRequisitionItems)
+          .where(eq(materialPurchaseRequisitionItems.id, allocation.materialPurchaseRequisitionItemId))
+          .for('update');
+
+        if (!reqItem) {
+          throw new NotFoundException(
+            translate('Purchase requisition item not found.', 'بند طلب الشراء غير موجود.'),
+          );
+        }
+
+        if (reqItem.materialCode !== dto.materialCode) {
+          throw new BadRequestException(
+            translate(
+              `Requisition item material ${reqItem.materialCode} does not match order line material ${dto.materialCode}.`,
+              `مادة بند طلب الشراء ${reqItem.materialCode} لا تطابق مادة بند أمر التوريد ${dto.materialCode}.`,
+            ),
+          );
+        }
+
+        const reqFactor = resolveConversionFactor(
+          reqItem.unitOfMeasurementSelected as MaterialUnit,
+          material.unitOfMeasurement as MaterialUnit,
+          conversions,
+        );
+        const newAllocated = reqFactor === 0 ? orderedBase : orderedBase / reqFactor;
+
+        const [{ totalAllocated }] = await tx
+          .select({
+            totalAllocated: sql<string>`coalesce(sum(${materialPurchaseOrderItemRequisitionItems.quantityAllocated}), 0)`,
+          })
+          .from(materialPurchaseOrderItemRequisitionItems)
+          .where(
+            and(
+              eq(
+                materialPurchaseOrderItemRequisitionItems.materialPurchaseRequisitionItemId,
+                allocation.materialPurchaseRequisitionItemId,
+              ),
+              notInArray(materialPurchaseOrderItemRequisitionItems.id, [allocation.id]),
+            ),
+          );
+
+        if (Number(totalAllocated) + newAllocated > Number(reqItem.quantityRequested) + QTY_EPSILON) {
+          throw new BadRequestException(
+            translate(
+              `Allocated quantity for requisition item exceeds quantity requested (${reqItem.quantityRequested}).`,
+              `الكمية الموزعة لبند طلب الشراء تتجاوز الكمية المطلوبة (${reqItem.quantityRequested}).`,
+            ),
+          );
+        }
+
+        if (Math.abs(Number(allocation.quantityAllocated) - newAllocated) > QTY_EPSILON) {
+          await tx
+            .update(materialPurchaseOrderItemRequisitionItems)
+            .set({ quantityAllocated: newAllocated })
+            .where(eq(materialPurchaseOrderItemRequisitionItems.id, allocation.id));
+        }
+      } else if (allocations.length > 1) {
+        if (dto.materialCode !== item.materialCode) {
+          throw new BadRequestException(
+            translate(
+              'This order line has multiple requisition allocations. Change the material only after reallocating on the normal edit path.',
+              'هذا البند مرتبط بعدة توزيعات لطلبات شراء. غيّر المادة فقط بعد إعادة التوزيع من مسار التعديل العادي.',
+            ),
+          );
+        }
+
+        const reqItemIds = allocations.map((row) => row.materialPurchaseRequisitionItemId);
+        const reqItems = await tx.query.materialPurchaseRequisitionItems.findMany({
+          where: inArray(materialPurchaseRequisitionItems.id, reqItemIds),
+          columns: {
+            id: true,
+            materialCode: true,
+            unitOfMeasurementSelected: true,
+          },
+        });
+        const reqById = new Map(reqItems.map((row) => [row.id, row]));
+
+        let allocatedBase = 0;
+        for (const allocation of allocations) {
+          const reqItem = reqById.get(allocation.materialPurchaseRequisitionItemId);
+          if (!reqItem) {
+            throw new NotFoundException(
+              translate('Purchase requisition item not found.', 'بند طلب الشراء غير موجود.'),
+            );
+          }
+          if (reqItem.materialCode !== dto.materialCode) {
+            throw new BadRequestException(
+              translate(
+                `Requisition item material ${reqItem.materialCode} does not match order line material ${dto.materialCode}.`,
+                `مادة بند طلب الشراء ${reqItem.materialCode} لا تطابق مادة بند أمر التوريد ${dto.materialCode}.`,
+              ),
+            );
+          }
+          const reqFactor = resolveConversionFactor(
+            reqItem.unitOfMeasurementSelected as MaterialUnit,
+            material.unitOfMeasurement as MaterialUnit,
+            conversions,
+          );
+          allocatedBase += toBaseQuantity(Number(allocation.quantityAllocated), reqFactor);
+        }
+
+        if (Math.abs(allocatedBase - orderedBase) > QTY_EPSILON) {
+          throw new BadRequestException(
+            translate(
+              'This order line has multiple requisition allocations. Change the ordered quantity only after reallocating on the normal edit path.',
+              'هذا البند مرتبط بعدة توزيعات لطلبات شراء. غيّر الكمية المطلوبة فقط بعد إعادة التوزيع من مسار التعديل العادي.',
+            ),
+          );
+        }
+      }
+
+      const supplierQuotationItemId =
+        dto.materialCode !== item.materialCode ? null : (item.supplierQuotationItemId ?? null);
+
+      const [updatedItem] = await tx
+        .update(materialPurchaseOrderItems)
+        .set({
+          materialCode: dto.materialCode,
+          unitOfMeasurementSelected: dto.unitOfMeasurementSelected,
+          quantityOrdered: dto.quantityOrdered,
+          unitPrice: dto.unitPrice,
+          notes: dto.notes,
+          supplierQuotationItemId,
+        })
+        .where(eq(materialPurchaseOrderItems.id, itemId))
+        .returning();
+
+      if (receiptItem) {
+        await tx
+          .update(materialPurchaseReceiptItems)
+          .set({
+            unitOfMeasurementSelected: dto.unitOfMeasurementSelected,
+            quantityReceived: dto.quantityOrdered,
+          })
+          .where(eq(materialPurchaseReceiptItems.id, receiptItem.id));
+      }
+
+      if (inventoryTransaction && inventoryItem) {
+        await tx
+          .update(inventoryTransactionItems)
+          .set({
+            materialCode: dto.materialCode,
+            unitOfMeasurementSelected: dto.unitOfMeasurementSelected,
+            quantity: dto.quantityOrdered,
+            unitPrice: convertUnitPrice(
+              Number(dto.unitPrice),
+              dto.unitOfMeasurementSelected,
+              dto.unitOfMeasurementSelected,
+              material.unitOfMeasurement as MaterialUnit,
+              conversions,
+            ),
+          })
+          .where(eq(inventoryTransactionItems.id, inventoryItem.id));
+      }
+
+      const allOrderItems = await tx
+        .select({
+          id: materialPurchaseOrderItems.id,
+          materialCode: materialPurchaseOrderItems.materialCode,
+          quantityOrdered: materialPurchaseOrderItems.quantityOrdered,
+          unitPrice: materialPurchaseOrderItems.unitPrice,
+          unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
+        })
+        .from(materialPurchaseOrderItems)
+        .where(eq(materialPurchaseOrderItems.materialPurchaseOrderId, orderId));
+
+      const totalAmount = allOrderItems.reduce(
+        (sum, row) => sum + Number(row.quantityOrdered) * Number(row.unitPrice),
+        0,
+      );
+      const grandTotal = totalAmount + totalAmount * VAT_RATE;
+
+      const paymentTerms = await tx
+        .select({
+          valueKind: materialPurchaseOrderPaymentTerms.valueKind,
+          value: materialPurchaseOrderPaymentTerms.value,
+        })
+        .from(materialPurchaseOrderPaymentTerms)
+        .where(eq(materialPurchaseOrderPaymentTerms.materialPurchaseOrderId, orderId));
+
+      // Seeded / legacy orders may have no payment rows; only recheck coverage when terms exist.
+      if (paymentTerms.length > 0) {
+        this.assertPaymentTermsCoverTotal(
+          paymentTerms.map((term) => ({
+            valueKind: term.valueKind,
+            value: term.value == null ? null : Number(term.value),
+          })),
+          grandTotal,
+        );
+      }
+
+      if (dto.updateCompletedAt === true) {
+        await this.recomputeOrderCompletedAtFull(tx, orderId, allOrderItems);
+      }
+
+      const [savedOrder] = await tx
+        .update(materialPurchaseOrders)
+        .set({ totalAmount })
+        .where(eq(materialPurchaseOrders.id, orderId))
+        .returning();
+
+      return {
+        ...savedOrder,
+        item: updatedItem,
+        linkedReceiptCode: receiptItem
+          ? (
+              await tx
+                .select({ code: materialPurchaseReceipts.code })
+                .from(materialPurchaseReceipts)
+                .where(eq(materialPurchaseReceipts.id, receiptItem.materialPurchaseReceiptId))
+                .limit(1)
+            )[0]?.code ?? null
+          : null,
+        linkedInventoryTransactionCode: inventoryTransaction?.code ?? null,
+      };
     });
   }
 
@@ -1113,6 +1620,85 @@ export class MaterialPurchaseOrdersService {
     }
 
     return progress;
+  }
+
+  private async recomputeOrderCompletedAtFull(
+    tx: Tx,
+    orderId: string,
+    orderItems: {
+      id: string;
+      quantityOrdered: string | number;
+      unitOfMeasurementSelected: MaterialUnit;
+      materialCode: string;
+    }[],
+  ) {
+    if (orderItems.length === 0) {
+      await tx
+        .update(materialPurchaseOrders)
+        .set({ completedAt: null })
+        .where(eq(materialPurchaseOrders.id, orderId));
+      return;
+    }
+
+    const materialCodes = [...new Set(orderItems.map((item) => item.materialCode))];
+    const materialRows = await tx.query.materials.findMany({
+      where: inArray(materials.code, materialCodes),
+      columns: { code: true, unitOfMeasurement: true },
+      extras: materialUnitConversionsExtra,
+    });
+    const materialByCode = new Map(materialRows.map((row) => [row.code, row]));
+
+    const orderItemIds = orderItems.map((item) => item.id);
+    const receiptRows = await tx
+      .select({
+        materialPurchaseOrderItemId: materialPurchaseReceiptItems.materialPurchaseOrderItemId,
+        unitOfMeasurementSelected: materialPurchaseReceiptItems.unitOfMeasurementSelected,
+        quantityReceived: materialPurchaseReceiptItems.quantityReceived,
+        quantityRejected: materialPurchaseReceiptItems.quantityRejected,
+      })
+      .from(materialPurchaseReceiptItems)
+      .where(inArray(materialPurchaseReceiptItems.materialPurchaseOrderItemId, orderItemIds));
+
+    const coveredBaseById = new Map<string, number>();
+    for (const id of orderItemIds) coveredBaseById.set(id, 0);
+
+    for (const row of receiptRows) {
+      const orderItem = orderItems.find((item) => item.id === row.materialPurchaseOrderItemId);
+      if (!orderItem) continue;
+      const material = materialByCode.get(orderItem.materialCode);
+      if (!material) continue;
+
+      const conversions = (material.unitConversions ?? []) as UnitConversionRow[];
+      const factor = resolveConversionFactor(
+        row.unitOfMeasurementSelected as MaterialUnit,
+        material.unitOfMeasurement as MaterialUnit,
+        conversions,
+      );
+      const covered =
+        toBaseQuantity(Number(row.quantityReceived), factor) + toBaseQuantity(Number(row.quantityRejected), factor);
+      coveredBaseById.set(row.materialPurchaseOrderItemId, (coveredBaseById.get(row.materialPurchaseOrderItemId) ?? 0) + covered);
+    }
+
+    const fullyReceived = orderItems.every((orderItem) => {
+      const material = materialByCode.get(orderItem.materialCode);
+      if (!material) return false;
+      const conversions = (material.unitConversions ?? []) as UnitConversionRow[];
+      const orderedBase = toBaseQuantity(
+        Number(orderItem.quantityOrdered),
+        resolveConversionFactor(
+          orderItem.unitOfMeasurementSelected,
+          material.unitOfMeasurement as MaterialUnit,
+          conversions,
+        ),
+      );
+      const coveredBase = coveredBaseById.get(orderItem.id) ?? 0;
+      return coveredBase + QTY_EPSILON >= orderedBase;
+    });
+
+    await tx
+      .update(materialPurchaseOrders)
+      .set({ completedAt: fullyReceived ? new Date() : null })
+      .where(eq(materialPurchaseOrders.id, orderId));
   }
 
   private async getRequisitionAllocationsByOrderItemIds(orderItemIds: string[]) {

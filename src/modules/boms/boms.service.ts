@@ -100,7 +100,7 @@ export class BomsService {
         depth: true,
         diameter: true,
         height: true,
-        isDefault: true,
+        isStandard: true,
         notes: true,
       },
       with: {

@@ -114,14 +114,6 @@ export class ProductsController {
     return this.productsService.listDimensions(code);
   }
 
-  @Put(':code/dimensions/:dimensionId/default')
-  @UseGuards(PermissionGuard)
-  @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT)
-  @ApiBearerAuth()
-  setDefaultDimension(@Param('code') code: string, @Param('dimensionId', ParseUUIDPipe) dimensionId: string) {
-    return this.productsService.setDefaultDimension(code, dimensionId);
-  }
-
   @Put(':code/dimensions/:dimensionId')
   @UseGuards(PermissionGuard)
   @AllowedPermission(PERMISSIONS.UPDATE_PRODUCT)

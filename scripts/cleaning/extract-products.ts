@@ -14,7 +14,7 @@ type ProductDimensionJson = {
   depth: number | null;
   diameter: number | null;
   height: number | null;
-  isDefault: boolean;
+  isStandard: boolean;
   notes: string | null;
 };
 
@@ -206,7 +206,7 @@ function groupByName(valid: ParsedItem[]): ProductJson[] {
       depth: item.depth,
       diameter: null,
       height: item.height,
-      isDefault: false,
+      isStandard: false,
       notes: null,
     };
 
@@ -216,8 +216,8 @@ function groupByName(valid: ParsedItem[]): ProductJson[] {
   }
 
   for (const product of groups.values()) {
-    if (product.dimensions.length > 0) {
-      product.dimensions[0].isDefault = true;
+    if (product.dimensions.length > 0 && !product.dimensions.some((d) => d.isStandard)) {
+      product.dimensions[0].isStandard = true;
     }
   }
 

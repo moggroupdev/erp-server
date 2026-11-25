@@ -9,6 +9,7 @@ import { PERMISSIONS } from 'src/utils/constants';
 import { MaterialPurchaseOrdersService } from './material-purchase-orders.service';
 import { CreateMaterialPurchaseOrderDto } from './dto/create-material-purchase-order.dto';
 import { UpdateMaterialPurchaseOrderDto } from './dto/update-material-purchase-order.dto';
+import { UpdateMaterialPurchaseOrderItemDto } from './dto/update-material-purchase-order-item.dto';
 
 @Controller('material-purchase-orders')
 export class MaterialPurchaseOrdersController {
@@ -28,6 +29,29 @@ export class MaterialPurchaseOrdersController {
   @ApiBearerAuth()
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateDto: UpdateMaterialPurchaseOrderDto) {
     return this.materialPurchaseOrdersService.update(id, updateDto);
+  }
+
+  @Get(':orderId/items/:itemId/update-context')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.CORRECT_MATERIAL_PURCHASE_ORDER_ITEM)
+  @ApiBearerAuth()
+  getItemUpdateContext(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+  ) {
+    return this.materialPurchaseOrdersService.getItemUpdateContext(orderId, itemId);
+  }
+
+  @Patch(':orderId/items/:itemId')
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.CORRECT_MATERIAL_PURCHASE_ORDER_ITEM)
+  @ApiBearerAuth()
+  updateItem(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() updateDto: UpdateMaterialPurchaseOrderItemDto,
+  ) {
+    return this.materialPurchaseOrdersService.updateItem(orderId, itemId, updateDto);
   }
 
   @Get()

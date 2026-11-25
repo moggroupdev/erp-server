@@ -64,13 +64,13 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.quantity`\*\* — on inventory item insert/delete/update: receipt +, issue −, return +; revert on delete; use `sql\`quantity + ${n}`. Omit from material create/update DTOs (schema default `0` on create).
 
-**Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land.
+**Important (deferred):** Creating a material-purchase-linked `inventory_transactions` row of type `receipt` does **not** yet sync `materials.quantity` or `materials.unit_price`. Issue posting is not implemented; applying a one-sided receipt delta would leave stock wrong once issues exist. Leave the document rows in place and wire stock/costing sync when issue flows land. The same obligation applies to posted MPO line correction (`PATCH /material-purchase-orders/:orderId/items/:itemId`): it rewrites the inventory line quantity and unit price but must later apply those changes as a stock/costing delta when sync lands.
 
 `**materials.unit_price`\*\* — recalculate from `inventory_transaction_items.unit_price` when inventory items change; apply configured costing method; omit from material create/update DTOs (schema default `0`). The average-price-gaps report audits this not-yet-synced cache against the quantity-weighted average of non-cancelled `material_purchase_order_items` (converted to the material's base unit).
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
-**PO `completed_at`** — set when fully fulfilled (`received + rejected = ordered` in base units across all receipts); clear if receipts reversed. Create-receipt currently sets `completed_at` when fully covered; reverse is out of scope.
+**PO `completed_at`** — set when fully fulfilled (`received + rejected = ordered` in base units across all receipts); clear if receipts reversed. Create-receipt currently sets `completed_at` when fully covered; reverse is out of scope. Posted line correction leaves `completed_at` unchanged unless `updateCompletedAt` is true.
 
 **`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
 
@@ -114,6 +114,7 @@ All sources live on the header — one source event per transaction; items only 
   - App enforces at most one IVT per receipt for new posts (legacy rows may already have several)
   - Items are projected from receipt lines with `quantity_received > 0`; `unit_price` is copied from the MPO line and converted into the receipt line's unit (not client-writable)
   - Does **not** update `materials.quantity` / `materials.unit_price` yet (see deferred note under Caching)
+  - Posted MPO line correction may rewrite that inventory item's `material_code`, selected unit, quantity, and converted `unit_price` (see Purchasing → posted line correction)
 
 ### Warehouse (legacy issue permits)
 
@@ -128,6 +129,8 @@ All sources live on the header — one source event per transaction; items only 
   - `internal_use` / `executive_personal`: no contract, maintenance, or customer fields
 - When `has_multiple_customers` is true: `customer_id`, `contract_number`, and `maintenance_order_number` must all be null
 - `legacy_issue_permits.customer_id` — optional FK to `customers`; verified to exist when set. Hard-delete of a referenced customer is blocked by the FK
+- `legacy_issue_permits.is_sst` — boolean (default false). SST and normal permits share the table; uniqueness of `issue_permit_number` is split by two partial unique indexes (`lip_number_normal_uidx` where `is_sst = false`, `lip_number_sst_uidx` where `is_sst = true`), so the same paper number may exist once in each group
+- SST number allocation (`@APP_CHECKED`): client sends the paper number only (no trailing `-<digits>`). On create (and on update when SST is turned on or the paper number changes), the service takes a transaction advisory lock on the paper number, finds `max` existing SST suffix for that base, and stores `{paper}-{max+1}` (deleted suffixes are not reused). If SST stays on and the paper number is unchanged, the current stored suffix is kept. Turning SST off stores the bare paper number and fails if another normal permit already has it
 - Migration backfill (edit generated SQL before `db:migrate`): set `permit_type` from old `work_order_number_type` (`base_contract` → `contract_review`, else → `maintenance_order`); null out maintenance type on former `base_contract` rows; rename `work_order_number` → `maintenance_order_number` and `work_order_number_type` → `maintenance_order_type`; recreate enum without `base_contract`; then add the new checks
 
 ### Warehouse (legacy receipt permits — reverse entry)
@@ -170,6 +173,14 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - Product receipt: one receipt line per `product_unit_id`; unit's `contract_item_id` must match PO line
 - Material purchase order items (`material_purchase_order_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
+- Posted MPO line correction (`PATCH /material-purchase-orders/:orderId/items/:itemId`, permission `correct_material_purchase_order_item`) (`@APP_CHECKED`):
+  - Separate from the normal one-day whole-order update. Cancelled orders are refused; completed orders are allowed. This path does not stamp `updated_at`. `completed_at` is left unchanged unless the body sets `updateCompletedAt` to true, in which case it is recomputed from every receipt line in base units (set to now when every line is fully covered, otherwise cleared)
+  - Body: `materialCode`, `unitOfMeasurementSelected`, `quantityOrdered`, `unitPrice`, `notes`, and optional `updateCompletedAt` (default false). Typed quantities are stored as entered (no unit conversion of the old number)
+  - When the line has exactly one receipt item, that receipt's selected unit and `quantity_received` are set to the order line unit and ordered quantity. `quantity_rejected` is unchanged. More than one receipt line, or any non-zero rejected quantity, is rejected
+  - When that receipt already has an inventory transaction, the one inventory item with the old material code is rewritten (material, unit, quantity = ordered, unit price via `convertUnitPrice`). Missing or ambiguous inventory lines, or a target material already on the transaction, are rejected. Unposted receipts update the receipt only
+  - Supplier invoice rows are not written; order `total_amount` is recomputed. When the order already has payment terms, they are rechecked against the new VAT-inclusive grand total and the correction is rejected when they no longer cover it. Orders with no payment terms skip that check
+  - Quotation link is cleared when the material changes. A single requisition allocation is resized to the new ordered base quantity (capped by the requisition). Multiple allocations reject material or ordered-quantity changes that break base-unit equality
+  - Does **not** update `materials.quantity` / `materials.unit_price` (see deferred note under Caching)
 - Material purchase order payment terms (`material_purchase_order_payment_terms`) (`@APP_CHECKED`):
   - Contractual slices on the order, not payables generated per receipt or invoice. `after_receipt` / `after_invoice` store a day offset; the due date is resolved later when that document exists
   - `POST /material-purchase-orders` requires delivery location and timing, and at least one payment slice. The set must cover the VAT-inclusive grand total (`total_amount * (1 + VAT_RATE)`, where `VAT_RATE` is the global constant) exactly. `total_amount` itself stays the pre-tax sum of line totals. Percentages are of that grand total (not of the remainder); fixed amounts are absolute. Compare at 6 decimal places
@@ -234,6 +245,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 
 ### Production
 
+- `product_dimensions.is_standard` — independent boolean flag; any number of dimensions on the same product may be standard (including none). Create and update set the flag on that row only and do not clear siblings
 - `product_standard_boms.product_dimension_id` — parent product must have `products.source_type = 'manufactured'`
 - `product_standard_boms.quantity_required` — stored in `unit_of_measurement_selected` (or base unit when null). Must be > 0 when `no_longer_used` is false.
 - `product_standard_boms.legacy_quantity` — stored in the same unit as `quantity_required`. Optional (null or >= 0) on an active line. Required and > 0 when `no_longer_used` is true. Comparison only; costing does not use it.
@@ -263,6 +275,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - `users.production_sub_department` — required if `department_id = PRODUCTION_DEPARTMENT_ID`
 - `roles.max_discount_pct` — cap company negotiation rounds and direct contract review discounts; `NULL` = no discount; admins exempt
 - `roles.department_id` — when set, user's `department_id` must match on role assignment
+- Role hard delete (`DELETE /roles/:id`, `delete_role`) — allowed only when no `users.role_id` points at the role, including soft-deleted users; deletes `permissions` rows for that role in the same transaction. `GET /roles/:id` returns `assignedUserCount` with that same unfiltered count
 
 ### Contract reviews
 
@@ -313,6 +326,7 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - `materials.code` — random unique 6-digit string (`100000`–`999999`) generated on create; omit from create/update DTOs; immutable
 - `materials.sub_category_id` — must exist in `material_category_subs` on create/update
 - `unit_price`, `quantity`, `opening_unit_price`, `opening_quantity` — not accepted on create/update DTOs
+- Last purchase price — `GET /materials/:code/last-purchase-price` (`read_material_purchase_orders`); newest non-cancelled `material_purchase_order_items` line for the material (by `material_purchase_orders.created_at`), with `unit_price` converted to the material's base unit; response `{ unitPrice, purchasedAt, supplierName }` (all null when never purchased). Not the same as `materials.unit_price` (inventory cost cache). Separate from `GET /materials/:code` so callers without this permission never receive it
 - `materials.market_unit_price` / `market_unit_price_set_at` / `market_unit_price_set_by` — omit from create/update DTOs; set only via `PATCH /materials/:code/market-price` (`set_material_market_price`); stored in the material's base unit; all three columns are set together or all null (DB-checked)
 - `materials.market_manufacturing_cost` / `market_manufacturing_cost_set_at` / `market_manufacturing_cost_set_by` (`@APP_CHECKED`) — omit from create/update DTOs; set only via `PATCH /materials/:code/market-manufacturing-cost` (`set_material_market_price`); manufactured materials only (400 otherwise); stored in the material's base unit; all three columns are set together or all null (DB-checked). This is the outsourcing processing fee, not `market_unit_price` (buying the finished item). Cleared when leaving `manufactured_material` via `PATCH /materials/:code/material-type`
 - `materials.material_type` — immutable via `PUT /materials/:code`; changed only via `PATCH /materials/:code/material-type` (`set_material_type`). Preview via `GET /materials/:code/material-type/impact?targetType=…`. Guards:

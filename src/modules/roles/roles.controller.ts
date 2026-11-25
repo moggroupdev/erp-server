@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Put, Param, ParseUUIDPipe, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Delete, Param, ParseUUIDPipe, UseGuards, Query, HttpCode } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { ApiListQueries } from 'src/utils/decorators';
 import { type QueryParams, type User } from 'src/utils/types';
@@ -45,5 +45,14 @@ export class RolesController {
   @ApiBearerAuth()
   update(@Param('id', ParseUUIDPipe) id: string, @Body() updateRoleDto: UpdateRoleDto) {
     return this.rolesService.update(id, updateRoleDto);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(PermissionGuard)
+  @AllowedPermission(PERMISSIONS.DELETE_ROLE)
+  @ApiBearerAuth()
+  delete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.rolesService.delete(id);
   }
 }

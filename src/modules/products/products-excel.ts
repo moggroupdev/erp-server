@@ -25,7 +25,7 @@ type CatalogDimension = {
   depth: number | null;
   diameter: number | null;
   height: number;
-  isDefault: boolean;
+  isStandard: boolean;
 };
 
 export type CatalogProductForExcel = {
@@ -189,7 +189,7 @@ function writeHeaderRow(
   const headers = [
     translate('Code', 'الكود'),
     translate('Product Name', 'اسم المنتج'),
-    `${translate('Standard Dimensions', 'الأبعاد النمطية')} (${unit})`,
+    `${translate('Dimensions', 'الأبعاد')} (${unit})`,
     ...optionalColumns.map((column) => column.header),
   ];
 
@@ -268,7 +268,7 @@ function formatDimensionLines(dimensions: CatalogDimension[], unit: string): str
 
   return [...dimensions]
     .sort((a, b) => {
-      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
+      if (a.isStandard !== b.isStandard) return a.isStandard ? -1 : 1;
       return a.height - b.height;
     })
     .map((dimension) => {
@@ -277,7 +277,8 @@ function formatDimensionLines(dimensions: CatalogDimension[], unit: string): str
         dimension.diameter != null
           ? `⌀${formatMeasure(dimension.diameter)} × ${height}`
           : `${formatMeasure(dimension.length)} × ${formatMeasure(dimension.depth)} × ${height}`;
-      return `${size} ${unit}`;
+      const standardMark = dimension.isStandard ? ` (${translate('Standard', 'نمطي')})` : '';
+      return `${size} ${unit}${standardMark}`;
     });
 }
 

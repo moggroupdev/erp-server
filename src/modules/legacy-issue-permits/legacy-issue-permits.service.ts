@@ -1,5 +1,11 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, asc, eq, ne, sql } from 'drizzle-orm';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import { customers, legacyIssuePermitItems, legacyIssuePermits } from 'src/database/schema';
 import { QueryParams, User, type LegacyIssuePermitType } from 'src/utils/types';
@@ -11,6 +17,8 @@ import { CreateLegacyIssuePermitItemDto } from './dto/create-legacy-issue-permit
 import { UpdateLegacyIssuePermitDto } from './dto/update-legacy-issue-permit.dto';
 import { UpdateLegacyIssuePermitItemDto } from './dto/update-legacy-issue-permit-item.dto';
 import { ReorderLegacyIssuePermitItemsDto } from './dto/reorder-legacy-issue-permit-items.dto';
+
+const SST_SUFFIX_RE = /-\d+$/;
 
 type PermitHeaderFields = {
   permitType: LegacyIssuePermitType;
@@ -24,6 +32,8 @@ type PermitHeaderFields = {
   hasMultipleCustomers?: boolean;
 };
 
+type Tx = Parameters<Parameters<DrizzleDB['transaction']>[0]>[0];
+
 @Injectable()
 export class LegacyIssuePermitsService {
   constructor(
@@ -33,14 +43,22 @@ export class LegacyIssuePermitsService {
 
   public async create(createDto: CreateLegacyIssuePermitDto, user: User) {
     const { items, ...header } = createDto;
+    const isSst = header.isSst ?? false;
 
     await this.assertPermitHeader(header);
 
     return await this.db.transaction(async (tx) => {
+      const issuePermitNumber = await this.resolveIssuePermitNumber(tx, {
+        paperNumber: header.issuePermitNumber,
+        isSst,
+      });
+
       const [transaction] = await tx
         .insert(legacyIssuePermits)
         .values({
           ...header,
+          issuePermitNumber,
+          isSst,
           date: new Date(header.date),
           issueOrderDate: header.issueOrderDate ? new Date(header.issueOrderDate) : null,
           hasMultipleCustomers: header.hasMultipleCustomers ?? false,
@@ -90,24 +108,24 @@ export class LegacyIssuePermitsService {
         translate(`Legacy issue permit with ID ${id} does not exist.`, `لا يوجد إذن صرف مرحلي بالمعرف ${id}.`),
       );
 
-    return await this.queryBuilderService.findNeighbors<{ id: string; issuePermitNumber: string }>(
-      legacyIssuePermits,
-      id,
-      { keyword: queryParams.keyword, sortBy: queryParams.sortBy },
-      {
-        searchableFields: [
-          'issuePermitNumber',
-          'issueOrderNumber',
-          'contractNumber',
-          'maintenanceOrderNumber',
-          'notes',
-        ],
-        select: {
-          id: legacyIssuePermits.id,
-          issuePermitNumber: legacyIssuePermits.issuePermitNumber,
-        },
+    return await this.queryBuilderService.findNeighbors<{
+      id: string;
+      issuePermitNumber: string;
+      isSst: boolean;
+    }>(legacyIssuePermits, id, { keyword: queryParams.keyword, sortBy: queryParams.sortBy }, {
+      searchableFields: [
+        'issuePermitNumber',
+        'issueOrderNumber',
+        'contractNumber',
+        'maintenanceOrderNumber',
+        'notes',
+      ],
+      select: {
+        id: legacyIssuePermits.id,
+        issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        isSst: legacyIssuePermits.isSst,
       },
-    );
+    });
   }
 
   public async get(id: string) {
@@ -173,19 +191,41 @@ export class LegacyIssuePermitsService {
 
     await this.assertPermitHeader(merged);
 
-    const [updated] = await this.db
-      .update(legacyIssuePermits)
-      .set({
-        ...rest,
-        ...(date !== undefined ? { date: new Date(date) } : {}),
-        ...(issueOrderDate !== undefined
-          ? { issueOrderDate: issueOrderDate ? new Date(issueOrderDate) : null }
-          : {}),
-      })
-      .where(eq(legacyIssuePermits.id, id))
-      .returning();
+    const nextIsSst = rest.isSst !== undefined ? rest.isSst : existing.isSst;
+    const paperNumber =
+      rest.issuePermitNumber !== undefined
+        ? rest.issuePermitNumber
+        : existing.isSst
+          ? this.stripSstSuffix(existing.issuePermitNumber)
+          : existing.issuePermitNumber;
 
-    return updated;
+    return await this.db.transaction(async (tx) => {
+      const issuePermitNumber = await this.resolveIssuePermitNumber(tx, {
+        paperNumber,
+        isSst: nextIsSst,
+        existing: {
+          id: existing.id,
+          issuePermitNumber: existing.issuePermitNumber,
+          isSst: existing.isSst,
+        },
+      });
+
+      const [updated] = await tx
+        .update(legacyIssuePermits)
+        .set({
+          ...rest,
+          issuePermitNumber,
+          isSst: nextIsSst,
+          ...(date !== undefined ? { date: new Date(date) } : {}),
+          ...(issueOrderDate !== undefined
+            ? { issueOrderDate: issueOrderDate ? new Date(issueOrderDate) : null }
+            : {}),
+        })
+        .where(eq(legacyIssuePermits.id, id))
+        .returning();
+
+      return updated;
+    });
   }
 
   public async addItem(transactionId: string, createDto: CreateLegacyIssuePermitItemDto) {
@@ -331,6 +371,97 @@ export class LegacyIssuePermitsService {
   }
 
   // ============================== PRIVATE METHODS ==============================
+
+  private stripSstSuffix(storedNumber: string) {
+    return storedNumber.replace(SST_SUFFIX_RE, '');
+  }
+
+  private assertPaperNumberHasNoSuffix(paperNumber: string) {
+    if (SST_SUFFIX_RE.test(paperNumber)) {
+      throw new BadRequestException(
+        translate(
+          'SST permit numbers must be entered without a -N suffix. The system assigns the suffix automatically.',
+          'يجب إدخال رقم إذن صرف SST بدون لاحقة -N. النظام يعيّن اللاحقة تلقائياً.',
+        ),
+      );
+    }
+  }
+
+  private escapeRegex(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private async resolveIssuePermitNumber(
+    tx: Tx,
+    params: {
+      paperNumber: string;
+      isSst: boolean;
+      existing?: { id: string; issuePermitNumber: string; isSst: boolean };
+    },
+  ) {
+    const paperNumber = params.paperNumber.trim();
+    if (!paperNumber) {
+      throw new BadRequestException(
+        translate('Issue permit number is required.', 'رقم إذن الصرف مطلوب.'),
+      );
+    }
+
+    if (!params.isSst) {
+      await this.assertNormalNumberAvailable(tx, paperNumber, params.existing?.id);
+      return paperNumber;
+    }
+
+    this.assertPaperNumberHasNoSuffix(paperNumber);
+
+    if (
+      params.existing?.isSst &&
+      this.stripSstSuffix(params.existing.issuePermitNumber) === paperNumber
+    ) {
+      return params.existing.issuePermitNumber;
+    }
+
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext('legacy_issue_permit_sst'), hashtext(${paperNumber}))`,
+    );
+
+    const escaped = this.escapeRegex(paperNumber);
+    const suffixWhere = [
+      eq(legacyIssuePermits.isSst, true),
+      sql`${legacyIssuePermits.issuePermitNumber} ~ ${'^' + escaped + '-[0-9]+$'}`,
+    ];
+    if (params.existing) suffixWhere.push(ne(legacyIssuePermits.id, params.existing.id));
+
+    const [row] = await tx
+      .select({
+        maxSuffix: sql<number>`coalesce(max(substring(${legacyIssuePermits.issuePermitNumber} from '.*-([0-9]+)$')::int), 0)`,
+      })
+      .from(legacyIssuePermits)
+      .where(and(...suffixWhere));
+
+    return `${paperNumber}-${Number(row?.maxSuffix ?? 0) + 1}`;
+  }
+
+  private async assertNormalNumberAvailable(tx: Tx, paperNumber: string, excludeId?: string) {
+    const clashWhere = [
+      eq(legacyIssuePermits.issuePermitNumber, paperNumber),
+      eq(legacyIssuePermits.isSst, false),
+    ];
+    if (excludeId) clashWhere.push(ne(legacyIssuePermits.id, excludeId));
+
+    const clash = await tx.query.legacyIssuePermits.findFirst({
+      where: and(...clashWhere),
+      columns: { id: true },
+    });
+
+    if (clash) {
+      throw new ConflictException(
+        translate(
+          `A normal issue permit with number ${paperNumber} already exists.`,
+          `يوجد إذن صرف عادي برقم ${paperNumber} بالفعل.`,
+        ),
+      );
+    }
+  }
 
   private async assertPermitHeader(header: PermitHeaderFields) {
     const hasIssueOrderNumber = !!header.issueOrderNumber;

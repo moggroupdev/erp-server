@@ -215,6 +215,7 @@ export class DashboardService {
       .select({
         id: legacyIssuePermits.id,
         issuePermitNumber: legacyIssuePermits.issuePermitNumber,
+        isSst: legacyIssuePermits.isSst,
         date: legacyIssuePermits.date,
         productionSubDepartment: legacyIssuePermits.productionSubDepartment,
         isCancelled: legacyIssuePermits.isCancelled,
@@ -227,6 +228,7 @@ export class DashboardService {
     return rows.map((row) => ({
       id: row.id,
       issuePermitNumber: row.issuePermitNumber,
+      isSst: row.isSst,
       date: row.date instanceof Date ? row.date.toISOString() : String(row.date),
       productionSubDepartment: row.productionSubDepartment,
       isCancelled: row.isCancelled,

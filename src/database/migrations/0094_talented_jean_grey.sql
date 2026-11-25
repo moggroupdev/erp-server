@@ -1,0 +1,1 @@
+ALTER TYPE "public"."permission" ADD VALUE 'correct_material_purchase_order_item' BEFORE 'add_material_purchase_receipt';

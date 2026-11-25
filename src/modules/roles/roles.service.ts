@@ -1,7 +1,7 @@
-import { and, eq, inArray } from 'drizzle-orm';
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, count, eq, inArray } from 'drizzle-orm';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
-import { permissions, roles } from 'src/database/schema';
+import { permissions, roles, users } from 'src/database/schema';
 import { QueryParams, User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
@@ -50,7 +50,16 @@ export class RolesService {
 
     if (!role) throw new NotFoundException(translate(`Role with ID ${id} does not exist.`, `لا يوجد دور بالمعرف ${id}.`));
 
-    return { ...role, permissions: role.permissions.map((p) => p.permission) };
+    const [{ assignedUserCount }] = await this.db
+      .select({ assignedUserCount: count() })
+      .from(users)
+      .where(eq(users.roleId, id));
+
+    return {
+      ...role,
+      permissions: role.permissions.map((p) => p.permission),
+      assignedUserCount,
+    };
   }
 
   public async update(id: string, updateRoleDto: UpdateRoleDto) {
@@ -83,5 +92,33 @@ export class RolesService {
     });
 
     return updatedRole;
+  }
+
+  public async delete(id: string) {
+    await this.db.transaction(async (tx) => {
+      const existing = await tx.query.roles.findFirst({
+        where: eq(roles.id, id),
+        columns: { id: true },
+      });
+
+      if (!existing)
+        throw new NotFoundException(translate(`Role with ID ${id} does not exist.`, `لا يوجد دور بالمعرف ${id}.`));
+
+      const [{ assignedUserCount }] = await tx
+        .select({ assignedUserCount: count() })
+        .from(users)
+        .where(eq(users.roleId, id));
+
+      if (assignedUserCount > 0)
+        throw new ConflictException(
+          translate(
+            'This role cannot be deleted because users are still assigned to it.',
+            'لا يمكن حذف هذا الدور لأن مستخدمين ما زالوا معيّنين إليه.',
+          ),
+        );
+
+      await tx.delete(permissions).where(eq(permissions.roleId, id));
+      await tx.delete(roles).where(eq(roles.id, id));
+    });
   }
 }

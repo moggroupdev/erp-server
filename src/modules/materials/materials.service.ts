@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
 import {
@@ -29,8 +29,9 @@ import {
   suppliers,
 } from 'src/database/schema';
 import { MATERIAL_TYPES } from 'src/utils/constants';
-import { type MaterialType, type QueryParams, type User } from 'src/utils/types';
+import { type MaterialType, type MaterialUnit, type QueryParams, type User } from 'src/utils/types';
 import { translate } from 'src/utils/i18n/translate';
+import { convertUnitPrice } from 'src/utils/helpers/unit-conversion';
 import { materialUnitConversionsExtra } from 'src/utils/extras/material-unit-conversions-extra';
 import { QueryBuilderService } from 'src/utils/services/query-builder.service';
 import { CreateMaterialDto } from './dto/create-material.dto';
@@ -142,6 +143,48 @@ export class MaterialsService {
     if (!material)
       throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
     return material;
+  }
+
+  // Last purchased price = newest non-cancelled PO line unit price, normalized to the material's base unit.
+  public async getLastPurchasePrice(code: string) {
+    const material = await this.db.query.materials.findFirst({
+      where: eq(materials.code, code),
+      columns: { code: true, unitOfMeasurement: true },
+      extras: materialUnitConversionsExtra,
+    });
+    if (!material)
+      throw new NotFoundException(translate(`Material with code ${code} does not exist.`, `لا توجد مادة بالكود ${code}.`));
+
+    const [row] = await this.db
+      .select({
+        unitPrice: materialPurchaseOrderItems.unitPrice,
+        unitOfMeasurementSelected: materialPurchaseOrderItems.unitOfMeasurementSelected,
+        purchasedAt: materialPurchaseOrders.createdAt,
+        supplierName: suppliers.name,
+      })
+      .from(materialPurchaseOrderItems)
+      .innerJoin(materialPurchaseOrders, eq(materialPurchaseOrderItems.materialPurchaseOrderId, materialPurchaseOrders.id))
+      .innerJoin(suppliers, eq(materialPurchaseOrders.supplierId, suppliers.id))
+      .where(and(eq(materialPurchaseOrderItems.materialCode, code), isNull(materialPurchaseOrders.cancelledAt)))
+      .orderBy(desc(materialPurchaseOrders.createdAt))
+      .limit(1);
+
+    if (!row) {
+      return { unitPrice: null, purchasedAt: null, supplierName: null };
+    }
+
+    const baseUnit = material.unitOfMeasurement as MaterialUnit;
+    const purchaseUnit = row.unitOfMeasurementSelected as MaterialUnit;
+    const conversions = (material.unitConversions ?? []).map((conversion) => ({
+      unit: conversion.unit as MaterialUnit,
+      conversionFactorToBase: Number(conversion.conversionFactorToBase),
+    }));
+
+    return {
+      unitPrice: convertUnitPrice(Number(row.unitPrice), purchaseUnit, baseUnit, baseUnit, conversions),
+      purchasedAt: row.purchasedAt,
+      supplierName: row.supplierName,
+    };
   }
 
   public async update(code: string, updateMaterialDto: UpdateMaterialDto) {
