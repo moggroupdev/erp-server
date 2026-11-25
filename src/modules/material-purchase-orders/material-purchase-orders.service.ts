@@ -755,14 +755,13 @@ export class MaterialPurchaseOrdersService {
         );
       }
 
-      await this.recomputeOrderCompletedAtFull(tx, orderId, allOrderItems);
+      if (dto.updateCompletedAt === true) {
+        await this.recomputeOrderCompletedAtFull(tx, orderId, allOrderItems);
+      }
 
       const [savedOrder] = await tx
         .update(materialPurchaseOrders)
-        .set({
-          totalAmount,
-          updatedAt: new Date(),
-        })
+        .set({ totalAmount })
         .where(eq(materialPurchaseOrders.id, orderId))
         .returning();
 

@@ -70,7 +70,7 @@ Recalculate inside a transaction when source rows change.
 
 `**materials.opening_unit_price` / `materials.opening_quantity`\*\* — omit from material create/update DTOs (schema defaults `0`); not client-writable via materials CRUD.
 
-**PO `completed_at`** — set when fully fulfilled (`received + rejected = ordered` in base units across all receipts); clear if receipts reversed. Create-receipt currently sets `completed_at` when fully covered; reverse is out of scope.
+**PO `completed_at`** — set when fully fulfilled (`received + rejected = ordered` in base units across all receipts); clear if receipts reversed. Create-receipt currently sets `completed_at` when fully covered; reverse is out of scope. Posted line correction leaves `completed_at` unchanged unless `updateCompletedAt` is true.
 
 **`outsourcing_orders.completed_at`** — set when all order lines are fully received (`received + rejected = ordered`) across receipts; clear if receipts reversed.
 
@@ -172,8 +172,8 @@ Uniqueness: invoice number unique per supplier; `legacy_number` unique among exi
 - Material purchase order items (`material_purchase_order_items`):
   - `unit_of_measurement_selected` (`@APP_CHECKED`): required; must be the material's base `unit_of_measurement` or one of its `material_unit_conversions`; `quantity_ordered` / `unit_price` are in this unit
 - Posted MPO line correction (`PATCH /material-purchase-orders/:orderId/items/:itemId`, permission `correct_material_purchase_order_item`) (`@APP_CHECKED`):
-  - Separate from the normal one-day whole-order update. Cancelled orders are refused; completed orders are allowed. `completed_at` is recomputed from every receipt line in base units
-  - Body: `materialCode`, `unitOfMeasurementSelected`, `quantityOrdered`, `unitPrice`, `notes`. Typed quantities are stored as entered (no unit conversion of the old number)
+  - Separate from the normal one-day whole-order update. Cancelled orders are refused; completed orders are allowed. This path does not stamp `updated_at`. `completed_at` is left unchanged unless the body sets `updateCompletedAt` to true, in which case it is recomputed from every receipt line in base units (set to now when every line is fully covered, otherwise cleared)
+  - Body: `materialCode`, `unitOfMeasurementSelected`, `quantityOrdered`, `unitPrice`, `notes`, and optional `updateCompletedAt` (default false). Typed quantities are stored as entered (no unit conversion of the old number)
   - When the line has exactly one receipt item, that receipt's selected unit and `quantity_received` are set to the order line unit and ordered quantity. `quantity_rejected` is unchanged. More than one receipt line, or any non-zero rejected quantity, is rejected
   - When that receipt already has an inventory transaction, the one inventory item with the old material code is rewritten (material, unit, quantity = ordered, unit price via `convertUnitPrice`). Missing or ambiguous inventory lines, or a target material already on the transaction, are rejected. Unposted receipts update the receipt only
   - Supplier invoice rows are not written; order `total_amount` is recomputed. When the order already has payment terms, they are rechecked against the new VAT-inclusive grand total and the correction is rejected when they no longer cover it. Orders with no payment terms skip that check
