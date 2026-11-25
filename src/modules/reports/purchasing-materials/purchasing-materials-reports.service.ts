@@ -1,7 +1,11 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lte, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { DRIZZLE, type DrizzleDB } from 'src/database/database.constants';
+import {
+  buildRequisitionFollowUpExcelFilename,
+  buildRequisitionFollowUpWorkbook,
+} from './requisition-follow-up-excel';
 import {
   inventoryTransactions,
   materialCategoryMains,
@@ -952,14 +956,137 @@ export class PurchasingMaterialsReportsService {
     }
 
     const dept = productionSubDepartment as ProductionSubDepartment;
+    const loaded = await this.loadRequisitionFollowUpLines({
+      productionSubDepartment: dept,
+      from: params.from,
+      to: params.to,
+      approvedOnly: true,
+    });
+
+    let requestedValue = 0;
+    let orderedValue = 0;
+    let receivedValue = 0;
+
+    const items = loaded.map((row) => {
+      if (row.requestedValue != null) requestedValue += row.requestedValue;
+      if (row.orderedValue != null) orderedValue += row.orderedValue;
+      if (row.receivedValue != null) receivedValue += row.receivedValue;
+
+      return {
+        requisitionItemId: row.requisitionItemId,
+        requisitionId: row.requisitionId,
+        requisitionCode: row.requisitionCode,
+        materialCode: row.materialCode,
+        materialTitle: row.materialTitle,
+        unitOfMeasurementSelected: row.unitOfMeasurementSelected,
+        quantityRequested: row.quantityRequested,
+        quantityOrdered: row.quantityOrdered,
+        quantityReceived: row.quantityReceived,
+        lastPurchasePrice: row.lastPurchasePrice,
+        requestedValue: row.requestedValue,
+        orderedValue: row.orderedValue,
+        receivedValue: row.receivedValue,
+        notes: row.itemNotes?.trim() || row.requisitionNotes || null,
+      };
+    });
+
+    return {
+      productionSubDepartment: dept,
+      items,
+      totals: { requestedValue, orderedValue, receivedValue },
+      missingPriceCount: items.filter((item) => item.lastPurchasePrice == null).length,
+    };
+  }
+
+  public async downloadRequisitionFollowUpExcel(params: { from?: string; to?: string; approvedOnly?: boolean }) {
+    const from = params.from?.trim();
+    const to = params.to?.trim();
+    if (!from || !to) {
+      throw new BadRequestException(
+        translate('Start date and end date are required.', 'تاريخ البداية وتاريخ النهاية مطلوبان.'),
+      );
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      throw new BadRequestException(translate('Invalid date range.', 'نطاق التاريخ غير صالح.'));
+    }
+    if (fromDate > toDate) {
+      throw new BadRequestException(
+        translate('Start date must be on or before end date.', 'يجب أن يكون تاريخ البداية قبل أو يساوي تاريخ النهاية.'),
+      );
+    }
+
+    const approvedOnly = params.approvedOnly === true;
+    const lines = await this.loadRequisitionFollowUpLines({ from, to, approvedOnly });
+    if (lines.length === 0) {
+      throw new BadRequestException(
+        approvedOnly
+          ? translate(
+              'No approved purchase requisition lines found for the selected date range.',
+              'لا توجد بنود طلبات شراء معتمدة في نطاق التاريخ المحدد.',
+            )
+          : translate(
+              'No purchase requisition lines found for the selected date range.',
+              'لا توجد بنود طلبات شراء في نطاق التاريخ المحدد.',
+            ),
+      );
+    }
+
+    const buffer = await buildRequisitionFollowUpWorkbook(
+      lines.map((line) => ({
+        requisitionId: line.requisitionId,
+        requisitionCode: line.requisitionCode,
+        productionSubDepartment: line.productionSubDepartment,
+        requisitionNotes: line.requisitionNotes,
+        materialCode: line.materialCode,
+        materialTitle: line.materialTitle,
+        unitOfMeasurementSelected: line.unitOfMeasurementSelected,
+        quantityRequested: line.quantityRequested,
+        quantityReceived: line.quantityReceived,
+        lastPurchasePrice: line.lastPurchasePrice,
+        requestedValue: line.requestedValue,
+      })),
+      { from, to },
+    );
+
+    const downloadName = buildRequisitionFollowUpExcelFilename({ from, to, approvedOnly });
+    // Node rejects non-ASCII in bare header values; keep ASCII in `filename=` and put the
+    // localized name in RFC 5987 `filename*`.
+    const asciiFallback = approvedOnly
+      ? `approved-requisition-follow-up_${from}_to_${to}.xlsx`
+      : `requisition-follow-up_${from}_to_${to}.xlsx`;
+    return new StreamableFile(buffer, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
+      length: buffer.length,
+    });
+  }
+
+  /**
+   * Shared follow-up line loader for the on-screen report and Excel export.
+   * When `productionSubDepartment` is omitted, returns lines for every department in the date range.
+   * `approvedOnly` defaults to false (Excel); the on-screen report passes true.
+   */
+  private async loadRequisitionFollowUpLines(params: {
+    productionSubDepartment?: ProductionSubDepartment;
+    from?: string;
+    to?: string;
+    approvedOnly?: boolean;
+  }) {
     const dateRange = this.buildDateRange(params.from, params.to);
-    const conditions: SQL[] = [
-      eq(materialPurchaseRequisitions.isPreGoLive, false),
-      eq(materialPurchaseRequisitions.productionSubDepartment, dept),
-      eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
-      eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
-      eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
-    ];
+    const conditions: SQL[] = [eq(materialPurchaseRequisitions.isPreGoLive, false)];
+    if (params.approvedOnly) {
+      conditions.push(
+        eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
+        eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
+        eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
+      );
+    }
+    if (params.productionSubDepartment) {
+      conditions.push(eq(materialPurchaseRequisitions.productionSubDepartment, params.productionSubDepartment));
+    }
     if (dateRange.from) conditions.push(gte(materialPurchaseRequisitions.createdAt, dateRange.from));
     if (dateRange.to) conditions.push(lte(materialPurchaseRequisitions.createdAt, dateRange.to));
 
@@ -968,6 +1095,7 @@ export class PurchasingMaterialsReportsService {
         requisitionItemId: materialPurchaseRequisitionItems.id,
         requisitionId: materialPurchaseRequisitions.id,
         requisitionCode: materialPurchaseRequisitions.code,
+        productionSubDepartment: materialPurchaseRequisitions.productionSubDepartment,
         requisitionNotes: materialPurchaseRequisitions.notes,
         itemNotes: materialPurchaseRequisitionItems.notes,
         materialCode: materialPurchaseRequisitionItems.materialCode,
@@ -984,16 +1112,13 @@ export class PurchasingMaterialsReportsService {
       )
       .innerJoin(materials, eq(materialPurchaseRequisitionItems.materialCode, materials.code))
       .where(and(...conditions))
-      .orderBy(desc(materialPurchaseRequisitions.createdAt), asc(materialPurchaseRequisitionItems.materialCode));
+      .orderBy(
+        desc(materialPurchaseRequisitions.createdAt),
+        asc(materialPurchaseRequisitions.code),
+        asc(materialPurchaseRequisitionItems.materialCode),
+      );
 
-    if (rows.length === 0) {
-      return {
-        productionSubDepartment: dept,
-        items: [],
-        totals: { requestedValue: 0, orderedValue: 0, receivedValue: 0 },
-        missingPriceCount: 0,
-      };
-    }
+    if (rows.length === 0) return [];
 
     const requisitionItemIds = rows.map((row) => row.requisitionItemId);
     const materialCodes = [...new Set(rows.map((row) => row.materialCode))];
@@ -1135,11 +1260,7 @@ export class PurchasingMaterialsReportsService {
       }
     }
 
-    let requestedValue = 0;
-    let orderedValue = 0;
-    let receivedValue = 0;
-
-    const items = rows.map((row) => {
+    return rows.map((row) => {
       const baseUnit = row.unitOfMeasurement as MaterialUnit;
       const lineUnit = row.unitOfMeasurementSelected as MaterialUnit;
       const conversions = conversionsByCode.get(row.materialCode) ?? [];
@@ -1156,18 +1277,13 @@ export class PurchasingMaterialsReportsService {
           ? convertUnitPrice(lastPurchase.unitPrice, lastPurchase.purchaseUnit, lineUnit, baseUnit, conversions)
           : null;
 
-      const requestedLineValue = lastPurchasePrice != null ? quantityRequested * lastPurchasePrice : null;
-      const orderedLineValue = lastPurchasePrice != null ? quantityOrdered * lastPurchasePrice : null;
-      const receivedLineValue = lastPurchasePrice != null ? quantityReceived * lastPurchasePrice : null;
-
-      if (requestedLineValue != null) requestedValue += requestedLineValue;
-      if (orderedLineValue != null) orderedValue += orderedLineValue;
-      if (receivedLineValue != null) receivedValue += receivedLineValue;
-
       return {
         requisitionItemId: row.requisitionItemId,
         requisitionId: row.requisitionId,
         requisitionCode: row.requisitionCode,
+        productionSubDepartment: row.productionSubDepartment as ProductionSubDepartment,
+        requisitionNotes: row.requisitionNotes,
+        itemNotes: row.itemNotes,
         materialCode: row.materialCode,
         materialTitle: row.materialTitle,
         unitOfMeasurementSelected: lineUnit,
@@ -1175,19 +1291,12 @@ export class PurchasingMaterialsReportsService {
         quantityOrdered,
         quantityReceived,
         lastPurchasePrice,
-        requestedValue: requestedLineValue,
-        orderedValue: orderedLineValue,
-        receivedValue: receivedLineValue,
-        notes: row.itemNotes?.trim() || row.requisitionNotes || null,
+        requestedValue: lastPurchasePrice != null ? quantityRequested * lastPurchasePrice : null,
+        orderedValue: lastPurchasePrice != null ? quantityOrdered * lastPurchasePrice : null,
+        receivedValue: lastPurchasePrice != null ? quantityReceived * lastPurchasePrice : null,
+        createdAt: row.createdAt,
       };
     });
-
-    return {
-      productionSubDepartment: dept,
-      items,
-      totals: { requestedValue, orderedValue, receivedValue },
-      missingPriceCount: items.filter((item) => item.lastPurchasePrice == null).length,
-    };
   }
 
   public async getRequisitionHistory(params: { materialCode: string; from?: string; to?: string }) {

@@ -85,6 +85,7 @@ export const PERMISSION_VALUES = [
   'read_material_purchasing_price_outliers_report',
   'read_material_purchasing_average_price_gaps_report',
   'read_material_purchasing_requisition_follow_up_report',
+  'download_material_purchasing_requisition_follow_up_report',
   'read_material_purchasing_requisition_history_report',
   'read_accounting_supplier_invoices_report',
   'add_product',
