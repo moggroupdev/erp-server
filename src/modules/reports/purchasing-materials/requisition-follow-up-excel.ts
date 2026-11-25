@@ -13,7 +13,18 @@ const HAZE_WASH = 'FFE4F5FD';
 const BORDER = 'FFD2D8E2';
 const WHITE = 'FFFFFFFF';
 
-const COLUMN_COUNT = 8;
+const COLUMN_COUNT = 9;
+const COL = {
+  materialCode: 1,
+  material: 2,
+  unit: 3,
+  requestedQty: 4,
+  receivedQty: 5,
+  lastPrice: 6,
+  totalValue: 7,
+  requisitionNo: 8,
+  notes: 9,
+} as const;
 
 const thinBorder: Partial<ExcelJS.Borders> = {
   top: { style: 'thin', color: { argb: BORDER } },
@@ -90,6 +101,7 @@ export type RequisitionFollowUpExcelLine = {
   requisitionCode: string;
   productionSubDepartment: ProductionSubDepartment;
   requisitionNotes: string | null;
+  materialCode: string;
   materialTitle: string;
   unitOfMeasurementSelected: MaterialUnit;
   quantityRequested: number;
@@ -186,6 +198,7 @@ function writeDepartmentSheet(
 
   sheet.properties.tabColor = { argb: NAVY };
   sheet.columns = [
+    { width: 16 },
     { width: 36 },
     { width: 14 },
     { width: 14 },
@@ -200,15 +213,14 @@ function writeDepartmentSheet(
   writeMetaRow(sheet, departmentLabel, from, to, locale, readingOrder);
   writeHeaderRow(sheet, currency, readingOrder);
 
-  let rowIndex = 4;
+  const firstDataRow = 4;
+  let rowIndex = firstDataRow;
   let dataRowIndex = 0;
-  let subtotal = 0;
   let mergeStart = rowIndex;
   let mergeRequisitionId = items[0]?.requisitionId ?? null;
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i]!;
-    if (item.requestedValue != null) subtotal += item.requestedValue;
 
     writeDataRow(sheet, rowIndex, item, {
       shaded: dataRowIndex % 2 === 1,
@@ -221,8 +233,8 @@ function writeDepartmentSheet(
     const nextDifferent = !next || next.requisitionId !== mergeRequisitionId;
     if (nextDifferent && mergeRequisitionId) {
       if (rowIndex > mergeStart) {
-        sheet.mergeCells(mergeStart, 7, rowIndex, 7);
-        sheet.mergeCells(mergeStart, 8, rowIndex, 8);
+        sheet.mergeCells(mergeStart, COL.requisitionNo, rowIndex, COL.requisitionNo);
+        sheet.mergeCells(mergeStart, COL.notes, rowIndex, COL.notes);
       }
       mergeStart = rowIndex + 1;
       mergeRequisitionId = next?.requisitionId ?? null;
@@ -232,27 +244,31 @@ function writeDepartmentSheet(
     dataRowIndex += 1;
   }
 
-  const vatAmount = subtotal * VAT_RATE;
-  const totalWithVat = subtotal + vatAmount;
-
-  writeFooterRow(sheet, rowIndex, translate('Subtotal', 'الإجمالي'), subtotal, readingOrder, false);
+  const lastDataRow = rowIndex - 1;
+  const subtotalRow = rowIndex;
+  writeFooterRow(sheet, subtotalRow, translate('Subtotal', 'الإجمالي'), readingOrder, false, {
+    formula: `SUM(${colLetter(COL.totalValue)}${firstDataRow}:${colLetter(COL.totalValue)}${lastDataRow})`,
+  });
   rowIndex += 1;
+
+  const vatRow = rowIndex;
   writeFooterRow(
     sheet,
-    rowIndex,
+    vatRow,
     translate(`VAT (${VAT_PERCENT}%)`, `ضريبة القيمة المضافة (${VAT_PERCENT}%)`),
-    vatAmount,
     readingOrder,
     false,
+    { formula: `${colLetter(COL.totalValue)}${subtotalRow}*${VAT_RATE}` },
   );
   rowIndex += 1;
+
   writeFooterRow(
     sheet,
     rowIndex,
     translate('Total incl. VAT', 'الإجمالي شامل الضريبة'),
-    totalWithVat,
     readingOrder,
     true,
+    { formula: `${colLetter(COL.totalValue)}${subtotalRow}+${colLetter(COL.totalValue)}${vatRow}` },
   );
 
   const pageNumber = translate('&RPage &P of &N', '&Rصفحة &P من &N');
@@ -307,6 +323,7 @@ function writeMetaRow(
 
 function writeHeaderRow(sheet: ExcelJS.Worksheet, currency: string, readingOrder: 'rtl' | 'ltr') {
   const headers = [
+    translate('Material code', 'كود الصنف'),
     translate('Material', 'الصنف'),
     translate('Unit', 'الوحدة'),
     translate('Requested Qty', 'الكمية المطلوبة'),
@@ -338,49 +355,107 @@ function writeDataRow(
   const row = sheet.getRow(rowIndex);
   row.height = Math.max(22, estimateWrappedLines(item.materialTitle, 34) * 16 + 8);
   const startAlign = options.isRtl ? 'right' : 'left';
+  const fill = solidFill(options.shaded ? HAZE_WASH : WHITE);
 
-  const values: (string | number | null)[] = [
-    item.materialTitle,
-    getUnitLabel(item.unitOfMeasurementSelected, options.locale),
-    item.quantityRequested,
-    item.quantityReceived,
-    item.lastPurchasePrice,
-    item.requestedValue,
-    item.requisitionCode,
-    item.requisitionNotes?.trim() || null,
-  ];
+  const materialCell = row.getCell(COL.material);
+  materialCell.value = item.materialTitle;
+  materialCell.font = { name: FONT, size: 11, bold: true, color: { argb: NAVY } };
+  materialCell.fill = fill;
+  materialCell.border = thinBorder;
+  materialCell.alignment = {
+    horizontal: startAlign,
+    vertical: 'middle',
+    wrapText: true,
+    readingOrder: options.readingOrder,
+  };
 
-  values.forEach((value, index) => {
-    const column = index + 1;
-    const cell = row.getCell(column);
-    const isEmpty = value == null || value === '';
-    cell.value = isEmpty ? '-' : value;
-    cell.font = {
-      name: column === 7 ? CODE_FONT : FONT,
-      size: 11,
-      bold: column === 1,
-      color: { argb: NAVY },
+  const codeCell = row.getCell(COL.materialCode);
+  codeCell.value = item.materialCode;
+  codeCell.font = { name: CODE_FONT, size: 11, color: { argb: NAVY } };
+  codeCell.fill = fill;
+  codeCell.border = thinBorder;
+  codeCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: options.readingOrder };
+
+  const unitCell = row.getCell(COL.unit);
+  unitCell.value = getUnitLabel(item.unitOfMeasurementSelected, options.locale);
+  unitCell.font = { name: FONT, size: 11, color: { argb: NAVY } };
+  unitCell.fill = fill;
+  unitCell.border = thinBorder;
+  unitCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: options.readingOrder };
+
+  writeQtyCell(row.getCell(COL.requestedQty), item.quantityRequested, fill, options.readingOrder);
+  writeQtyCell(row.getCell(COL.receivedQty), item.quantityReceived, fill, options.readingOrder);
+
+  const priceCell = row.getCell(COL.lastPrice);
+  priceCell.fill = fill;
+  priceCell.border = thinBorder;
+  priceCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: options.readingOrder };
+  if (item.lastPurchasePrice == null) {
+    priceCell.value = '-';
+    priceCell.font = { name: FONT, size: 11, color: { argb: NAVY } };
+  } else {
+    priceCell.value = item.lastPurchasePrice;
+    priceCell.numFmt = '0.00';
+    priceCell.font = { name: FONT, size: 11, color: { argb: NAVY } };
+  }
+
+  const totalCell = row.getCell(COL.totalValue);
+  totalCell.fill = fill;
+  totalCell.border = thinBorder;
+  totalCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: options.readingOrder };
+  totalCell.font = { name: FONT, size: 11, bold: true, color: { argb: NAVY } };
+  if (item.lastPurchasePrice == null) {
+    totalCell.value = '-';
+  } else {
+    // Requested qty × last price
+    totalCell.value = {
+      formula: `${colLetter(COL.requestedQty)}${rowIndex}*${colLetter(COL.lastPrice)}${rowIndex}`,
     };
-    cell.fill = solidFill(options.shaded ? HAZE_WASH : WHITE);
-    cell.border = thinBorder;
-    cell.alignment = {
-      horizontal: column === 1 || column === 8 ? startAlign : 'center',
-      vertical: 'middle',
-      wrapText: column === 1 || column === 8,
-      readingOrder: options.readingOrder,
-    };
-    if (!isEmpty && (column === 3 || column === 4)) cell.numFmt = '#,##0.###';
-    if (!isEmpty && (column === 5 || column === 6)) cell.numFmt = '#,##0.00';
-  });
+    totalCell.numFmt = '0.00';
+  }
+
+  const reqNoCell = row.getCell(COL.requisitionNo);
+  reqNoCell.value = item.requisitionCode;
+  reqNoCell.font = { name: CODE_FONT, size: 11, color: { argb: NAVY } };
+  reqNoCell.fill = fill;
+  reqNoCell.border = thinBorder;
+  reqNoCell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder: options.readingOrder };
+
+  const notesCell = row.getCell(COL.notes);
+  notesCell.value = item.requisitionNotes?.trim() || '-';
+  notesCell.font = { name: FONT, size: 11, color: { argb: NAVY } };
+  notesCell.fill = fill;
+  notesCell.border = thinBorder;
+  notesCell.alignment = {
+    horizontal: startAlign,
+    vertical: 'middle',
+    wrapText: true,
+    readingOrder: options.readingOrder,
+  };
+}
+
+/** Write qty without a decimal format that Arabic Excel can render as a leading ".". */
+function writeQtyCell(
+  cell: ExcelJS.Cell,
+  value: number,
+  fill: ExcelJS.Fill,
+  readingOrder: 'rtl' | 'ltr',
+) {
+  const qty = Number.isFinite(value) ? value : 0;
+  cell.value = Number.isInteger(qty) ? qty : Math.round(qty * 1000) / 1000;
+  cell.font = { name: FONT, size: 11, color: { argb: NAVY } };
+  cell.fill = fill;
+  cell.border = thinBorder;
+  cell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder };
 }
 
 function writeFooterRow(
   sheet: ExcelJS.Worksheet,
   rowIndex: number,
   label: string,
-  amount: number,
   readingOrder: 'rtl' | 'ltr',
   emphasize: boolean,
+  amount: { formula: string },
 ) {
   const row = sheet.getRow(rowIndex);
   row.height = 24;
@@ -390,13 +465,24 @@ function writeFooterRow(
     cell.fill = solidFill(emphasize ? HAZE_WASH : WHITE);
     cell.border = thinBorder;
     cell.alignment = { horizontal: 'center', vertical: 'middle', readingOrder };
-    cell.font = { name: FONT, size: 11, bold: emphasize, color: { argb: NAVY } };
+    cell.font = { name: FONT, size: 11, bold: emphasize || column === COL.totalValue, color: { argb: NAVY } };
   }
 
-  row.getCell(1).value = label;
-  row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle', readingOrder };
-  row.getCell(6).value = amount;
-  row.getCell(6).numFmt = '#,##0.00';
+  row.getCell(COL.material).value = label;
+  row.getCell(COL.material).alignment = { horizontal: 'center', vertical: 'middle', readingOrder };
+  row.getCell(COL.totalValue).value = { formula: amount.formula };
+  row.getCell(COL.totalValue).numFmt = '0.00';
+}
+
+function colLetter(column: number) {
+  let n = column;
+  let letter = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letter;
 }
 
 function getDepartmentLabel(department: ProductionSubDepartment, locale: Locale) {

@@ -957,6 +957,7 @@ export class PurchasingMaterialsReportsService {
       productionSubDepartment: dept,
       from: params.from,
       to: params.to,
+      approvedOnly: true,
     });
 
     let requestedValue = 0;
@@ -994,7 +995,7 @@ export class PurchasingMaterialsReportsService {
     };
   }
 
-  public async downloadRequisitionFollowUpExcel(params: { from?: string; to?: string }) {
+  public async downloadRequisitionFollowUpExcel(params: { from?: string; to?: string; approvedOnly?: boolean }) {
     const from = params.from?.trim();
     const to = params.to?.trim();
     if (!from || !to) {
@@ -1014,13 +1015,19 @@ export class PurchasingMaterialsReportsService {
       );
     }
 
-    const lines = await this.loadRequisitionFollowUpLines({ from, to });
+    const approvedOnly = params.approvedOnly === true;
+    const lines = await this.loadRequisitionFollowUpLines({ from, to, approvedOnly });
     if (lines.length === 0) {
       throw new BadRequestException(
-        translate(
-          'No approved purchase requisition lines found for the selected date range.',
-          'لا توجد بنود طلبات شراء معتمدة في نطاق التاريخ المحدد.',
-        ),
+        approvedOnly
+          ? translate(
+              'No approved purchase requisition lines found for the selected date range.',
+              'لا توجد بنود طلبات شراء معتمدة في نطاق التاريخ المحدد.',
+            )
+          : translate(
+              'No purchase requisition lines found for the selected date range.',
+              'لا توجد بنود طلبات شراء في نطاق التاريخ المحدد.',
+            ),
       );
     }
 
@@ -1030,6 +1037,7 @@ export class PurchasingMaterialsReportsService {
         requisitionCode: line.requisitionCode,
         productionSubDepartment: line.productionSubDepartment,
         requisitionNotes: line.requisitionNotes,
+        materialCode: line.materialCode,
         materialTitle: line.materialTitle,
         unitOfMeasurementSelected: line.unitOfMeasurementSelected,
         quantityRequested: line.quantityRequested,
@@ -1049,20 +1057,24 @@ export class PurchasingMaterialsReportsService {
 
   /**
    * Shared follow-up line loader for the on-screen report and Excel export.
-   * When `productionSubDepartment` is omitted, returns approved lines for every department in the date range.
+   * When `productionSubDepartment` is omitted, returns lines for every department in the date range.
+   * `approvedOnly` defaults to false (Excel); the on-screen report passes true.
    */
   private async loadRequisitionFollowUpLines(params: {
     productionSubDepartment?: ProductionSubDepartment;
     from?: string;
     to?: string;
+    approvedOnly?: boolean;
   }) {
     const dateRange = this.buildDateRange(params.from, params.to);
-    const conditions: SQL[] = [
-      eq(materialPurchaseRequisitions.isPreGoLive, false),
-      eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
-      eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
-      eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
-    ];
+    const conditions: SQL[] = [eq(materialPurchaseRequisitions.isPreGoLive, false)];
+    if (params.approvedOnly) {
+      conditions.push(
+        eq(materialPurchaseRequisitions.planningDecision, APPROVAL_DECISIONS.APPROVED),
+        eq(materialPurchaseRequisitions.inventoryControlDecision, APPROVAL_DECISIONS.APPROVED),
+        eq(materialPurchaseRequisitions.managerDecision, APPROVAL_DECISIONS.APPROVED),
+      );
+    }
     if (params.productionSubDepartment) {
       conditions.push(eq(materialPurchaseRequisitions.productionSubDepartment, params.productionSubDepartment));
     }

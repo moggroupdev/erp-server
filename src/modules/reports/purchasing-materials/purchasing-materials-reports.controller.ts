@@ -116,8 +116,16 @@ export class PurchasingMaterialsReportsController {
   @AllowedPermission(PERMISSIONS.DOWNLOAD_MATERIAL_PURCHASING_REQUISITION_FOLLOW_UP_REPORT)
   @ApiBearerAuth()
   @Header('Cache-Control', 'no-store')
-  downloadRequisitionFollowUpExcel(@Query('from') from?: string, @Query('to') to?: string) {
-    return this.service.downloadRequisitionFollowUpExcel({ from, to });
+  downloadRequisitionFollowUpExcel(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('approvedOnly') approvedOnly?: string,
+  ) {
+    return this.service.downloadRequisitionFollowUpExcel({
+      from,
+      to,
+      approvedOnly: approvedOnly === 'true' || approvedOnly === '1',
+    });
   }
 
   @Get('requisition-history')
